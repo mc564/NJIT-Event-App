@@ -7,7 +7,7 @@ class CalendarPage extends StatelessWidget {
     return Scaffold(
       body: CalendarCarousel(
         onDayPressed: (DateTime date, List<dynamic> list) {
-         // Navigator.pushReplacementNamed(context, '/products')
+         Navigator.pushNamed(context, '/detail');
           /*
             showDialog(
                 context: context, 

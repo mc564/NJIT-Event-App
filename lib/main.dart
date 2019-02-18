@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import './pages/add_page.dart';
 import './pages/calendar_page.dart';
+import './pages/event_detail.dart';
 
 void main() => runApp(MyApp());
 
@@ -17,6 +18,7 @@ class MyApp extends StatelessWidget {
       routes: {
         '/': (BuildContext context) => CalendarPage(),
         '/add': (BuildContext context) => AddPage(),
+        '/detail': (BuildContext context) => EventDetailPage(),
       },
     );
   }
