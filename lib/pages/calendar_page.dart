@@ -8,15 +8,6 @@ class CalendarPage extends StatelessWidget {
       body: CalendarCarousel(
         onDayPressed: (DateTime date, List<dynamic> list) {
          Navigator.pushNamed(context, '/detail');
-          /*
-            showDialog(
-                context: context, 
-                builder: (BuildContext context) {
-                  return AlertDialog(
-                    content: Text('hi wat up'),
-                  );
-                });
-                */
         },
       ),
     );
