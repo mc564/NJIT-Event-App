@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/event.dart';
 
 class EventDetailPage extends StatelessWidget {
-  Event _event;
+  final Event _event;
 
   EventDetailPage(this._event);
 
