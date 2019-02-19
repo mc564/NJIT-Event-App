@@ -8,44 +8,45 @@ import 'package:intl/intl.dart';
 import '../models/event.dart';
 
 class EventAPI {
+  Future<http.Response> apiCall(Map<String, String> args) {
+    //strip out last character later
+    String url = 'http://25livepub.collegenet.com/calendars/NJIT_EVENTS.json?';
+
+    args.forEach((String key, String val) {
+      url += key + "=" + val + "&";
+    });
+
+    url = url.substring(0, url.length - 1);
+    return http.get(url);
+  }
+
   //returns all events happening on this particular day
   Future<List<Event>> eventsOnDay(DateTime startDay) {
     DateTime endDay = startDay.add(new Duration(days: 1));
     var formatter = new DateFormat('yyyyMMdd');
-    String startDayString = formatter.format(startDay);
-    String endDayString = formatter.format(endDay);
 
-    print('http://25livepub.collegenet.com/calendars/NJIT_EVENTS.json?startdate=$startDayString&enddate=$endDayString');
+    Map<String, String> args = {
+      'startdate': formatter.format(startDay),
+      'enddate': formatter.format(endDay),
+    };
 
-    //get? post? ..
-    return http
-        .get(
-            'http://25livepub.collegenet.com/calendars/NJIT_EVENTS.json?startdate=$startDayString&enddate=$endDayString')
-        .then((http.Response response) {
-      if (response.statusCode != 200 && response.statusCode != 201) {
-        print('BAD RESPONSE');
-        return null;
-      }
-      final Map<String, dynamic> resultData = json.decode(response.body);
-      print('THIS IS RESULT DATA: ' + resultData.toString());
+    return apiCall(args).then((http.Response response) {
+      final Iterable resultData = json.decode(response.body);
 
-      List<Event> fetchedEventList = [
-        Event(
-            description: 'Another day',
-            organization: 'njit',
-            time: DateTime.now(),
-            title: 'title',
-            location: 'loc'),
-      ];
+      List<Event> fetchedEventList = [];
+      resultData.forEach((event) {
+        fetchedEventList.add(Event(
+          title: event['title'],
+          description: event['description'],
+          organization: 'spongebob land',
+          //organization: event['customFields']['value'],
+          time: DateTime.parse(event['startDateTime']),
+          location: event['location'],
+        ));
+      });
       return fetchedEventList;
     }).catchError((Function onError) {
-      print('IN CATCH ERROR');
-      return null;
+      return [];
     });
-    /*
-    resultData.forEach((String key, dynamic data){
-      fetchedEventList.add(Event());
-    });
-    */
   }
 }

@@ -3,32 +3,49 @@ import '../widgets/event_card.dart';
 import '../models/event.dart';
 import '../scoped_models/events.dart';
 
-class EventListPage extends StatelessWidget {
-  List<Event> _events;
+import 'package:scoped_model/scoped_model.dart';
 
-  EventListPage(this._events);
+class EventListPage extends StatefulWidget {
+  EventsModel _model;
+
+  EventListPage(this._model);
+
+  @override
+  State<StatefulWidget> createState() {
+    return EventListPageState();
+  }
+}
+
+class EventListPageState extends State<EventListPage> {
+  List<Event> _events = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _events = widget._model.events;
+  }
 
   @override
   Widget build(BuildContext context) {
-    if (_events == null){
-      return Scaffold(
-        appBar: AppBar(
-          title: Text('null _events eventlist'),
-        ),
-      );
-    }
-
-    print('list length is: ' + _events.length.toString());
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Event List'),
-      ),
-      body: ListView.builder(
-        itemCount: _events.length,
-        itemBuilder: (BuildContext context, int index) {
-          return ListTile(title: Text('title')); //EventCard(_eventList[index]);
-        },
-      ),
+    return ScopedModelDescendant(
+      builder: (BuildContext context, Widget child, EventsModel model) {
+        _events = widget._model.events;
+        return Scaffold(
+          appBar: AppBar(
+            title: Text('Event List'),
+          ),
+          body: widget._model.isLoading
+              ? Center(child: CircularProgressIndicator())
+              : ListView.builder(
+                  itemCount: _events.length,
+                  itemBuilder: (BuildContext context, int index) {
+                    return ListTile(
+                      title: Text(_events[index].title),
+                    ); //EventCard(_eventList[index]);
+                  },
+                ),
+        );
+      },
     );
   }
 }

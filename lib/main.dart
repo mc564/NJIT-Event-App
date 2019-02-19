@@ -29,7 +29,7 @@ class _MyAppState extends State<MyApp> {
 
         //home: MyHomePage(title: 'Flutter Demo Home Page'),
         routes: {
-          '/': (BuildContext context) => CalendarPage(),
+          '/': (BuildContext context) => CalendarPage(_model),
           '/add': (BuildContext context) => AddPage(),
         },
       ),
