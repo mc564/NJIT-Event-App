@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/event_card.dart';
 
 class EventListPage extends StatelessWidget {
   @override
@@ -8,7 +9,7 @@ class EventListPage extends StatelessWidget {
         title: Text('Event List'),
       ),
       body: ListView.builder(itemBuilder: (BuildContext context, int index) {
-
+        
       },),
     );
   }

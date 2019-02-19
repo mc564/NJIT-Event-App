@@ -23,7 +23,6 @@ class MyApp extends StatelessWidget {
       routes: {
         '/': (BuildContext context) => CalendarPage(),
         '/add': (BuildContext context) => AddPage(),
-        '/detail': (BuildContext context) => EventDetailPage(event),
       },
     );
   }

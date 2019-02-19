@@ -12,8 +12,7 @@ class EventDetailPage extends StatelessWidget {
       appBar: AppBar(
         title: Text('Event Details'),
       ),
-      body: Card(
-        color: Colors.red,
+      body: Container(//TODO put event information here in nice ui
       ),
     );
   }
