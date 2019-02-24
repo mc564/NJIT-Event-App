@@ -20,12 +20,6 @@ class EventListPageState extends State<EventListPage> {
   List<Event> _events = [];
 
   @override
-  void initState() {
-    super.initState();
-    _events = widget._model.events;
-  }
-
-  @override
   Widget build(BuildContext context) {
     return ScopedModelDescendant(
       builder: (BuildContext context, Widget child, EventsModel model) {

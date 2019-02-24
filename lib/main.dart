@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:scoped_model/scoped_model.dart';
 
-import './pages/add_page.dart';
-import './pages/calendar_page.dart';
+import './pages/add.dart';
+import './pages/home.dart';
 
 import './scoped_models/events.dart';
+import './widgets/success_dialog.dart';
 
 void main() => runApp(MyApp());
 
@@ -25,11 +26,23 @@ class _MyAppState extends State<MyApp> {
       model: _model,
       child: MaterialApp(
         title: 'NJIT Event Planner',
-        //look up theme: ThemeData()
+        theme: ThemeData(
+          // Define the default Brightness and Colors
+          brightness: Brightness.dark,
+          primaryColor: Colors.black,
+          accentColor: Colors.red,
+          inputDecorationTheme: InputDecorationTheme(
+            filled: true,
+            fillColor: Colors.black,
+            labelStyle: TextStyle(
+              color: Colors.blueGrey,
+            ),
+          ),
+        ),
 
         //home: MyHomePage(title: 'Flutter Demo Home Page'),
         routes: {
-          '/': (BuildContext context) => CalendarPage(_model),
+          '/': (BuildContext context) => HomePage(_model),
           '/add': (BuildContext context) => AddPage(),
         },
       ),
