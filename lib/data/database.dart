@@ -1,7 +1,11 @@
-import '../models/event.dart';
 import 'dart:convert';
+
 import 'package:intl/intl.dart';
 import 'package:http/http.dart' as http;
+
+import '../models/event.dart';
+import '../models/category.dart';
+import '../models/location.dart';
 
 //communicates with a web api that allows operations on a database
 class Database {
@@ -9,22 +13,29 @@ class Database {
 
   Event getEvent(dynamic json) {
     return Event(
-        eventId: json['id'],
-        organization: json['organization'],
-        location: json['location'],
-        title: json['title'],
-        startTime: DateTime.parse(json['startDateTime']),
-        endTime: DateTime.parse(json['endDateTime']),
-        description: json['description']);
+      eventId: json['id'],
+      organization: json['organization'],
+      location: json['location'],
+      locationCode: LocationHelper.abbrevStringToLocationCode(json['locationCode']),
+      title: json['title'],
+      startTime: DateTime.parse(json['startDateTime']),
+      endTime: DateTime.parse(json['endDateTime']),
+      description: json['description'],
+      category: CategoryHelper.getCategory(json['category']),
+    );
   }
 
   Future<bool> addEvent(Event event) {
+    print('ADDING EVENT');
     Map<String, dynamic> eventMap = {
       'id': event.eventId,
       'title': event.title,
       'location': event.location,
+      'locationCode': LocationHelper.getAbbreviation(
+          LocationHelper.getLocationCode(event.location)),
       'startDateTime': formatter.format(event.startTime),
       'endDateTime': formatter.format(event.endTime),
+      'category': CategoryHelper.getString(event.category),
       'organization': event.organization,
       'description': event.description
     };
@@ -32,19 +43,35 @@ class Database {
         .post('https://web.njit.edu/~mc564/eventapi/event/add.php',
             body: json.encode(eventMap))
         .then((http.Response response) {
+      if (response.statusCode != 200 &&
+          response.statusCode != 201 &&
+          response.statusCode != 202) {
+        throw Exception(
+            "Error in Database class addEvent method: Database response code is: " +
+                response.statusCode.toString() +
+                "\n response body: " +
+                response.body);
+      }
       return true;
-    }).catchError(() {
-      return false;
+    }).catchError((error) {
+      throw Exception(
+          "Error in Database class addEvent method: " + error.toString());
     });
   }
 
-  Future<List<Event>> eventsOnDay(DateTime startDay) {
-    DateTime realStart = startDay.subtract(Duration(hours: startDay.hour, 
-                               minutes: startDay.minute, 
-                               seconds: startDay.second,
-                               milliseconds: startDay.millisecond));
-    DateTime endTime = realStart.add(Duration(days:1));
-    return eventsBetween(realStart, endTime);
+  Future<List<Event>> eventsOnDay(DateTime startDay) async {
+    DateTime realStart = startDay.subtract(Duration(
+        hours: startDay.hour,
+        minutes: startDay.minute,
+        seconds: startDay.second,
+        milliseconds: startDay.millisecond));
+    DateTime endTime = realStart.add(Duration(days: 1));
+    try {
+      return await eventsBetween(realStart, endTime);
+    } catch (error) {
+      throw Exception(
+          "Error in Database class eventsOnDay method: " + error.toString());
+    }
   }
 
   Future<List<Event>> eventsBetween(DateTime start, DateTime end) {
@@ -65,8 +92,9 @@ class Database {
         fetchedEventList.add(getEvent(eventData));
       });
       return fetchedEventList;
-    }).catchError(() {
-      return [];
+    }).catchError((error) {
+      throw Exception(
+          "Error in Database class eventsBetween method: " + error.toString());
     });
   }
 }

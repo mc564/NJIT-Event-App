@@ -1,24 +1,23 @@
 import 'package:flutter/material.dart';
 import '../models/event.dart';
-import './success_dialog.dart';
 
 //similar event suggestions dialog
 class SuggestionDialog extends StatelessWidget {
-  Event _event;
-  List<Event> _similarEvents;
-  String _continuePrompt;
-  Function _callback;
+  final Event _event;
+  final List<Event> _similarEvents;
+  final String _continuePrompt;
+  final Function _callback;
 
   SuggestionDialog(
       {@required Event event,
       @required List<Event> similarEvents,
       @required String continuePrompt,
-      @required Function callback}) {
-    _event = event;
-    _similarEvents = similarEvents;
-    _continuePrompt = continuePrompt;
-    _callback = callback;
-  }
+      @required Function callback})
+      : _event = event,
+        _similarEvents = similarEvents,
+        _continuePrompt = continuePrompt,
+        _callback = callback;
+//^initializer list
 
   @override
   Widget build(BuildContext context) {
@@ -39,7 +38,6 @@ class SuggestionDialog extends StatelessWidget {
       actions: <Widget>[
         FlatButton(
           onPressed: () {
-            //Navigator.of(context).pop();
             _callback(_event);
           },
           child: Text(_continuePrompt),

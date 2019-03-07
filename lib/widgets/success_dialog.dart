@@ -1,7 +1,4 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
-import '../models/event.dart';
-import '../widgets/redirecting_countdown.dart';
 
 class SuccessDialog extends StatefulWidget {
   final String _successMessage;
@@ -16,7 +13,7 @@ class SuccessDialog extends StatefulWidget {
 class _SuccessDialogState extends State<SuccessDialog>
     with TickerProviderStateMixin {
   AnimationController _controller;
-  int _secondsCountdown = 10;
+  int _secondsCountdown = 60;
 
   @override
   void initState() {
@@ -67,5 +64,22 @@ class _SuccessDialogState extends State<SuccessDialog>
   void dispose() {
     _controller.dispose();
     super.dispose();
+  }
+}
+
+
+class RedirectingCountdown extends AnimatedWidget {
+  RedirectingCountdown({Key key, this.animation})
+      : super(key: key, listenable: animation);
+  final Animation<int> animation;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      'Redirecting to home page in ' +
+          animation.value.toString() +
+          ' seconds...',
+      textAlign: TextAlign.center,
+    );
   }
 }

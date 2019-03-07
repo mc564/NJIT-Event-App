@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_calendar_carousel/flutter_calendar_carousel.dart';
-import './event_list.dart';
-import '../scoped_models/events.dart';
+import './daily_event_list.dart';
+import 'package:intl/intl.dart';
 
 class CalendarPage extends StatelessWidget {
-  final EventsModel _model;
-
-  CalendarPage(this._model);
+  final DateFormat dayFormatter = DateFormat('EEE, MMM d, yyyy');
 
   @override
   Widget build(BuildContext context) {
@@ -18,8 +16,9 @@ class CalendarPage extends StatelessWidget {
             context,
             MaterialPageRoute(
               builder: (context) {
-                _model.getEventsOnDay(dayPressed);
-                return EventListPage(_model);
+                return DailyEventListPage(
+                    title: 'Events for ' + dayFormatter.format(dayPressed),
+                    day: dayPressed);
               },
             ),
           );

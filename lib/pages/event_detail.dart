@@ -12,7 +12,20 @@ class EventDetailPage extends StatelessWidget {
       appBar: AppBar(
         title: Text('Event Details'),
       ),
-      body: Container(//TODO put event information here in nice ui
+      body: Center(
+        child: Column(
+          children: <Widget>[
+            Text(
+              _event.title,
+              style: TextStyle(fontSize: 20),
+            ),
+            Text('by ' + _event.organization),
+            Text(_event.startTime.toString()),
+            Text(_event.endTime.toString()),
+            Text(_event.location),
+            Text(_event.description),
+          ],
+        ),
       ),
     );
   }

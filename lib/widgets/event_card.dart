@@ -10,10 +10,9 @@ class EventCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      color: Colors.red,
       child: Column(
         children: <Widget>[
-          Text('Title: ${_event.title}'),
+          Text('Title: ${_event.title}', style: TextStyle(fontSize: 20)),
           Text('Location: ${_event.location}'),
           Text('Description: ${_event.description}'),
         ],
