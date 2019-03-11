@@ -13,7 +13,7 @@ class SuccessDialog extends StatefulWidget {
 class _SuccessDialogState extends State<SuccessDialog>
     with TickerProviderStateMixin {
   AnimationController _controller;
-  int _secondsCountdown = 60;
+  int _secondsCountdown = 10;
 
   @override
   void initState() {

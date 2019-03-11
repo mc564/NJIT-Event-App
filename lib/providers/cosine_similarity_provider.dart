@@ -1,10 +1,10 @@
 import 'dart:math';
 
-class CosineSimilarity {
+class CosineSimilarityProvider {
   double _charSimilarityThreshold;
   double _wordSimilarityThreshold;
 
-  CosineSimilarity(
+  CosineSimilarityProvider(
       {double charSimilarityThreshold = 0.8,
       double wordSimilarityThreshold = 0.2})
       : _charSimilarityThreshold = charSimilarityThreshold,

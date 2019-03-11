@@ -9,7 +9,7 @@ import '../models/event.dart';
 import '../models/category.dart';
 import '../models/location.dart';
 
-class EventAPI {
+class NJITEventAPI {
   var formatter = new DateFormat('yyyyMMdd');
   final Map<String, Category> categoryOf = {
     'Arts & Entertainment': Category.ArtsAndEntertainment,

@@ -8,7 +8,7 @@ import '../models/category.dart';
 import '../models/location.dart';
 
 //communicates with a web api that allows operations on a database
-class Database {
+class DatabaseEventAPI {
   var formatter = new DateFormat('yyyy-MM-dd HH:mm:ss');
 
   Event getEvent(dynamic json) {

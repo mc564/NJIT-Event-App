@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/event.dart';
 import '../models/category.dart';
 import 'package:intl/intl.dart';
-import '../pages/event_detail.dart';
+import '../pages/detail/event_detail.dart';
 
 class EventListTile extends StatelessWidget {
   final Event _event;
@@ -51,10 +51,10 @@ class EventListTile extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.start,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Text(_event.title, style: TextStyle(fontSize: 20)),
-            Text(cutShort(_event.location)),
-            Text(formatEventDuration(_event.startTime, _event.endTime)),
-            Text(CategoryHelper.getString(_event.category)),
+            Text(_event.title, style: TextStyle(fontSize: 18)),
+            Text(cutShort(_event.location), style: TextStyle(fontSize: 15)),
+            Text(formatEventDuration(_event.startTime, _event.endTime), style: TextStyle(fontSize: 14)),
+            Text(CategoryHelper.getString(_event.category), style: TextStyle(fontSize: 14)),
           ],
         ),
         trailing: IconButton(

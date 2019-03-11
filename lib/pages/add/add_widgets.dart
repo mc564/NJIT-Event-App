@@ -1,8 +1,43 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-//NO, make all children widgets stateless and keep the state in the parent widget,
-//the parent widget can then remake the children whenever needed
+class DropDownButtonFormField extends FormField<String> {
+  DropDownButtonFormField(
+      {String hint,
+      List<DropdownMenuItem> items,
+      Function onChanged,
+      String initialValue = null,
+      FormFieldSetter<String> onSaved,
+      FormFieldValidator<String> validator,
+      bool autovalidate = false})
+      : super(
+            onSaved: onSaved,
+            validator: validator,
+            initialValue: initialValue,
+            autovalidate: autovalidate,
+            builder: (FormFieldState<String> state) {
+              return Column(
+                children: <Widget>[
+                  DropdownButton(
+                    hint: Text(hint),
+                    items: items,
+                    onChanged: (value) {
+                      state.didChange(value);
+                      onChanged(value);
+                    },
+                    value: state.value,
+                  ),
+                  state.hasError
+                      ? Text(
+                          state.errorText,
+                          style: TextStyle(color: Colors.red),
+                        )
+                      : Container(),
+                ],
+              );
+            });
+}
+
 class DateRangePicker extends StatefulWidget {
   final DateTime _initialStartTime;
   final DateTime _initialEndTime;
@@ -96,7 +131,7 @@ class DateTimePicker extends StatelessWidget {
           SizedBox(width: 5),
           Text(
             _label,
-            style: TextStyle(fontSize: 20.0),
+            style: TextStyle(fontSize: 14.0),
           ),
           SizedBox(width: 10),
           DatePickerButton(_dateTime, (DateTime date) {
@@ -183,7 +218,7 @@ class TimePickerButton extends StatelessWidget {
         formattedTime(),
         style: TextStyle(
           color: Colors.black,
-          fontSize: 20.0,
+          fontSize: 14.0,
         ),
       ),
     );
@@ -217,7 +252,7 @@ class DatePickerButton extends StatelessWidget {
         formatter.format(_date),
         style: TextStyle(
           color: Colors.black,
-          fontSize: 20.0,
+          fontSize: 14.0,
         ),
       ),
     );

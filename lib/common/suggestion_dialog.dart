@@ -3,20 +3,17 @@ import '../models/event.dart';
 
 //similar event suggestions dialog
 class SuggestionDialog extends StatelessWidget {
-  final Event _event;
   final List<Event> _similarEvents;
   final String _continuePrompt;
-  final Function _callback;
+  final Function _onSuggestionIgnored;
 
   SuggestionDialog(
-      {@required Event event,
-      @required List<Event> similarEvents,
+      {@required List<Event> similarEvents,
       @required String continuePrompt,
-      @required Function callback})
-      : _event = event,
-        _similarEvents = similarEvents,
+      @required Function onSuggestionIgnored})
+      : _similarEvents = similarEvents,
         _continuePrompt = continuePrompt,
-        _callback = callback;
+        _onSuggestionIgnored = onSuggestionIgnored;
 //^initializer list
 
   @override
@@ -38,7 +35,7 @@ class SuggestionDialog extends StatelessWidget {
       actions: <Widget>[
         FlatButton(
           onPressed: () {
-            _callback(_event);
+            _onSuggestionIgnored();
           },
           child: Text(_continuePrompt),
         )
