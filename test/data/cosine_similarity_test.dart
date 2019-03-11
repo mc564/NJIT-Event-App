@@ -1,5 +1,5 @@
 import 'package:test_api/test_api.dart';
-import '../../lib/data/cosine_similarity.dart';
+import '../../lib/providers/cosine_similarity_provider.dart';
 
 void main() {
   /*
@@ -11,7 +11,7 @@ void main() {
   */
 
   test('correct character cosine similarity', () {
-    CosineSimilarity calculator = CosineSimilarity();
+    CosineSimilarityProvider calculator = CosineSimilarityProvider();
     var result = calculator.cosineSimilarityCharacters('aber', 'rabe');
     expect(result, 1.0);
     result = calculator.cosineSimilarityCharacters('shikha', 'medlyn');
@@ -25,7 +25,7 @@ void main() {
   });
 
   test('correct word cosine similarity', () {
-    CosineSimilarity calculator = CosineSimilarity();
+    CosineSimilarityProvider calculator = CosineSimilarityProvider();
     var result = calculator.cosineSimilarityWords('aber', 'rabe');
     expect(result, 0.0);
     result = calculator.cosineSimilarityWords('shikha', 'medlyn');
@@ -40,7 +40,7 @@ void main() {
 
   test('correct judge of similarity according to input thresholds for characters and words', () {
     //either word similarity or char similarity must be above the threshold to return true
-    CosineSimilarity calculator = CosineSimilarity(charSimilarityThreshold: 0.3, wordSimilarityThreshold: 0.5);
+    CosineSimilarityProvider calculator = CosineSimilarityProvider(charSimilarityThreshold: 0.3, wordSimilarityThreshold: 0.5);
     assert(calculator.areSimilar('jessica coyotl', 'medlyn chen') == true);
     //^should be true because in test 'correct character cosine similarity', similarity is measured as  0.404...
     assert(calculator.areSimilar('matt', 'shikha') == false);
