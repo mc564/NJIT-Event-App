@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 
 import '../../models/event.dart';
 import '../../models/category.dart';
@@ -24,6 +25,7 @@ class AddPage extends StatefulWidget {
 }
 
 class _AddPageState extends State<AddPage> {
+  StreamSubscription _navigationListener;
   AddEventBloc _addEventBloc;
   GlobalKey<FormState> _formKey;
   Function _titleValidator;
@@ -182,15 +184,13 @@ class _AddPageState extends State<AddPage> {
             continuePrompt: "No, continue to add event",
             onSuggestionIgnored: () {
               _addEventBloc.submitDespiteSuggestions(eventToAdd);
-              Navigator.pop(context); //pops the suggestion dialog
+              Navigator.pop(context);
             });
       },
     );
   }
 
   DropDownButtonFormField _buildCategoryField(AddFormState state) {
-    //TODO put this category getting logic in a bloc somehow...?
-    //or make it more readable
 
     String initVal = '';
     if (state is FormInitial) {
@@ -239,22 +239,6 @@ class _AddPageState extends State<AddPage> {
       builder: (BuildContext context, AsyncSnapshot<AddFormState> snapshot) {
         print('state added to stream: ' + snapshot.data.runtimeType.toString());
         AddFormState state = snapshot.data;
-        //these are all delayed to wait for the form to finish building
-        //before an overlaying widget like a dialog is generated
-        if (state is FormSubmitAlternative) {
-          Future.delayed(Duration(milliseconds: 100), () {
-            _suggestEditingSimilarEvents(
-                state.eventToAdd, state.editableSimilarEvents);
-          });
-        } else if (state is FormSubmitError) {
-          Future.delayed(Duration(milliseconds: 100), () {
-            _showErrorDialog(state);
-          });
-        } else if (state is FormSubmitted) {
-          Future.delayed(Duration(milliseconds: 100), () {
-            _showSuccessDialog();
-          });
-        }
 
         return GestureDetector(
           onTap: () {
@@ -303,6 +287,16 @@ class _AddPageState extends State<AddPage> {
     CategoryHelper.categoryFrom.forEach((String string, Category category) {
       _dropdownItems.add(DropdownMenuItem(value: string, child: Text(string)));
     });
+    _navigationListener = _addEventBloc.formSubmissions.listen((dynamic state) {
+      if (state is FormSubmitAlternative) {
+        _suggestEditingSimilarEvents(
+            state.eventToAdd, state.editableSimilarEvents);
+      } else if (state is FormSubmitError) {
+        _showErrorDialog(state);
+      } else if (state is FormSubmitted) {
+        _showSuccessDialog();
+      }
+    });
   }
 
   @override
@@ -318,6 +312,7 @@ class _AddPageState extends State<AddPage> {
 
   @override
   void dispose() {
+    _navigationListener.cancel();
     _addEventBloc.dispose();
     super.dispose();
   }

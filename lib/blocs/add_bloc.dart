@@ -16,7 +16,7 @@ class AddEventBloc {
       : assert(eventListProvider != null),
         _eventListProvider = eventListProvider,
         _addEventProvider = AddEventProvider(),
-        _formController = StreamController() {
+        _formController = StreamController.broadcast() {
     print('in addbloc constructor!!');
     _initialState = FormInitial(
       description: _addEventProvider.description,

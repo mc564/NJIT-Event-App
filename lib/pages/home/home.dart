@@ -1,20 +1,28 @@
 import 'package:flutter/material.dart';
+
 import '../../blocs/date_bloc.dart';
 import '../../blocs/event_bloc.dart';
 import '../../blocs/search_bloc.dart';
+import '../../blocs/favorite_bloc.dart';
+import '../../blocs/user_bloc.dart';
+
 import './home_widgets.dart';
-import '../../providers/event_list_provider.dart';
-import '../add/add.dart';
+
 import '../../common/daily_event_list.dart';
+import '../../providers/event_list_provider.dart';
+
+import '../add/add.dart';
 import '../calendar/calendar.dart';
 import '../filter/filter.dart';
 import '../search/search.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
 
 enum View { daily, weekly, monthly }
 
 class HomePage extends StatefulWidget {
+  final UserBloc _userBloc;
+
+  HomePage({@required UserBloc userBloc}) : _userBloc = userBloc;
+
   @override
   State<StatefulWidget> createState() {
     return _HomePageState();
@@ -26,6 +34,7 @@ class _HomePageState extends State<HomePage> {
   EventBloc _eventBloc;
   DateBloc _dateBloc;
   SearchBloc _searchBloc;
+  FavoriteBloc _favoriteBloc;
   PageController _pageController;
   int _prevPage;
   View _view;
@@ -38,7 +47,7 @@ class _HomePageState extends State<HomePage> {
         List<PopupMenuEntry> entries = List<PopupMenuEntry>();
         entries.add(PopupMenuItem(value: 'add', child: Text('Add An Event')));
         entries.add(PopupMenuItem(value: 'search', child: Text('Search')));
-        entries.add(PopupMenuItem(value: '3', child: Text('item3')));
+        entries.add(PopupMenuItem(value: 'log out', child: Text('Log Out')));
         return entries;
       },
       onSelected: (value) {
@@ -54,10 +63,15 @@ class _HomePageState extends State<HomePage> {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (BuildContext context) =>
-                  SearchPage(searchBloc: _searchBloc),
+              builder: (BuildContext context) => SearchPage(
+                    searchBloc: _searchBloc,
+                    favoriteBloc: _favoriteBloc,
+                  ),
             ),
           );
+        } else if (value == 'log out') {
+          widget._userBloc.logout();
+          Navigator.pushReplacementNamed(context, '/login');
         }
       },
     );
@@ -156,6 +170,7 @@ class _HomePageState extends State<HomePage> {
   DailyEventList _buildDailyView(DateLoaded dateState) {
     return DailyEventList(
         eventBloc: _eventBloc,
+        favoriteBloc: _favoriteBloc,
         day: dateState.day,
         key: PageStorageKey<String>(DateTime.now().toString()));
   }
@@ -167,6 +182,7 @@ class _HomePageState extends State<HomePage> {
   CalendarPage _buildMonthlyView(DateLoaded state) {
     return CalendarPage(
       eventBloc: _eventBloc,
+      favoriteBloc: _favoriteBloc,
       selectedDay: state.day,
     );
   }
@@ -202,7 +218,7 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    
+
     DateTime now = DateTime.now();
     _eventListProvider = EventListProvider();
     _eventBloc = EventBloc(eventListProvider: _eventListProvider);
@@ -211,6 +227,7 @@ class _HomePageState extends State<HomePage> {
     );
     _searchBloc =
         SearchBloc(searchEvents: true, eventListProvider: _eventListProvider);
+    _favoriteBloc = FavoriteBloc(eventListProvider: _eventListProvider);
     _view = null;
     //make it some ridiculously large number to allow scrolling both directions
     int initialPage = 20000;
@@ -261,6 +278,7 @@ class _HomePageState extends State<HomePage> {
     _dateBloc.dispose();
     _eventBloc.dispose();
     _searchBloc.dispose();
+    _favoriteBloc.dispose();
     super.dispose();
   }
 }

@@ -2,18 +2,24 @@ import 'package:flutter/material.dart';
 import './event_list_tile.dart';
 import '../models/event.dart';
 import '../blocs/event_bloc.dart';
+import '../blocs/favorite_bloc.dart';
 
 class DailyEventList extends StatefulWidget {
+  final FavoriteBloc _favoriteBloc;
   final EventBloc _eventBloc;
   final DateTime _day;
 
   DateTime get day => _day;
 
   DailyEventList(
-      {@required DateTime day, @required EventBloc eventBloc, Key key})
+      {@required DateTime day,
+      @required EventBloc eventBloc,
+      @required FavoriteBloc favoriteBloc,
+      Key key})
       : assert(day != null && eventBloc != null),
         _day = day,
         _eventBloc = eventBloc,
+        _favoriteBloc = favoriteBloc,
         super(key: key);
 
   @override
@@ -39,7 +45,8 @@ class _DailyEventListState extends State<DailyEventList> {
     return ListView.builder(
       itemCount: events.length,
       itemBuilder: (BuildContext context, int index) {
-        return EventListTile(events[index], colors[index % colors.length]);
+        return EventListTile(
+            events[index], colors[index % colors.length], widget._favoriteBloc);
       },
     );
   }

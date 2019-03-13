@@ -239,6 +239,13 @@ class EventListProvider {
     }
     return true;
   }
+
+  //TODO make this obselete and put favorite data in a favorite provider
+  Future<bool> addFavorite(String ucid, String eventId) {
+    return Future.delayed(Duration(seconds:2)).then((_){
+      return true;
+    });
+  }
 }
 
 //keeps 50 or x number (depending on set size) daily event lists

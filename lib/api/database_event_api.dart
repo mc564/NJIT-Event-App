@@ -16,7 +16,8 @@ class DatabaseEventAPI {
       eventId: json['id'],
       organization: json['organization'],
       location: json['location'],
-      locationCode: LocationHelper.abbrevStringToLocationCode(json['locationCode']),
+      locationCode:
+          LocationHelper.abbrevStringToLocationCode(json['locationCode']),
       title: json['title'],
       startTime: DateTime.parse(json['startDateTime']),
       endTime: DateTime.parse(json['endDateTime']),
@@ -56,6 +57,41 @@ class DatabaseEventAPI {
     }).catchError((error) {
       throw Exception(
           "Error in Database class addEvent method: " + error.toString());
+    });
+  }
+
+  //update the database record
+  Future<bool> editEvent(Event event) {
+    print('EDITING EVENT');
+    Map<String, dynamic> eventMap = {
+      'id': event.eventId,
+      'title': event.title,
+      'location': event.location,
+      'locationCode': LocationHelper.getAbbreviation(
+          LocationHelper.getLocationCode(event.location)),
+      'startDateTime': formatter.format(event.startTime),
+      'endDateTime': formatter.format(event.endTime),
+      'category': CategoryHelper.getString(event.category),
+      'organization': event.organization,
+      'description': event.description
+    };
+    return http
+        .post('https://web.njit.edu/~mc564/eventapi/event/edit.php',
+            body: json.encode(eventMap))
+        .then((http.Response response) {
+      if (response.statusCode != 200 &&
+          response.statusCode != 201 &&
+          response.statusCode != 202) {
+        throw Exception(
+            "Error in Database class editEvent method: Database response code is: " +
+                response.statusCode.toString() +
+                "\n response body: " +
+                response.body);
+      }
+      return true;
+    }).catchError((error) {
+      throw Exception(
+          "Error in Database class editEvent method: " + error.toString());
     });
   }
 

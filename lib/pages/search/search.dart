@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
 import '../../common/event_list_tile.dart';
 import '../../blocs/search_bloc.dart';
+import '../../blocs/favorite_bloc.dart';
 import '../../providers/event_list_provider.dart';
 
 class SearchPage extends StatefulWidget {
   final SearchBloc _searchBloc;
+  final FavoriteBloc _favoriteBloc;
 
-  SearchPage({@required SearchBloc searchBloc})
-      : _searchBloc = searchBloc;
+  SearchPage(
+      {@required SearchBloc searchBloc, @required FavoriteBloc favoriteBloc})
+      : _searchBloc = searchBloc,
+        _favoriteBloc = favoriteBloc;
 
   @override
   State<StatefulWidget> createState() {
@@ -16,7 +20,6 @@ class SearchPage extends StatefulWidget {
 }
 
 class _SearchPageState extends State<SearchPage> {
-
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<SearchState>(
@@ -64,8 +67,8 @@ class _SearchPageState extends State<SearchPage> {
                           shrinkWrap: true,
                           itemCount: searchResult.results.length,
                           itemBuilder: (context, index) {
-                            return EventListTile(
-                                searchResult.results[index], 0xffFFFFFF);
+                            return EventListTile(searchResult.results[index],
+                                0xffFFFFFF, widget._favoriteBloc);
                           }),
                 ),
               ],
