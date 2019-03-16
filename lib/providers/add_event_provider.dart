@@ -58,7 +58,7 @@ class AddEventProvider {
   }
 
   void setEndTime(DateTime endTime) {
-    print('in add event provider, set end date to : '+startTime.toString());
+    print('in add event provider, set end date to : '+endTime.toString());
     _endDateTime = endTime;
   }
 

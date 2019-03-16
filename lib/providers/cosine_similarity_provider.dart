@@ -92,4 +92,9 @@ class CosineSimilarityProvider {
     } else
       return false;
   }
+
+  //Added for testing purposes.
+
+  double vectorMagnitude(List<int> vector) => _vectorMagnitude(vector);
+  double dotProduct(List<int> v1, List<int> v2) => _dotProduct(v1, v2);
 }
