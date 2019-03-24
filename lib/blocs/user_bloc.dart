@@ -1,16 +1,17 @@
 import 'dart:async';
-import '../providers/auth_provider.dart';
+import '../providers/user_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:equatable/equatable.dart';
+import '../models/user.dart';
 
 //manages user and authentication
 class UserBloc {
   final StreamController<UserState> _userController;
-  final AuthProvider _authProvider;
+  final UserProvider _userProvider;
   UserState _prevState;
 
   UserBloc()
-      : _authProvider = AuthProvider(),
+      : _userProvider = UserProvider(),
         _userController = StreamController.broadcast(),
         _prevState = UserAuthInitial(authenticated: false) {
     _userController.stream.listen((UserState state) {
@@ -18,23 +19,31 @@ class UserBloc {
     });
   }
 
+  String get name => _userProvider.name;
+  String get ucid => _userProvider.ucid;
+
+  //just for use upon logging in - changes to the modeled items (favorites, users, organizations etc.) are handled in their respective blocs
+  List<UserTypes> get initialUserTypes => _userProvider.initialUserTypes;
+  List<String> get initialFavoriteIds => _userProvider.initialFavoriteIds;
+  Map<String, String> get initialOrgRoles => _userProvider.initialOrgRoles;
+
   UserState get initialState => _prevState;
 
   Stream get userRequests => _userController.stream;
 
   void setUCID(String ucid) {
-    _authProvider.setUCID(ucid);
+    _userProvider.setAuthUCID(ucid);
   }
 
   void setPassword(String password) {
-    _authProvider.setPassword(password);
+    _userProvider.setAuthPassword(password);
   }
 
   //runs once every time the program is reopened
   void autoAuthenticate() async {
     try {
       _userController.sink.add(UserAuthLoading());
-      bool authenticated = await _authProvider.autoAuthenticate();
+      bool authenticated = await _userProvider.autoAuthenticate();
       if (authenticated) {
         _userController.sink.add(UserAuthInitial(authenticated: true));
       } else {
@@ -50,7 +59,7 @@ class UserBloc {
   void authenticate() async {
     try {
       _userController.sink.add(UserAuthLoading());
-      bool authenticated = await _authProvider.authenticate();
+      bool authenticated = await _userProvider.authenticate();
       if (authenticated) {
         _userController.sink.add(UserAuthDone(authenticated: true));
       } else {
@@ -64,7 +73,7 @@ class UserBloc {
 
   void logout() async {
     try {
-      _authProvider.logout();
+      _userProvider.logout();
       _userController.sink.add(UserAuthInitial(authenticated: false));
     } catch (error) {
       _userController.sink.add(UserAuthError(error: error.toString()));

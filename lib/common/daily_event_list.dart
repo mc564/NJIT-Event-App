@@ -3,6 +3,7 @@ import './event_list_tile.dart';
 import '../models/event.dart';
 import '../blocs/event_bloc.dart';
 import '../blocs/favorite_bloc.dart';
+import 'dart:async';
 
 class DailyEventList extends StatefulWidget {
   final FavoriteBloc _favoriteBloc;
@@ -29,6 +30,8 @@ class DailyEventList extends StatefulWidget {
 }
 
 class _DailyEventListState extends State<DailyEventList> {
+  StreamSubscription _favoriteErrorSubscription;
+
   Widget _buildPage(List<Event> events) {
     List<int> colors = [
       0xffffdde2,
@@ -46,7 +49,7 @@ class _DailyEventListState extends State<DailyEventList> {
       itemCount: events.length,
       itemBuilder: (BuildContext context, int index) {
         return EventListTile(
-            events[index], colors[index % colors.length], widget._favoriteBloc);
+            events[index], colors[index % colors.length], widget._favoriteBloc, widget._eventBloc);
       },
     );
   }
@@ -54,8 +57,12 @@ class _DailyEventListState extends State<DailyEventList> {
   @override
   void initState() {
     super.initState();
-    print('running initState daily event list fetch daily events!');
     widget._eventBloc.fetchDailyEvents(widget._day);
+    _favoriteErrorSubscription =
+        widget._favoriteBloc.favoriteSettingErrors.listen((dynamic state) {
+      //recieve any favorite setting errors? rollback favorite status by setting state
+      setState(() {});
+    });
   }
 
   @override
@@ -85,5 +92,10 @@ class _DailyEventListState extends State<DailyEventList> {
         }
       },
     );
+  }
+
+  dispose(){
+    _favoriteErrorSubscription.cancel();
+    super.dispose();
   }
 }

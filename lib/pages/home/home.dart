@@ -9,12 +9,16 @@ import '../../blocs/user_bloc.dart';
 import './home_widgets.dart';
 
 import '../../common/daily_event_list.dart';
-import '../../providers/event_list_provider.dart';
 
 import '../add/add.dart';
 import '../calendar/calendar.dart';
 import '../filter/filter.dart';
 import '../search/search.dart';
+import '../favorites/favorites.dart';
+import '../organization/organization.dart';
+import '../admin/admin.dart';
+
+import '../../models/user.dart';
 
 enum View { daily, weekly, monthly }
 
@@ -30,7 +34,6 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  EventListProvider _eventListProvider;
   EventBloc _eventBloc;
   DateBloc _dateBloc;
   SearchBloc _searchBloc;
@@ -45,8 +48,25 @@ class _HomePageState extends State<HomePage> {
       icon: Icon(Icons.dehaze, color: Colors.black),
       itemBuilder: (BuildContext context) {
         List<PopupMenuEntry> entries = List<PopupMenuEntry>();
-        entries.add(PopupMenuItem(value: 'add', child: Text('Add An Event')));
+        //TODO change maybe later to integrate user types with user object? So then don't allow
+        //actual passing out of initialUserTypes from UserBloc
+        if (widget._userBloc.initialUserTypes.contains(UserTypes.Admin)) {
+          entries.add(
+              PopupMenuItem(value: 'admin', child: Text('Administration')));
+        }
+        if (widget._userBloc.initialUserTypes.contains(UserTypes.E_Board)) {
+          entries.add(
+              PopupMenuItem(value: 'e-board', child: Text('E-Board Tasks')));
+        }
+        if (widget._userBloc.initialUserTypes.contains(UserTypes.Admin) ||
+            widget._userBloc.initialUserTypes.contains(UserTypes.E_Board)) {
+          entries.add(PopupMenuItem(value: 'add', child: Text('Add An Event')));
+        }
+        entries.add(PopupMenuItem(
+            value: 'organizations', child: Text('Organizations')));
         entries.add(PopupMenuItem(value: 'search', child: Text('Search')));
+        entries
+            .add(PopupMenuItem(value: 'favorites', child: Text('Favorites')));
         entries.add(PopupMenuItem(value: 'log out', child: Text('Log Out')));
         return entries;
       },
@@ -56,7 +76,7 @@ class _HomePageState extends State<HomePage> {
             context,
             MaterialPageRoute(
               builder: (BuildContext context) =>
-                  AddPage(eventListProvider: _eventListProvider),
+                  AddPage(eventListProvider: _eventBloc.eventListProvider),
             ),
           );
         } else if (value == 'search') {
@@ -66,12 +86,37 @@ class _HomePageState extends State<HomePage> {
               builder: (BuildContext context) => SearchPage(
                     searchBloc: _searchBloc,
                     favoriteBloc: _favoriteBloc,
+                    eventBloc: _eventBloc,
                   ),
             ),
           );
         } else if (value == 'log out') {
           widget._userBloc.logout();
           Navigator.pushReplacementNamed(context, '/login');
+        } else if (value == 'favorites') {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (BuildContext context) => FavoritesPage(
+                    favoriteBloc: _favoriteBloc,
+                    eventBloc: _eventBloc,
+                  ),
+            ),
+          );
+        } else if (value == 'organizations') {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (BuildContext context) => OrganizationPage(),
+            ),
+          );
+        } else if (value == 'admin') {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (BuildContext context) => AdminPage(),
+            ),
+          );
         }
       },
     );
@@ -139,7 +184,7 @@ class _HomePageState extends State<HomePage> {
                     MaterialPageRoute(builder: (BuildContext context) {
                       return FilterPage(
                           searchBloc: _searchBloc,
-                          eventListProvider: _eventListProvider,
+                          eventListProvider: _eventBloc.eventListProvider,
                           viewDay: dateState.day);
                     }),
                   );
@@ -189,7 +234,13 @@ class _HomePageState extends State<HomePage> {
 
   Center _buildStartupView() {
     return Center(
-        child: Text('welcome to njit event planner!\n choose a view to begin'));
+      child: Column(
+        children: <Widget>[
+          Text('welcome to njit event planner!\n choose a view to begin'),
+          Image.asset('images/welcome.png'),
+        ],
+      ),
+    );
   }
 
   void _setDate(int page) {
@@ -220,14 +271,15 @@ class _HomePageState extends State<HomePage> {
     super.initState();
 
     DateTime now = DateTime.now();
-    _eventListProvider = EventListProvider();
-    _eventBloc = EventBloc(eventListProvider: _eventListProvider);
+    print('in init state of home!');
+    _favoriteBloc = FavoriteBloc(
+        ucid: widget._userBloc.ucid,
+        initialFavoriteIds: widget._userBloc.initialFavoriteIds);
+    _eventBloc = EventBloc(favoriteProvider: _favoriteBloc.favoriteProvider);
     _dateBloc = DateBloc(
       initialDay: DateTime(now.year, now.month, now.day),
     );
-    _searchBloc =
-        SearchBloc(searchEvents: true, eventListProvider: _eventListProvider);
-    _favoriteBloc = FavoriteBloc(eventListProvider: _eventListProvider);
+    _searchBloc = SearchBloc(eventListProvider: _eventBloc.eventListProvider);
     _view = null;
     //make it some ridiculously large number to allow scrolling both directions
     int initialPage = 20000;

@@ -48,6 +48,12 @@ class _AddPageState extends State<AddPage> {
     return TextFormField(
       decoration: InputDecoration(
         labelText: 'Event Title',
+        labelStyle: TextStyle(
+            color: Colors.black,
+            fontWeight: FontWeight.w600),
+        filled: true,
+        fillColor: Color(0xffffff00),
+        border: InputBorder.none,
       ),
       validator: _titleValidator,
       initialValue: initVal,
@@ -67,8 +73,15 @@ class _AddPageState extends State<AddPage> {
       initVal = state.organization;
     }
     return TextFormField(
+      style: TextStyle(color: Colors.white),
       decoration: InputDecoration(
         labelText: 'Event Organization',
+        labelStyle: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w600),
+        filled: true,
+        fillColor: Color(0xff0200ff),
+        border: InputBorder.none,
       ),
       initialValue: initVal,
       validator: _organizationValidator,
@@ -90,6 +103,12 @@ class _AddPageState extends State<AddPage> {
     return TextFormField(
       decoration: InputDecoration(
         labelText: 'Event Location',
+        labelStyle: TextStyle(
+            color: Colors.black,
+            fontWeight: FontWeight.w600),
+        filled: true,
+        fillColor: Color(0xff02d100),
+        border: InputBorder.none,
       ),
       initialValue: initVal,
       validator: _locationValidator,
@@ -146,6 +165,12 @@ class _AddPageState extends State<AddPage> {
       maxLines: 5,
       decoration: InputDecoration(
         labelText: 'Event Description',
+        labelStyle: TextStyle(
+            color: Colors.black,
+            fontWeight: FontWeight.w600),
+        filled: true,
+        fillColor: Color(0xffffa500),
+        border: InputBorder.none,
       ),
       initialValue: initVal,
       validator: _descriptionValidator,
@@ -191,7 +216,6 @@ class _AddPageState extends State<AddPage> {
   }
 
   DropDownButtonFormField _buildCategoryField(AddFormState state) {
-
     String initVal = '';
     if (state is FormInitial) {
       initVal = state.category;
@@ -202,7 +226,7 @@ class _AddPageState extends State<AddPage> {
     }
 
     return DropDownButtonFormField(
-      hint: '[ Event Category ]',
+      hint: 'Event Category',
       items: _dropdownItems,
       initialValue: initVal,
       onChanged: (String value) {},
@@ -249,6 +273,8 @@ class _AddPageState extends State<AddPage> {
             child: Form(
               key: _formKey,
               child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: <Widget>[
                   _buildTitleField(state),
                   SizedBox(height: 10.0),
@@ -284,9 +310,24 @@ class _AddPageState extends State<AddPage> {
     _titleValidator = initialState.titleValidator;
     _organizationValidator = initialState.organizationValidator;
     _dropdownItems = List<DropdownMenuItem<String>>();
-    CategoryHelper.categoryFrom.forEach((String string, Category category) {
-      _dropdownItems.add(DropdownMenuItem(value: string, child: Text(string)));
-    });
+    CategoryHelper.categoryFrom.forEach(
+      (String string, Category category) {
+        _dropdownItems.add(
+          DropdownMenuItem(
+            value: string,
+            child: Padding(
+              padding: EdgeInsets.only(left: 10),
+              child: Text(
+                string,
+                style: TextStyle(
+                    color: Colors.black,
+                    fontWeight: FontWeight.w600),
+              ),
+            ),
+          ),
+        );
+      },
+    );
     _navigationListener = _addEventBloc.formSubmissions.listen((dynamic state) {
       if (state is FormSubmitAlternative) {
         _suggestEditingSimilarEvents(
@@ -303,8 +344,15 @@ class _AddPageState extends State<AddPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.yellow,
-        title: Text('Add An Event', style: TextStyle(color: Colors.grey[700])),
+        centerTitle: true,
+        iconTheme: IconThemeData(
+          color: Colors.black,
+        ),
+        backgroundColor: Colors.white,
+        title: Text(
+          'Add An Event',
+          style: TextStyle(color: Colors.black),
+        ),
       ),
       body: _buildAddForm(context),
     );

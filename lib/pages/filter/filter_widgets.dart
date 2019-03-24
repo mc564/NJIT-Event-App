@@ -5,9 +5,12 @@ import 'package:flutter/material.dart';
 
 class RelevanceOrDateSortButton extends StatefulWidget {
   final Function _onSortChanged;
+  final Sort _initialSort;
 
-  RelevanceOrDateSortButton({Function onSortChanged})
-      : _onSortChanged = onSortChanged;
+  RelevanceOrDateSortButton(
+      {Function onSortChanged, @required Sort initialSort})
+      : _onSortChanged = onSortChanged,
+        _initialSort = initialSort;
 
   @override
   State<StatefulWidget> createState() {
@@ -16,11 +19,34 @@ class RelevanceOrDateSortButton extends StatefulWidget {
 }
 
 class _RelevanceOrDateSortButtonState extends State<RelevanceOrDateSortButton> {
-  bool _dateSortOrder = true;
-  Color _dateButtonColor = Colors.blue;
-  Color _dateTextColor = Colors.white;
-  Color _relevanceButtonColor = Colors.white;
-  Color _relevanceTextColor = Colors.blue;
+  Color _dateButtonColor;
+  Color _dateTextColor;
+  Color _relevanceButtonColor;
+  Color _relevanceTextColor;
+
+  _changeButtonColors(Sort sortType) {
+    if (sortType == Sort.Date) {
+      _relevanceButtonColor = Colors.white;
+      _relevanceTextColor = Colors.blue;
+      _dateButtonColor = Colors.blue;
+      _dateTextColor = Colors.white;
+    } else {
+      _relevanceButtonColor = Colors.blue;
+      _relevanceTextColor = Colors.white;
+      _dateButtonColor = Colors.white;
+      _dateTextColor = Colors.blue;
+    }
+  }
+
+  _changeToDateSort() {
+    widget._onSortChanged(Sort.Date);
+    _changeButtonColors(Sort.Date);
+  }
+
+  _changeToRelevanceSort() {
+    widget._onSortChanged(Sort.Relevance);
+    _changeButtonColors(Sort.Relevance);
+  }
 
   FlatButton _buildDateButton() {
     return FlatButton(
@@ -28,12 +54,7 @@ class _RelevanceOrDateSortButtonState extends State<RelevanceOrDateSortButton> {
       onPressed: () {
         if (_dateButtonColor == Colors.white) {
           setState(() {
-            _dateSortOrder = true;
-            widget._onSortChanged(Sort.Date);
-            _relevanceButtonColor = Colors.white;
-            _relevanceTextColor = Colors.blue;
-            _dateButtonColor = Colors.blue;
-            _dateTextColor = Colors.white;
+            _changeToDateSort();
           });
         }
       },
@@ -58,12 +79,7 @@ class _RelevanceOrDateSortButtonState extends State<RelevanceOrDateSortButton> {
       onPressed: () {
         if (_relevanceButtonColor == Colors.white) {
           setState(() {
-            _dateSortOrder = false;
-            widget._onSortChanged(Sort.Relevance);
-            _relevanceButtonColor = Colors.blue;
-            _relevanceTextColor = Colors.white;
-            _dateButtonColor = Colors.white;
-            _dateTextColor = Colors.blue;
+            _changeToRelevanceSort();
           });
         }
       },
@@ -80,6 +96,16 @@ class _RelevanceOrDateSortButtonState extends State<RelevanceOrDateSortButton> {
       color: _relevanceButtonColor,
       textColor: _relevanceTextColor,
     );
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget._initialSort == Sort.Date) {
+      _changeButtonColors(Sort.Date);
+    } else {
+      _changeButtonColors(Sort.Relevance);
+    }
   }
 
   @override

@@ -12,6 +12,7 @@ class Event {
   final String organization;
   final Category category;
   final String description;
+  bool favorited;
 
   Event({
     @required this.eventId,
@@ -23,6 +24,7 @@ class Event {
     @required this.organization,
     @required this.category,
     @required this.description,
+    @required this.favorited,
   });
 
   @override

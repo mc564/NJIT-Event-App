@@ -53,12 +53,12 @@ class AddEventProvider {
   }
 
   void setStartTime(DateTime startTime) {
-    print('in add event provider, set start date to : '+startTime.toString());
+    print('in add event provider, set start date to : ' + startTime.toString());
     _startDateTime = startTime;
   }
 
   void setEndTime(DateTime endTime) {
-    print('in add event provider, set end date to : '+startTime.toString());
+    print('in add event provider, set end date to : ' + startTime.toString());
     _endDateTime = endTime;
   }
 
@@ -111,19 +111,19 @@ class AddEventProvider {
 
   Event getEventFromFormData() {
     print('getting event from data to add to db');
-    print('start: '+startTime.toString()+" end: "+endTime.toString());
+    print('start: ' + startTime.toString() + " end: " + endTime.toString());
     Uuid idGen = Uuid();
     Event event = Event(
-      eventId: idGen.v4(),
-      location: _location,
-      title: _title,
-      startTime: _startDateTime,
-      endTime: _endDateTime,
-      organization: _organization,
-      description: _description,
-      category: CategoryHelper.getCategory(_category),
-      locationCode: LocationHelper.getLocationCode(_location),
-    );
+        eventId: idGen.v4(),
+        location: _location,
+        title: _title,
+        startTime: _startDateTime,
+        endTime: _endDateTime,
+        organization: _organization,
+        description: _description,
+        category: CategoryHelper.getCategory(_category),
+        locationCode: LocationHelper.getLocationCode(_location),
+        favorited: false);
     return event;
   }
 }

@@ -11,31 +11,45 @@ class DropDownButtonFormField extends FormField<String> {
       FormFieldValidator<String> validator,
       bool autovalidate = false})
       : super(
-            onSaved: onSaved,
-            validator: validator,
-            initialValue: initialValue,
-            autovalidate: autovalidate,
-            builder: (FormFieldState<String> state) {
-              return Column(
-                children: <Widget>[
-                  DropdownButton(
-                    hint: Text(hint),
-                    items: items,
-                    onChanged: (value) {
-                      state.didChange(value);
-                      onChanged(value);
-                    },
-                    value: state.value,
+          onSaved: onSaved,
+          validator: validator,
+          initialValue: initialValue,
+          autovalidate: autovalidate,
+          builder: (FormFieldState<String> state) {
+            return Column(
+              children: <Widget>[
+                Container(
+                  color: Color(0xffff0700),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton(
+                      hint: Padding(
+                        padding: EdgeInsets.only(left: 10),
+                        child: Text(
+                          hint,
+                          style: TextStyle(
+                              color: Colors.white, fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                      items: items,
+                      isExpanded: true,
+                      onChanged: (value) {
+                        state.didChange(value);
+                        onChanged(value);
+                      },
+                      value: state.value,
+                    ),
                   ),
-                  state.hasError
-                      ? Text(
-                          state.errorText,
-                          style: TextStyle(color: Colors.red),
-                        )
-                      : Container(),
-                ],
-              );
-            });
+                ),
+                state.hasError
+                    ? Text(
+                        state.errorText,
+                        style: TextStyle(color: Colors.red),
+                      )
+                    : Container(),
+              ],
+            );
+          },
+        );
 }
 
 class DateRangePicker extends StatefulWidget {
@@ -127,11 +141,11 @@ class DateTimePicker extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: <Widget>[
-          Icon(Icons.timer, size: 25.0, color: Colors.yellow),
+          Icon(Icons.timer, size: 25.0, color: Colors.black),
           SizedBox(width: 5),
           Text(
             _label,
-            style: TextStyle(fontSize: 14.0),
+            style: TextStyle(fontSize: 14.0, fontWeight: FontWeight.w600),
           ),
           SizedBox(width: 10),
           DatePickerButton(_dateTime, (DateTime date) {
@@ -217,9 +231,7 @@ class TimePickerButton extends StatelessWidget {
       child: Text(
         formattedTime(),
         style: TextStyle(
-          color: Colors.black,
-          fontSize: 14.0,
-        ),
+            color: Colors.black, fontSize: 14.0, fontWeight: FontWeight.w600),
       ),
     );
   }
@@ -251,9 +263,7 @@ class DatePickerButton extends StatelessWidget {
       child: Text(
         formatter.format(_date),
         style: TextStyle(
-          color: Colors.black,
-          fontSize: 14.0,
-        ),
+            color: Colors.black, fontSize: 14.0, fontWeight: FontWeight.w600),
       ),
     );
   }

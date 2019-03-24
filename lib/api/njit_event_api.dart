@@ -54,6 +54,7 @@ class NJITEventAPI {
       endTime: DateTime.parse(json['endDateTime']),
       location: clean(json['location']),
       locationCode: LocationHelper.getLocationCode(clean(json['location'])),
+      favorited: false,
     );
   }
 
@@ -65,7 +66,7 @@ class NJITEventAPI {
     });
 
     url = url.substring(0, url.length - 1);
-    print('event api url: '+url);
+    print('event api url: ' + url);
     return http.get(url).catchError((error) {
       throw Exception("Error in EventAPI class: " + error.toString());
     });
@@ -114,6 +115,49 @@ class NJITEventAPI {
       return fetchedEventList;
     }).catchError((error) {
       throw Exception("Error in EventAPI class: " + error.toString());
+    });
+  }
+
+  Future<Event> getEventWithId(String eventId) {
+    Map<String, String> args = {
+      'eventid': eventId,
+    };
+
+    return apiCall(args).then((http.Response response) {
+      final Iterable resultData = json.decode(response.body);
+      if (resultData != null && resultData.length > 0) {
+        return getEvent(resultData.first);
+      } else {
+        return null;
+      }
+    }).catchError((error) {
+      throw Exception("Error in EventAPI class: " + error.toString());
+    });
+  }
+
+  //bulk get events wiht ids
+  Future<List<Event>> getEventsWithIds(List<String> eventIds) async {
+    List<Event> fetchedEventList = [];
+    if (eventIds == null || eventIds.length == 0) return fetchedEventList;
+
+    String ids = '';
+    for (String id in eventIds) {
+      ids += id + ",";
+    }
+    Map<String, String> args = {
+      'eventids': ids,
+    };
+
+    return apiCall(args).then((http.Response response) {
+      final Iterable resultData = json.decode(response.body);
+
+      resultData.forEach((eventData) {
+        fetchedEventList.add(getEvent(eventData));
+      });
+      return fetchedEventList;
+    }).catchError((error) {
+      throw Exception("Error in EventAPI class, getEventsWithIds method: " +
+          error.toString());
     });
   }
 }
