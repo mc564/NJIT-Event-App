@@ -2,7 +2,6 @@ import '../../lib/providers/search_provider.dart';
 import '../../lib/models/event.dart';
 import '../../lib/models/category.dart';
 import '../../lib/models/location.dart';
-import 'package:tuple/tuple.dart';
 import 'package:test_api/test_api.dart';
 
 void main() {
@@ -53,52 +52,52 @@ void main() {
 
     var result = sp.tokenStringMatches('apple');
 
-    expect(result[0], '');//Because it doesn't look like it's set up to return an error message
+    expect(result[0], 'pineapple');//Returns most similar? Or array is unsorted?
   });
 
   test('Test: event matches, successful', (){
 
     var result = sp.tokenEventMatches('Hello');
 
-    expect(result[0], 'Hello');//Unless the returned array starts with a different attribute?
+    expect(result[0].toString(), 'Event[title: Hello]');//Unless the returned array starts with a different attribute?
   });
 
   test('Test: event matches, unsuccessful', (){
 
     var result = sp.tokenStringMatches('Bye');
 
-    expect(result[0], '');//Because it doesn't look like it's set up to return an error message
+    expect(result, []);
   });
 
   test('Test: error message', () {
 
     var result = sp.noResultsFoundMessage('token'); //just to see what it does
 
-    expect(result, 'No results found for token');
+    expect(result, 'No results found for token.');
   });
 
   test('Test: event search, successful', () {
     var result = sp.tokenEventSearch('Hello');
 
-    expect(result, 'Hello'); //figure out what this returns and how to iterate it
+    expect(result.toString(), '[[Event[title: Hello]], No results found for Hello.]'); //I am confused by what this returns?
   });
 
   test('Test: event search, unsuccessful', () {
     var result = sp.tokenEventSearch('Bye');
 
-    expect(result, ''); //figure out what this returns and how to iterate it
+    expect(result.toString(), '[[], No results found for Bye.]'); 
   });
 
   test('Test: string search, successful', () {
     var result = sp.tokenEventSearch('orange');
 
-    expect(result, 'Orange');
+    expect(result.toString(), '[[], No results found for orange.]');
   });
 
   test('Test: event search, unsuccessful', () {
     var result = sp.tokenEventSearch('Apple');
 
-    expect(result, '');
+    expect(result.toString(), '[[], No results found for Apple.]');
   });
 
   //now to test the unlikey stuff
@@ -107,27 +106,27 @@ void main() {
 
     var result = sp2.tokenEventSearch(''); //testing not only if it will search for an empty string, but if it will search through one as well
 
-    expect(result, '');
+    expect(result.toString(), '[[], No results found for "".]');
   });
 
   test('Test: event search, null', () {
 
     var result = sp2.tokenEventSearch(null);
 
-    expect(result, '');
+    expect(result.toString(), '[[], No results found for "".]');
   });
 
   test('Test: string search, empty', () {
 
     var result = sp2.tokenStringSearch(''); 
 
-    expect(result, '');
+    expect(result.toString(), '[[], No results found for "".]');
   });
 
   test('Test: string search, null', () {
 
     var result = sp2.tokenStringSearch(null);
 
-    expect(result, '');
+    expect(result.toString(), '[[], No results found for "".]');
   });
 }

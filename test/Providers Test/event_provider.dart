@@ -118,9 +118,9 @@ void main(){
     event.setStartTime(DateTime.parse('1969-07-20 20:18:04Z'));  //This is the moon landing.
     event.setEndTime(DateTime.parse('1969-07-21 20:18:04Z'));
     var result = event.startTime.toString();
-    expect(result, '1969-07-20 20:18:04Z');
+    expect(result, '1969-07-20 20:18:04.000Z');
     result = event.endTime.toString();
-    expect(result, '1969-07-21 20:18:04Z');
+    expect(result, '1969-07-21 20:18:04.000Z');
     event.clear();
   });
 

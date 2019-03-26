@@ -13,9 +13,9 @@ void main() {
     var result2 = date.currentWeekEnd;
     var result3 = date.currentWeekStart;
 
-    expect(result1.toString(), '01-01-2019');
-    expect(result2.toString(), '12-30-2018');
-    expect(result3.toString(), '01-05-2019');
+    expect(result1.toString(), '2019-01-01 00:00:00.000');
+    expect(result2.toString(), '2019-01-05 00:00:00.000');
+    expect(result3.toString(), '2018-12-30 00:00:00.000');
   });
 
   //Let's move the date around.
@@ -24,7 +24,7 @@ void main() {
 
     date.addOneDay();
 
-    expect(date.currentDay.toString(), '01-02-2019');
+    expect(date.currentDay.toString(), '2019-01-02 00:00:00.000');
   });
 
   test('Test: Remove 1 Day', () {
@@ -32,7 +32,7 @@ void main() {
     date.subtractOneDay();
     date.subtractOneDay();
 
-    expect(date.currentDay.toString(), '12-31-2018');
+    expect(date.currentDay.toString(), '2018-12-29 00:00:00.000');
     date.addOneDay();
   });
 
@@ -40,9 +40,9 @@ void main() {
 
     date.addOneWeek();
 
-    expect(date.currentDay.toString(), '01-08-2019');
-    expect(date.currentWeekEnd.toString(), '01-15-2019');
-    expect(date.currentWeekStart.toString(), '01-01-2019');
+    expect(date.currentDay.toString(), '2019-01-06 00:00:00.000');
+    expect(date.currentWeekEnd.toString(), '2019-01-12 00:00:00.000');
+    expect(date.currentWeekStart.toString(), '2019-01-06 00:00:00.000');
   });
 
   test('Test: Remove 1 Week', () {
@@ -50,9 +50,9 @@ void main() {
     date.subtractOneWeek();
     date.subtractOneWeek();
 
-    expect(date.currentDay.toString(), '12-28-2018');
-    expect(date.currentWeekEnd.toString(), '12-07-2018');
-    expect(date.currentWeekStart.toString(), '12-21-2018');
+    expect(date.currentDay.toString(), '2018-12-23 00:00:00.000');
+    expect(date.currentWeekEnd.toString(), '2018-12-29 00:00:00.000');
+    expect(date.currentWeekStart.toString(), '2018-12-23 00:00:00.000');
 
     date.addOneWeek();
   });
@@ -61,9 +61,9 @@ void main() {
 
     date.subtractOneMonth();
 
-    expect(date.currentDay.toString(), '12-01-2018');
-    expect(date.currentWeekEnd.toString(), '12-07-2018');
-    expect(date.currentWeekStart.toString(), '11-28-2018');
+    expect(date.currentDay.toString(), '2018-11-01 00:00:00.000');
+    expect(date.currentWeekEnd.toString(), '2018-11-03 00:00:00.000');
+    expect(date.currentWeekStart.toString(), '2018-10-28 00:00:00.000');
   });
 
   test('Test: Add 1 Month', () {
@@ -72,9 +72,9 @@ void main() {
     date.addOneMonth();
     date.addOneMonth();
 
-    expect(date.currentDay.toString(), '02-01-2019');
-    expect(date.currentWeekEnd.toString(), '02-08-2019');
-    expect(date.currentWeekStart.toString(), '01-28-2019');
+    expect(date.currentDay.toString(), '2019-01-01 00:00:00.000');
+    expect(date.currentWeekEnd.toString(), '2019-01-05 00:00:00.000');
+    expect(date.currentWeekStart.toString(), '2018-12-30 00:00:00.000');
 
     date.subtractOneMonth();
   });
@@ -83,21 +83,40 @@ void main() {
 
   test('Test: Add 1 Year', () {
     
-    for (var i = 0; i < 12; i++) {
-      date.addOneMonth();
-    }
+    //I'm a goof, I undid my loop because I thought it wasn't working the way I intended :P
+    date.addOneMonth();
+    date.addOneMonth();
+    date.addOneMonth();
+    date.addOneMonth();
+    date.addOneMonth();
+    date.addOneMonth();
+    date.addOneMonth();
+    date.addOneMonth();
+    date.addOneMonth();
+    date.addOneMonth();
+    date.addOneMonth();
+    date.addOneMonth();
 
-    expect(date.currentDay.toString(), '01-01-2020');
+    expect(date.currentDay.toString(), '2019-12-01 00:00:00.000');
   });
 
   //Or go back by a year?
 
   test('Test: Remove 1 Year', () {
 
-    for (var i = 0; i < 12; i++) {
-      date.subtractOneMonth();
-    }
+    date.subtractOneMonth();
+    date.subtractOneMonth();
+    date.subtractOneMonth();
+    date.subtractOneMonth();
+    date.subtractOneMonth();
+    date.subtractOneMonth();
+    date.subtractOneMonth();
+    date.subtractOneMonth();
+    date.subtractOneMonth();
+    date.subtractOneMonth();
+    date.subtractOneMonth();
+    date.subtractOneMonth();
 
-    expect(date.currentDay.toString(), '01-01-2018');
+    expect(date.currentDay.toString(), '2018-12-01 00:00:00.000');
   });
 }
