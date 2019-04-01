@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../blocs/favorite_bloc.dart';
-import '../../blocs/event_bloc.dart';
 import '../../models/event.dart';
 import '../../common/error_dialog.dart';
 import './favorites_widgets.dart';
@@ -8,11 +7,17 @@ import 'dart:async';
 
 class FavoritesPage extends StatefulWidget {
   final FavoriteBloc _favoriteBloc;
-  final EventBloc _eventBloc;
+  final Function _addViewToEvent;
+  final Function _canEditEvent;
 
-  FavoritesPage({@required FavoriteBloc favoriteBloc, @required EventBloc eventBloc})
+  FavoritesPage(
+      {@required FavoriteBloc favoriteBloc,
+      @required Function addViewToEvent,
+      @required Function canEditEvent})
       : _favoriteBloc = favoriteBloc,
-      _eventBloc = eventBloc;
+        _addViewToEvent = addViewToEvent,
+        _canEditEvent = canEditEvent;
+
   @override
   State<StatefulWidget> createState() {
     return _FavoritesPageState();
@@ -79,9 +84,9 @@ class _FavoritesPageState extends State<FavoritesPage> {
     return Container(
       color: Color(0xff02d100),
       alignment: Alignment.center,
-      padding:EdgeInsets.all(10),
+      padding: EdgeInsets.all(10),
       child: Stack(children: <Widget>[
-        Icon(Icons.check_circle, color:Colors.white),
+        Icon(Icons.check_circle, color: Colors.white),
         Text(
           '  means \nit\'s happening TODAY!!',
           textAlign: TextAlign.center,
@@ -97,7 +102,27 @@ class _FavoritesPageState extends State<FavoritesPage> {
 
   FavoriteGridTile _buildTile(Event event, int color) {
     return FavoriteGridTile(
-        favoriteBloc: widget._favoriteBloc, event: event, color: color, eventBloc: widget._eventBloc);
+      favoriteBloc: widget._favoriteBloc,
+      event: event,
+      color: color,
+      addViewToEvent: widget._addViewToEvent,
+      canEditEvent: widget._canEditEvent,
+    );
+  }
+
+  Container _noFavoritesTile() {
+    return Container(
+      padding: EdgeInsets.all(10),
+      alignment: Alignment.center,
+      child: Text(
+        'No Favorites For Now! :)',
+        style: TextStyle(
+          color: Colors.grey,
+          fontSize: 20,
+          fontFamily: 'Montserrat',
+        ),
+      ),
+    );
   }
 
   List<Widget> _buildDynamicPortion(List<Event> favorites) {
@@ -109,7 +134,10 @@ class _FavoritesPageState extends State<FavoritesPage> {
       0xff02d100,
     ];
     List<Widget> tiles = List<Widget>();
-    if (favorites == null) return tiles;
+    if (favorites == null || favorites.length == 0) {
+      tiles.add(_noFavoritesTile());
+      return tiles;
+    }
     for (int i = 0; i < favorites.length; i++) {
       tiles.add(_buildTile(favorites[i], colors[i % colors.length]));
     }

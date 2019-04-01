@@ -1,23 +1,25 @@
 import 'package:flutter/material.dart';
 import '../../blocs/favorite_bloc.dart';
-import '../../blocs/event_bloc.dart';
 import '../../models/event.dart';
 import '../detail/event_detail.dart';
 import 'package:intl/intl.dart';
 
 class FavoriteGridTile extends StatelessWidget {
   final FavoriteBloc _favoriteBloc;
-  final EventBloc _eventBloc;
+  final Function _addViewToEvent;
+  final Function _canEditEvent;
   final Event _event;
   final int _color;
 
   FavoriteGridTile(
       {@required FavoriteBloc favoriteBloc,
-      @required EventBloc eventBloc,
+      @required Function addViewToEvent,
+      @required Function canEditEvent,
       @required Event event,
       @required int color})
       : _favoriteBloc = favoriteBloc,
-        _eventBloc = eventBloc,
+        _addViewToEvent = addViewToEvent,
+        _canEditEvent = canEditEvent,
         _event = event,
         _color = color;
 
@@ -132,12 +134,14 @@ class FavoriteGridTile extends StatelessWidget {
                     alignment: Alignment.centerLeft,
                     icon: Icon(Icons.info),
                     onPressed: () {
-                      _eventBloc.addView(_event);
+                      _addViewToEvent(_event);
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (BuildContext context) =>
-                              EventDetailPage(_event),
+                          builder: (BuildContext context) => EventDetailPage(
+                                event: _event,
+                                canEdit: _canEditEvent,
+                              ),
                         ),
                       );
                     }),

@@ -8,12 +8,14 @@ class SearchPage extends StatefulWidget {
   final SearchBloc _searchBloc;
   final FavoriteBloc _favoriteBloc;
   final EventBloc _eventBloc;
+  final Function _canEdit;
 
   SearchPage(
-      {@required SearchBloc searchBloc, @required FavoriteBloc favoriteBloc, @required EventBloc eventBloc})
+      {@required SearchBloc searchBloc, @required FavoriteBloc favoriteBloc, @required EventBloc eventBloc, @required Function canEdit})
       : _searchBloc = searchBloc,
         _favoriteBloc = favoriteBloc,
-        _eventBloc = eventBloc;
+        _eventBloc = eventBloc,
+        _canEdit = canEdit;
 
   @override
   State<StatefulWidget> createState() {
@@ -83,7 +85,7 @@ class _SearchPageState extends State<SearchPage> {
                           itemCount: searchResult.results.length,
                           itemBuilder: (context, index) {
                             return EventListTile(searchResult.results[index],
-                                0xffFFFFFF, widget._favoriteBloc, widget._eventBloc);
+                                0xffFFFFFF, widget._favoriteBloc, widget._eventBloc, widget._canEdit);
                           }),
                 ),
               ],

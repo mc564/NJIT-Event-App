@@ -10,8 +10,8 @@ import '../models/category.dart';
 import '../models/location.dart';
 
 class NJITEventAPI {
-  var formatter = new DateFormat('yyyyMMdd');
-  final Map<String, Category> categoryOf = {
+  static DateFormat formatter = new DateFormat('yyyyMMdd');
+  static final Map<String, Category> categoryOf = {
     'Arts & Entertainment': Category.ArtsAndEntertainment,
     'Alumni & Friends': Category.AlumniAndUniversity,
     'Athletics': Category.Sports,
@@ -29,36 +29,36 @@ class NJITEventAPI {
     'Wellness': Category.HealthAndWellness,
   };
 
-  String clean(String htmlString) {
+  static String _clean(String htmlString) {
     var document = parse(htmlString);
     String parsedString = parse(document.body.text).documentElement.text;
     return parsedString;
   }
 
-  Category getCategory(String rawCategory) {
+  static Category _getCategory(String rawCategory) {
     if (categoryOf.containsKey(rawCategory))
       return categoryOf[rawCategory];
     else
       return Category.Miscellaneous;
   }
 
-  Event getEvent(dynamic json) {
-    String rawCategory = clean(json['template']);
+  static Event _getEvent(dynamic json) {
+    String rawCategory = _clean(json['template']);
     return Event(
       eventId: json['eventID'].toString(),
-      title: clean(json['title']),
-      description: clean(json['description']),
-      organization: clean(json['customFields'][0]['value']),
-      category: getCategory(rawCategory),
+      title: _clean(json['title']),
+      description: _clean(json['description']),
+      organization: _clean(json['customFields'][0]['value']),
+      category: _getCategory(rawCategory),
       startTime: DateTime.parse(json['startDateTime']),
       endTime: DateTime.parse(json['endDateTime']),
-      location: clean(json['location']),
-      locationCode: LocationHelper.getLocationCode(clean(json['location'])),
+      location: _clean(json['location']),
+      locationCode: LocationHelper.getLocationCode(_clean(json['location'])),
       favorited: false,
     );
   }
 
-  Future<http.Response> apiCall(Map<String, String> args) {
+  static Future<http.Response> _apiCall(Map<String, String> args) {
     String url = 'http://25livepub.collegenet.com/calendars/NJIT_EVENTS.json?';
 
     args.forEach((String key, String val) {
@@ -72,18 +72,18 @@ class NJITEventAPI {
     });
   }
 
-  Future<List<Event>> eventsOnDay(DateTime startDay) async {
+  static Future<List<Event>> eventsOnDay(DateTime startDay) async {
     DateTime realStart = DateTime(startDay.year, startDay.month, startDay.day);
     Map<String, String> args = {
       'startdate': formatter.format(realStart),
       'months': '0',
     };
-    return apiCall(args).then((http.Response response) {
+    return _apiCall(args).then((http.Response response) {
       final Iterable resultData = json.decode(response.body);
 
       List<Event> fetchedEventList = [];
       resultData.forEach((eventData) {
-        fetchedEventList.add(getEvent(eventData));
+        fetchedEventList.add(_getEvent(eventData));
       });
       print("api got " + resultData.length.toString() + " results ON DAY");
       return fetchedEventList;
@@ -92,7 +92,7 @@ class NJITEventAPI {
     });
   }
 
-  Future<List<Event>> eventsBetween(DateTime start, DateTime end) {
+  static Future<List<Event>> eventsBetween(DateTime start, DateTime end) {
     int days = DateTime(end.year, end.month, end.day)
             .difference(DateTime(start.year, start.month, start.day))
             .inDays +
@@ -104,12 +104,12 @@ class NJITEventAPI {
       'events': '1000'
     };
 
-    return apiCall(args).then((http.Response response) {
+    return _apiCall(args).then((http.Response response) {
       final Iterable resultData = json.decode(response.body);
 
       List<Event> fetchedEventList = [];
       resultData.forEach((eventData) {
-        fetchedEventList.add(getEvent(eventData));
+        fetchedEventList.add(_getEvent(eventData));
       });
       print("api got " + resultData.length.toString() + " results BETWEEN");
       return fetchedEventList;
@@ -118,15 +118,15 @@ class NJITEventAPI {
     });
   }
 
-  Future<Event> getEventWithId(String eventId) {
+  static Future<Event> getEventWithId(String eventId) {
     Map<String, String> args = {
       'eventid': eventId,
     };
 
-    return apiCall(args).then((http.Response response) {
+    return _apiCall(args).then((http.Response response) {
       final Iterable resultData = json.decode(response.body);
       if (resultData != null && resultData.length > 0) {
-        return getEvent(resultData.first);
+        return _getEvent(resultData.first);
       } else {
         return null;
       }
@@ -135,8 +135,8 @@ class NJITEventAPI {
     });
   }
 
-  //bulk get events wiht ids
-  Future<List<Event>> getEventsWithIds(List<String> eventIds) async {
+  //bulk get events with ids
+  static Future<List<Event>> getEventsWithIds(List<String> eventIds) async {
     List<Event> fetchedEventList = [];
     if (eventIds == null || eventIds.length == 0) return fetchedEventList;
 
@@ -148,11 +148,11 @@ class NJITEventAPI {
       'eventids': ids,
     };
 
-    return apiCall(args).then((http.Response response) {
+    return _apiCall(args).then((http.Response response) {
       final Iterable resultData = json.decode(response.body);
 
       resultData.forEach((eventData) {
-        fetchedEventList.add(getEvent(eventData));
+        fetchedEventList.add(_getEvent(eventData));
       });
       return fetchedEventList;
     }).catchError((error) {

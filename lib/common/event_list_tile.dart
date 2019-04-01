@@ -11,8 +11,10 @@ class EventListTile extends StatefulWidget {
   final int _color;
   final FavoriteBloc _favoriteBloc;
   final EventBloc _eventBloc;
+  final Function _canEdit;
 
-  EventListTile(this._event, this._color, this._favoriteBloc, this._eventBloc);
+  EventListTile(this._event, this._color, this._favoriteBloc, this._eventBloc,
+      this._canEdit);
 
   @override
   State<StatefulWidget> createState() {
@@ -109,9 +111,12 @@ class _EventListTileState extends State<EventListTile> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                          maintainState: false,
-                          builder: (BuildContext context) =>
-                              EventDetailPage(widget._event)),
+                        maintainState: false,
+                        builder: (BuildContext context) => EventDetailPage(
+                              event: widget._event,
+                              canEdit: widget._canEdit,
+                            ),
+                      ),
                     );
                   }),
             ],

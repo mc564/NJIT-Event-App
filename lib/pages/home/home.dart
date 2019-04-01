@@ -5,6 +5,8 @@ import '../../blocs/event_bloc.dart';
 import '../../blocs/search_bloc.dart';
 import '../../blocs/favorite_bloc.dart';
 import '../../blocs/user_bloc.dart';
+import '../../blocs/message_bloc.dart';
+import '../../blocs/organization_bloc.dart';
 
 import './home_widgets.dart';
 
@@ -17,6 +19,7 @@ import '../search/search.dart';
 import '../favorites/favorites.dart';
 import '../organization/organization.dart';
 import '../admin/admin.dart';
+import '../message/message.dart';
 
 import '../../models/user.dart';
 
@@ -24,7 +27,7 @@ enum View { daily, weekly, monthly }
 
 class HomePage extends StatefulWidget {
   final UserBloc _userBloc;
-
+//problems can arise when redirect to home page
   HomePage({@required UserBloc userBloc}) : _userBloc = userBloc;
 
   @override
@@ -38,6 +41,8 @@ class _HomePageState extends State<HomePage> {
   DateBloc _dateBloc;
   SearchBloc _searchBloc;
   FavoriteBloc _favoriteBloc;
+  MessageBloc _messageBloc;
+  OrganizationBloc _organizationBloc;
   PageController _pageController;
   int _prevPage;
   View _view;
@@ -48,18 +53,12 @@ class _HomePageState extends State<HomePage> {
       icon: Icon(Icons.dehaze, color: Colors.black),
       itemBuilder: (BuildContext context) {
         List<PopupMenuEntry> entries = List<PopupMenuEntry>();
-        //TODO change maybe later to integrate user types with user object? So then don't allow
-        //actual passing out of initialUserTypes from UserBloc
-        if (widget._userBloc.initialUserTypes.contains(UserTypes.Admin)) {
+        if (widget._userBloc.userTypes.contains(UserTypes.Admin)) {
           entries.add(
               PopupMenuItem(value: 'admin', child: Text('Administration')));
         }
-        if (widget._userBloc.initialUserTypes.contains(UserTypes.E_Board)) {
-          entries.add(
-              PopupMenuItem(value: 'e-board', child: Text('E-Board Tasks')));
-        }
-        if (widget._userBloc.initialUserTypes.contains(UserTypes.Admin) ||
-            widget._userBloc.initialUserTypes.contains(UserTypes.E_Board)) {
+        if (widget._userBloc.userTypes.contains(UserTypes.Admin) ||
+            widget._userBloc.userTypes.contains(UserTypes.E_Board)) {
           entries.add(PopupMenuItem(value: 'add', child: Text('Add An Event')));
         }
         entries.add(PopupMenuItem(
@@ -67,6 +66,7 @@ class _HomePageState extends State<HomePage> {
         entries.add(PopupMenuItem(value: 'search', child: Text('Search')));
         entries
             .add(PopupMenuItem(value: 'favorites', child: Text('Favorites')));
+        entries.add(PopupMenuItem(value: 'messages', child: Text('Messages')));
         entries.add(PopupMenuItem(value: 'log out', child: Text('Log Out')));
         return entries;
       },
@@ -75,8 +75,13 @@ class _HomePageState extends State<HomePage> {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (BuildContext context) =>
-                  AddPage(eventListProvider: _eventBloc.eventListProvider),
+              builder: (BuildContext context) => AddPage(
+                    eventListProvider: _eventBloc.eventListProvider,
+                    orgProvider: _organizationBloc.organizationProvider,
+                    isAdmin:
+                        widget._userBloc.userTypes.contains(UserTypes.Admin),
+                    ucid: widget._userBloc.ucid,
+                  ),
             ),
           );
         } else if (value == 'search') {
@@ -87,6 +92,7 @@ class _HomePageState extends State<HomePage> {
                     searchBloc: _searchBloc,
                     favoriteBloc: _favoriteBloc,
                     eventBloc: _eventBloc,
+                    canEdit: _organizationBloc.canEdit,
                   ),
             ),
           );
@@ -99,7 +105,8 @@ class _HomePageState extends State<HomePage> {
             MaterialPageRoute(
               builder: (BuildContext context) => FavoritesPage(
                     favoriteBloc: _favoriteBloc,
-                    eventBloc: _eventBloc,
+                    addViewToEvent: _eventBloc.addView,
+                    canEditEvent: _organizationBloc.canEdit,
                   ),
             ),
           );
@@ -107,14 +114,30 @@ class _HomePageState extends State<HomePage> {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (BuildContext context) => OrganizationPage(),
+              builder: (BuildContext context) => OrganizationPage(
+                    eventBloc: _eventBloc,
+                    organizationBloc: _organizationBloc,
+                    ucid: widget._userBloc.ucid,
+                  ),
             ),
           );
         } else if (value == 'admin') {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (BuildContext context) => AdminPage(),
+              builder: (BuildContext context) => AdminPage(
+                    organizationBloc: _organizationBloc,
+                    userBloc: widget._userBloc,
+                    eventListProvider: _eventBloc.eventListProvider,
+                  ),
+            ),
+          );
+        } else if (value == 'messages') {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (BuildContext context) =>
+                  MessagePage(messageBloc: _messageBloc),
             ),
           );
         }
@@ -217,6 +240,7 @@ class _HomePageState extends State<HomePage> {
         eventBloc: _eventBloc,
         favoriteBloc: _favoriteBloc,
         day: dateState.day,
+        canEdit: _organizationBloc.canEdit,
         key: PageStorageKey<String>(DateTime.now().toString()));
   }
 
@@ -229,6 +253,7 @@ class _HomePageState extends State<HomePage> {
       eventBloc: _eventBloc,
       favoriteBloc: _favoriteBloc,
       selectedDay: state.day,
+      canEdit: _organizationBloc.canEdit,
     );
   }
 
@@ -272,14 +297,16 @@ class _HomePageState extends State<HomePage> {
 
     DateTime now = DateTime.now();
     print('in init state of home!');
-    _favoriteBloc = FavoriteBloc(
-        ucid: widget._userBloc.ucid,
-        initialFavoriteIds: widget._userBloc.initialFavoriteIds);
+    _favoriteBloc = FavoriteBloc(ucid: widget._userBloc.ucid);
     _eventBloc = EventBloc(favoriteProvider: _favoriteBloc.favoriteProvider);
     _dateBloc = DateBloc(
       initialDay: DateTime(now.year, now.month, now.day),
     );
     _searchBloc = SearchBloc(eventListProvider: _eventBloc.eventListProvider);
+    _messageBloc = MessageBloc(ucid: widget._userBloc.ucid);
+    _organizationBloc = OrganizationBloc(
+        messageProvider: _messageBloc.messageProvider,
+        userProvider: widget._userBloc.userProvider);
     _view = null;
     //make it some ridiculously large number to allow scrolling both directions
     int initialPage = 20000;
@@ -331,6 +358,8 @@ class _HomePageState extends State<HomePage> {
     _eventBloc.dispose();
     _searchBloc.dispose();
     _favoriteBloc.dispose();
+    _messageBloc.dispose();
+    _organizationBloc.dispose();
     super.dispose();
   }
 }

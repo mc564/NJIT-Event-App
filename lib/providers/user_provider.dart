@@ -2,27 +2,19 @@ import '../api/login_api.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user.dart';
 import '../api/database_event_api.dart';
+import '../models/authentication_results.dart';
 
+//TODO figure out how to make an auth token to use with the api, or something similar
 class UserProvider {
-  DatabaseEventAPI _dbAPI;
   String _authUCID;
   String _authPassword;
   User _user;
-  List<UserTypes> _initialUserTypes;
-  List<String> _initialFavoriteIds;
-  Map<String, String> _initialOrgRoles;
-
-  UserProvider() {
-    _dbAPI = DatabaseEventAPI();
-  }
+  List<UserTypes> _userTypes;
 
   String get ucid => _user.ucid;
   String get name => _user.name;
-  //all initial getters for use when logging in
-  //state changes are maintained in the respective providers
-  List<UserTypes> get initialUserTypes => _initialUserTypes;
-  List<String> get initialFavoriteIds => _initialFavoriteIds;
-  Map<String, String> get initialOrgRoles => _initialOrgRoles;
+
+  List<UserTypes> get userTypes => _userTypes;
 
   void setAuthUCID(String ucid) {
     _authUCID = ucid;
@@ -38,23 +30,24 @@ class UserProvider {
   }
 
   //allows automatic login for the same device when app reopens
-  Future<bool> autoAuthenticate() async {
+  Future<AuthenticationResults> autoAuthenticate() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     final String ucid = prefs.getString('ucid');
     final String expiryTimeString = prefs.getString('expiryTime');
     if (ucid != null) {
       //TODO also verify that expirytime has not been passed
       _user = User(name: '', ucid: ucid);
-      Map<String, dynamic> userInitialInfo = await _dbAPI.userInitialInfo(ucid);
-      _initialUserTypes = userInitialInfo['types'];
-      _initialFavoriteIds = userInitialInfo['favorites'];
-      _initialOrgRoles = userInitialInfo['organizations'];
-      return true;
+      _userTypes = await DatabaseEventAPI.userTypes(ucid);
+      if (_userTypes.contains(UserTypes.Banned)) {
+        return AuthenticationResults(authenticated: true, banned: true);
+      } else {
+        return AuthenticationResults(authenticated: true, banned: false);
+      }
     }
-    return false;
+    return AuthenticationResults(authenticated: false, banned: false);
   }
 
-  Future<bool> authenticate() async {
+  Future<AuthenticationResults> authenticate() async {
     bool verified = await LoginAPI.loginVerified(_authUCID, _authPassword);
     if (verified) {
       final SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -62,15 +55,16 @@ class UserProvider {
       //TODO get actual expiryTime..
       prefs.setString('expiryTime', 'dummyval');
       _user = User(name: '', ucid: _authUCID);
-      Map<String, dynamic> userInitialInfo = await _dbAPI.userInitialInfo(ucid);
-      _initialUserTypes = userInitialInfo['types'];
-      _initialFavoriteIds = userInitialInfo['favorites'];
-      _initialOrgRoles = userInitialInfo['organizations'];
+      _userTypes = await DatabaseEventAPI.userTypes(ucid);
       clearFormFields();
-      return true;
+      if (_userTypes.contains(UserTypes.Banned)) {
+        return AuthenticationResults(authenticated: true, banned: true);
+      } else {
+        return AuthenticationResults(authenticated: true, banned: false);
+      }
     }
     clearFormFields();
-    return false;
+    return AuthenticationResults(authenticated: false, banned: false);
   }
 
   Future<bool> logout() async {
@@ -85,5 +79,21 @@ class UserProvider {
     } catch (error) {
       return false;
     }
+  }
+
+  Future<bool> banUser(String ucid) async {
+    return DatabaseEventAPI.banUser(ucid);
+  }
+
+  Future<bool> unbanUser(String ucid) async {
+    return DatabaseEventAPI.unbanUser(ucid);
+  }
+
+  Future<List<User>> fetchBannedUsers() async {
+    return DatabaseEventAPI.fetchBannedUsers();
+  }
+
+  Future<bool> setEboardUserType(String ucid) async {
+    return DatabaseEventAPI.assignEboardMemberType(ucid);
   }
 }

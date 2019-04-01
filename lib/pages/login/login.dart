@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../blocs/user_bloc.dart';
 import '../../common/error_dialog.dart';
 import 'dart:async';
+import '../../models/authentication_results.dart';
 
 class LoginPage extends StatefulWidget {
   final UserBloc _userBloc;
@@ -50,6 +51,17 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
+  void _showBannedDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return ErrorDialog(
+            errorMsg:
+                'Sorry, you have been banned from the NJIT Event Planner App. Please contact one of our admins for further assistance.');
+      },
+    );
+  }
+
   void _showInvalidLoginDialog() {
     showDialog(
         context: context,
@@ -70,8 +82,8 @@ class _LoginPageState extends State<LoginPage> {
 
   Widget _buildLoginButton() {
     return StreamBuilder<UserState>(
-      stream: widget._userBloc.userRequests,
-      initialData: widget._userBloc.initialState,
+      stream: widget._userBloc.userAuthRequests,
+      initialData: widget._userBloc.initialAuthState,
       builder: (BuildContext context, AsyncSnapshot<UserState> snapshot) {
         UserState state = snapshot.data;
         print('new state in login is: ' + state.runtimeType.toString());
@@ -230,18 +242,22 @@ class _LoginPageState extends State<LoginPage> {
   void initState() {
     super.initState();
     _formKey = GlobalKey<FormState>();
-    _navigationListener = widget._userBloc.userRequests.listen((dynamic state) {
+    _navigationListener = widget._userBloc.userAuthRequests.listen((dynamic state) {
       if (state is UserAuthError) {
         _showErrorDialog(state);
       } else if (state is UserAuthDone) {
         UserAuthDone doneState = state;
-        if (doneState.authenticated) {
+        AuthenticationResults user = doneState.authResults;
+        if (user.authenticated && !user.banned) {
           Navigator.pushReplacementNamed(context, '/home');
+        } else if (user.authenticated && user.banned) {
+          _showBannedDialog();
         } else {
+          //rest of cases would not be authenticated
           _showInvalidLoginDialog();
         }
       } else if (state is UserAuthInitial) {
-        if (state.authenticated) {
+        if (state.authResults.authenticated && !state.authResults.banned) {
           Navigator.pushReplacementNamed(context, '/home');
         }
       }

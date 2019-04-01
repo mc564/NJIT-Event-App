@@ -3,33 +3,45 @@ import '../providers/user_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:equatable/equatable.dart';
 import '../models/user.dart';
+import '../models/authentication_results.dart';
 
 //manages user and authentication
 class UserBloc {
-  final StreamController<UserState> _userController;
+  final StreamController<UserState> _userAuthController;
+  final StreamController<UserState> _bannedUsersController;
   final UserProvider _userProvider;
-  UserState _prevState;
+  UserState _prevAuthState;
+  UserState _prevBannedState;
 
   UserBloc()
       : _userProvider = UserProvider(),
-        _userController = StreamController.broadcast(),
-        _prevState = UserAuthInitial(authenticated: false) {
-    _userController.stream.listen((UserState state) {
-      _prevState = state;
+        _userAuthController = StreamController<UserState>.broadcast(),
+        _bannedUsersController = StreamController<UserState>.broadcast(),
+        _prevAuthState = UserAuthInitial(
+            authResults:
+                AuthenticationResults(authenticated: false, banned: false)),
+        _prevBannedState = BannedUsersLoading() {
+    loadBannedUsers();
+    _userAuthController.stream.listen((UserState state) {
+      _prevAuthState = state;
+    });
+    _bannedUsersController.stream.listen((UserState state) {
+      _prevBannedState = state;
     });
   }
 
   String get name => _userProvider.name;
   String get ucid => _userProvider.ucid;
+  UserProvider get userProvider => _userProvider;
 
   //just for use upon logging in - changes to the modeled items (favorites, users, organizations etc.) are handled in their respective blocs
-  List<UserTypes> get initialUserTypes => _userProvider.initialUserTypes;
-  List<String> get initialFavoriteIds => _userProvider.initialFavoriteIds;
-  Map<String, String> get initialOrgRoles => _userProvider.initialOrgRoles;
+  List<UserTypes> get userTypes => _userProvider.userTypes;
 
-  UserState get initialState => _prevState;
+  UserState get initialAuthState => _prevAuthState;
+  UserState get initialBannedState => _prevBannedState;
 
-  Stream get userRequests => _userController.stream;
+  Stream get userAuthRequests => _userAuthController.stream;
+  Stream get bannedUsers => _bannedUsersController.stream;
 
   void setUCID(String ucid) {
     _userProvider.setAuthUCID(ucid);
@@ -42,46 +54,95 @@ class UserBloc {
   //runs once every time the program is reopened
   void autoAuthenticate() async {
     try {
-      _userController.sink.add(UserAuthLoading());
-      bool authenticated = await _userProvider.autoAuthenticate();
-      if (authenticated) {
-        _userController.sink.add(UserAuthInitial(authenticated: true));
-      } else {
-        _userController.sink.add(UserAuthInitial(authenticated: false));
-      }
+      _userAuthController.sink.add(UserAuthLoading());
+      AuthenticationResults authResults =
+          await _userProvider.autoAuthenticate();
+      _userAuthController.sink.add(UserAuthInitial(authResults: authResults));
       print('finished autoauthenticating! result is: ' +
-          authenticated.toString());
+          authResults.authenticated.toString());
     } catch (error) {
-      _userController.sink.add(UserAuthError(error: error.toString()));
+      _userAuthController.sink.add(UserAuthError(error: error.toString()));
     }
   }
 
   void authenticate() async {
     try {
-      _userController.sink.add(UserAuthLoading());
-      bool authenticated = await _userProvider.authenticate();
-      if (authenticated) {
-        _userController.sink.add(UserAuthDone(authenticated: true));
-      } else {
-        _userController.sink.add(UserAuthDone(authenticated: false));
-      }
-      print('finished authenticating! result is: ' + authenticated.toString());
+      _userAuthController.sink.add(UserAuthLoading());
+      AuthenticationResults authResults = await _userProvider.authenticate();
+      _userAuthController.sink.add(UserAuthDone(authResults: authResults));
+
+      print('finished authenticating! result is: ' +
+          authResults.authenticated.toString());
     } catch (error) {
-      _userController.sink.add(UserAuthError(error: error.toString()));
+      _userAuthController.sink.add(UserAuthError(error: error.toString()));
     }
   }
 
   void logout() async {
     try {
       _userProvider.logout();
-      _userController.sink.add(UserAuthInitial(authenticated: false));
+      _userAuthController.sink.add(
+        UserAuthInitial(
+          authResults:
+              AuthenticationResults(authenticated: false, banned: false),
+        ),
+      );
     } catch (error) {
-      _userController.sink.add(UserAuthError(error: error.toString()));
+      _userAuthController.sink.add(UserAuthError(error: error.toString()));
+    }
+  }
+
+  void banUser(String ucid) async {
+    try {
+      _bannedUsersController.sink.add(BannedUsersLoading());
+      bool successfullyBanned = await _userProvider.banUser(ucid);
+      if (!successfullyBanned) {
+        _bannedUsersController.sink
+            .add(BannedUsersError(error: 'Failed to ban user.'));
+        return;
+      }
+      List<User> bannedUsers = await _userProvider.fetchBannedUsers();
+      _bannedUsersController.sink
+          .add(BannedUsersLoaded(bannedUsers: bannedUsers));
+    } catch (error) {
+      _bannedUsersController.sink
+          .add(BannedUsersError(error: error.toString()));
+    }
+  }
+
+  void unbanUser(String ucid) async {
+    try {
+      _bannedUsersController.sink.add(BannedUsersLoading());
+      bool successfullyUnbanned = await _userProvider.unbanUser(ucid);
+      if (!successfullyUnbanned) {
+        _bannedUsersController.sink
+            .add(BannedUsersError(error: 'Failed to unban user.'));
+        return;
+      }
+      List<User> bannedUsers = await _userProvider.fetchBannedUsers();
+      _bannedUsersController.sink
+          .add(BannedUsersLoaded(bannedUsers: bannedUsers));
+    } catch (error) {
+      _bannedUsersController.sink
+          .add(BannedUsersError(error: error.toString()));
+    }
+  }
+
+  void loadBannedUsers() async {
+    try {
+      _bannedUsersController.sink.add(BannedUsersLoading());
+      List<User> bannedUsers = await _userProvider.fetchBannedUsers();
+      _bannedUsersController.sink
+          .add(BannedUsersLoaded(bannedUsers: bannedUsers));
+    } catch (error) {
+      _bannedUsersController.sink
+          .add(BannedUsersError(error: error.toString()));
     }
   }
 
   void dispose() {
-    _userController.close();
+    _userAuthController.close();
+    _bannedUsersController.close();
   }
 }
 
@@ -102,17 +163,33 @@ class UserAuthError extends UserState {
 //auth fails on startup and leads to a log in screen
 //instead of autoauthenticating successfully
 class UserAuthInitial extends UserState {
-  final bool authenticated;
-  UserAuthInitial({@required bool authenticated})
-      : authenticated = authenticated,
-        super([authenticated]);
+  final AuthenticationResults authResults;
+  UserAuthInitial({@required AuthenticationResults authResults})
+      : authResults = authResults,
+        super([authResults]);
 }
 
 class UserAuthLoading extends UserState {}
 
 class UserAuthDone extends UserState {
-  final bool authenticated;
-  UserAuthDone({@required bool authenticated})
-      : authenticated = authenticated,
-        super([authenticated]);
+  final AuthenticationResults authResults;
+  UserAuthDone({@required AuthenticationResults authResults})
+      : authResults = authResults,
+        super([authResults]);
+}
+
+class BannedUsersLoading extends UserState {}
+
+class BannedUsersLoaded extends UserState {
+  final List<User> bannedUsers;
+  BannedUsersLoaded({@required List<User> bannedUsers})
+      : bannedUsers = bannedUsers,
+        super([bannedUsers]);
+}
+
+class BannedUsersError extends UserState {
+  final String error;
+  BannedUsersError({@required String error})
+      : error = error,
+        super([error]);
 }

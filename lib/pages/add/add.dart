@@ -2,21 +2,33 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 
 import '../../models/event.dart';
-import '../../models/category.dart';
 
 import '../../common/suggestion_dialog.dart';
 import '../../common/success_dialog.dart';
 import '../../common/error_dialog.dart';
-import './add_widgets.dart';
+import '../../common/date_range_picker.dart';
+import '../../common/drop_down_button_form_field.dart';
 
 import '../../blocs/add_bloc.dart';
+
 import '../../providers/event_list_provider.dart';
+import '../../providers/organization_provider.dart';
 
 class AddPage extends StatefulWidget {
   final EventListProvider _eventListProvider;
+  final OrganizationProvider _orgProvider;
+  final String _ucid;
+  final bool _isAdmin;
 
-  AddPage({@required EventListProvider eventListProvider})
-      : _eventListProvider = eventListProvider;
+  AddPage(
+      {@required EventListProvider eventListProvider,
+      @required OrganizationProvider orgProvider,
+      @required bool isAdmin,
+      @required ucid})
+      : _eventListProvider = eventListProvider,
+        _orgProvider = orgProvider,
+        _isAdmin = isAdmin,
+        _ucid = ucid;
 
   @override
   State<StatefulWidget> createState() {
@@ -25,120 +37,78 @@ class AddPage extends StatefulWidget {
 }
 
 class _AddPageState extends State<AddPage> {
+  GlobalKey<DateRangePickerState> _dateRangePickerKey;
   StreamSubscription _navigationListener;
   AddEventBloc _addEventBloc;
   GlobalKey<FormState> _formKey;
-  Function _titleValidator;
-  Function _organizationValidator;
-  Function _categoryValidator;
-  Function _locationValidator;
-  Function _descriptionValidator;
-  List<DropdownMenuItem<String>> _dropdownItems;
+  List<DropdownMenuItem<String>> _categoryDropdownItems;
+  List<DropdownMenuItem<String>> _organizationDropdownItems;
 
-  TextFormField _buildTitleField(AddFormState state) {
+  TextFormField _buildTitleField() {
     String initVal = '';
-    if (state is FormInitial) {
-      initVal = state.title;
-    } else if (state is FormSubmitting) {
-      initVal = state.title;
-    } else if (state is FormReady) {
-      if (state.title == null) print('title is null');
-      initVal = state.title;
-    }
+
     return TextFormField(
       decoration: InputDecoration(
         labelText: 'Event Title',
-        labelStyle: TextStyle(
-            color: Colors.black,
-            fontWeight: FontWeight.w600),
+        labelStyle: TextStyle(color: Colors.black, fontWeight: FontWeight.w600),
         filled: true,
         fillColor: Color(0xffffff00),
         border: InputBorder.none,
       ),
-      validator: _titleValidator,
+      validator: _addEventBloc.titleValidator,
       initialValue: initVal,
       onSaved: (String value) {
+        print('title saved');
         _addEventBloc.setTitle(value);
       },
     );
   }
 
-  TextFormField _buildOrganizationField(AddFormState state) {
-    String initVal = '';
-    if (state is FormInitial) {
-      initVal = state.organization;
-    } else if (state is FormSubmitting) {
-      initVal = state.organization;
-    } else if (state is FormReady) {
-      initVal = state.organization;
-    }
-    return TextFormField(
-      style: TextStyle(color: Colors.white),
-      decoration: InputDecoration(
-        labelText: 'Event Organization',
-        labelStyle: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w600),
-        filled: true,
-        fillColor: Color(0xff0200ff),
-        border: InputBorder.none,
+  Theme _buildOrganizationField() {
+    return Theme(
+      data: ThemeData(
+        canvasColor: Color(0xff0200ff),
       ),
-      initialValue: initVal,
-      validator: _organizationValidator,
-      onSaved: (String value) {
-        _addEventBloc.setOrganization(value);
-      },
+      child: DropDownButtonFormField(
+        hint: 'Event Organization',
+        items: _organizationDropdownItems,
+        color: Color(0xff0200ff),
+        textColor: Colors.white,
+        onChanged: (String value) {},
+        onSaved: (String value) {
+          _addEventBloc.setOrganization(value);
+        },
+        validator: _addEventBloc.organizationValidator,
+      ),
     );
   }
 
-  TextFormField _buildLocationField(AddFormState state) {
+  TextFormField _buildLocationField() {
     String initVal = '';
-    if (state is FormInitial) {
-      initVal = state.location;
-    } else if (state is FormSubmitting) {
-      initVal = state.location;
-    } else if (state is FormReady) {
-      initVal = state.location;
-    }
+
     return TextFormField(
       decoration: InputDecoration(
         labelText: 'Event Location',
-        labelStyle: TextStyle(
-            color: Colors.black,
-            fontWeight: FontWeight.w600),
+        labelStyle: TextStyle(color: Colors.black, fontWeight: FontWeight.w600),
         filled: true,
         fillColor: Color(0xff02d100),
         border: InputBorder.none,
       ),
       initialValue: initVal,
-      validator: _locationValidator,
+      validator: _addEventBloc.locationValidator,
       onSaved: (String value) {
         _addEventBloc.setLocation(value);
       },
     );
   }
 
-  DateRangePicker _buildDateRangeField(AddFormState formState) {
-    DateTime startTime;
-    DateTime endTime;
-
-    if (formState is FormReady) {
-      startTime = formState.startDateTime;
-      endTime = formState.endDateTime;
-    } else if (formState is FormSubmitting) {
-      startTime = formState.startDateTime;
-      endTime = formState.endDateTime;
-    } else if (formState is FormInitial) {
-      startTime = formState.startDateTime;
-      endTime = formState.endDateTime;
-    } else {
-      //error, submitted, etc., so just show default date again
-      DateTime now = DateTime.now();
-      startTime = now;
-      endTime = now;
-    }
+  DateRangePicker _buildDateRangeField() {
+    DateTime now = DateTime.now();
+    DateTime startTime = now;
+    DateTime endTime = now;
 
     return DateRangePicker(
+      key: _dateRangePickerKey,
       initialStartTime: startTime,
       initialEndTime: endTime,
       onStartChanged: (DateTime start) {
@@ -152,28 +122,19 @@ class _AddPageState extends State<AddPage> {
     );
   }
 
-  TextFormField _buildDescriptionField(AddFormState state) {
+  TextFormField _buildDescriptionField() {
     String initVal = '';
-    if (state is FormInitial) {
-      initVal = state.description;
-    } else if (state is FormSubmitting) {
-      initVal = state.description;
-    } else if (state is FormReady) {
-      initVal = state.description;
-    }
     return TextFormField(
       maxLines: 5,
       decoration: InputDecoration(
         labelText: 'Event Description',
-        labelStyle: TextStyle(
-            color: Colors.black,
-            fontWeight: FontWeight.w600),
+        labelStyle: TextStyle(color: Colors.black, fontWeight: FontWeight.w600),
         filled: true,
         fillColor: Color(0xffffa500),
         border: InputBorder.none,
       ),
       initialValue: initVal,
-      validator: _descriptionValidator,
+      validator: _addEventBloc.descriptionValidator,
       onSaved: (String value) {
         _addEventBloc.setDescription(value);
       },
@@ -190,11 +151,12 @@ class _AddPageState extends State<AddPage> {
     );
   }
 
-  void _showSuccessDialog() {
+  void _showSuccessDialog(Event addedEvent) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        return SuccessDialog("Event successfully added!");
+        return SuccessDialog(
+            "Event successfully added!\n" + addedEvent.toString());
       },
     );
   }
@@ -215,25 +177,22 @@ class _AddPageState extends State<AddPage> {
     );
   }
 
-  DropDownButtonFormField _buildCategoryField(AddFormState state) {
-    String initVal = '';
-    if (state is FormInitial) {
-      initVal = state.category;
-    } else if (state is FormSubmitting) {
-      initVal = state.category;
-    } else if (state is FormReady) {
-      initVal = state.category;
-    }
-
-    return DropDownButtonFormField(
-      hint: 'Event Category',
-      items: _dropdownItems,
-      initialValue: initVal,
-      onChanged: (String value) {},
-      onSaved: (String value) {
-        _addEventBloc.setCategory(value);
-      },
-      validator: _categoryValidator,
+  Theme _buildCategoryField() {
+    return Theme(
+      data: ThemeData(
+        canvasColor: Color(0xff800000),
+      ),
+      child: DropDownButtonFormField(
+        hint: 'Event Category',
+        items: _categoryDropdownItems,
+        color: Color(0xffff0700),
+        textColor: Colors.white,
+        onChanged: (String value) {},
+        onSaved: (String value) {
+          _addEventBloc.setCategory(value);
+        },
+        validator: _addEventBloc.categoryValidator,
+      ),
     );
   }
 
@@ -243,91 +202,120 @@ class _AddPageState extends State<AddPage> {
     }
     _formKey.currentState.save();
     _addEventBloc.submitForm();
+    _formKey.currentState.reset();
+    DateTime now = DateTime.now();
+    _dateRangePickerKey.currentState.setStartAndEndTime(now, now);
   }
 
-  Widget _buildSubmitButton(AddFormState state) {
-    if (state is FormSubmitting) {
-      return Center(child: CircularProgressIndicator());
-    } else
-      return RaisedButton(
-          child: Text('Add Event'),
-          onPressed: () {
-            _addEvent();
-          });
-  }
-
-  StreamBuilder _buildAddForm(BuildContext context) {
+  Widget _buildSubmitButton() {
     return StreamBuilder<AddFormState>(
       stream: _addEventBloc.formSubmissions,
       initialData: _addEventBloc.initialState,
       builder: (BuildContext context, AsyncSnapshot<AddFormState> snapshot) {
-        print('state added to stream: ' + snapshot.data.runtimeType.toString());
         AddFormState state = snapshot.data;
-
-        return GestureDetector(
-          onTap: () {
-            FocusScope.of(context).requestFocus(FocusNode());
-          },
-          child: SingleChildScrollView(
-            padding: EdgeInsets.all(10.0),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: <Widget>[
-                  _buildTitleField(state),
-                  SizedBox(height: 10.0),
-                  _buildOrganizationField(state),
-                  SizedBox(height: 10.0),
-                  _buildCategoryField(state),
-                  SizedBox(height: 10.0),
-                  _buildLocationField(state),
-                  SizedBox(height: 10.0),
-                  _buildDescriptionField(state),
-                  _buildDateRangeField(state),
-                  SizedBox(height: 10.0),
-                  _buildSubmitButton(state),
-                  SizedBox(height: 20.0),
-                ],
-              ),
-            ),
-          ),
-        );
+        if (state is FormSubmitting) {
+          return Center(child: CircularProgressIndicator());
+        } else
+          return RaisedButton(
+              child: Text('Add Event'),
+              onPressed: () {
+                _addEvent();
+              });
       },
     );
+  }
+
+  GestureDetector _buildAddForm(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        FocusScope.of(context).requestFocus(FocusNode());
+      },
+      child: SingleChildScrollView(
+        padding: EdgeInsets.all(10.0),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: <Widget>[
+              _buildTitleField(),
+              SizedBox(height: 10.0),
+              _buildOrganizationField(),
+              SizedBox(height: 10.0),
+              _buildCategoryField(),
+              SizedBox(height: 10.0),
+              _buildLocationField(),
+              SizedBox(height: 10.0),
+              _buildDescriptionField(),
+              _buildDateRangeField(),
+              SizedBox(height: 10.0),
+              _buildSubmitButton(),
+              SizedBox(height: 20.0),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _cutShort(String s, int length) {
+    if (s.length <= length)
+      return s;
+    else
+      return s.substring(0, length + 1) + "...";
   }
 
   @override
   void initState() {
     super.initState();
-    _addEventBloc = AddEventBloc(eventListProvider: widget._eventListProvider);
+    _dateRangePickerKey = GlobalKey<DateRangePickerState>();
+    _addEventBloc = AddEventBloc(
+        eventListProvider: widget._eventListProvider,
+        orgProvider: widget._orgProvider,
+        ucid: widget._ucid,
+        isAdmin: widget._isAdmin,
+        onInitialized: () {
+          setState(() {
+            _organizationDropdownItems = List<DropdownMenuItem<String>>();
+            _addEventBloc.allSelectableOrganizations
+                .forEach((String organization) {
+              _organizationDropdownItems.add(
+                DropdownMenuItem(
+                  value: organization,
+                  child: Padding(
+                    padding: EdgeInsets.only(left: 10),
+                    child: Text(
+                      _cutShort(organization, 80),
+                      style: TextStyle(
+                          color: Colors.white, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ),
+              );
+            });
+          });
+        });
     _formKey = GlobalKey<FormState>();
-    FormInitial initialState = _addEventBloc.initialState;
-    _categoryValidator = initialState.categoryValidator;
-    _locationValidator = initialState.locationValidator;
-    _descriptionValidator = initialState.descriptionValidator;
-    _titleValidator = initialState.titleValidator;
-    _organizationValidator = initialState.organizationValidator;
-    _dropdownItems = List<DropdownMenuItem<String>>();
-    CategoryHelper.categoryFrom.forEach(
-      (String string, Category category) {
-        _dropdownItems.add(
-          DropdownMenuItem(
-            value: string,
-            child: Padding(
-              padding: EdgeInsets.only(left: 10),
-              child: Text(
-                string,
-                style: TextStyle(
-                    color: Colors.black,
-                    fontWeight: FontWeight.w600),
-              ),
+    _categoryDropdownItems = List<DropdownMenuItem<String>>();
+
+    _addEventBloc.allSelectableCategories.forEach((String category) {
+      _categoryDropdownItems.add(
+        DropdownMenuItem(
+          value: category,
+          child: Padding(
+            padding: EdgeInsets.only(left: 10),
+            child: Text(
+              category,
+              style:
+                  TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
             ),
           ),
-        );
-      },
-    );
+        ),
+      );
+    });
+
+    _organizationDropdownItems = List<DropdownMenuItem<String>>();
+
     _navigationListener = _addEventBloc.formSubmissions.listen((dynamic state) {
       if (state is FormSubmitAlternative) {
         _suggestEditingSimilarEvents(
@@ -335,7 +323,7 @@ class _AddPageState extends State<AddPage> {
       } else if (state is FormSubmitError) {
         _showErrorDialog(state);
       } else if (state is FormSubmitted) {
-        _showSuccessDialog();
+        _showSuccessDialog(state.submittedEvent);
       }
     });
   }

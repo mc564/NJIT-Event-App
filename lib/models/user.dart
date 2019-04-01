@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import '../models/event.dart';
 
-enum UserTypes { Student, Admin, E_Board, Other }
+enum UserTypes { Student, Admin, E_Board, Banned, Other }
 
 class User {
   final String name;
@@ -20,21 +19,24 @@ class UserTypeHelper {
       return "Admin";
     } else if (type == UserTypes.E_Board) {
       return "E-Board";
-    }else{
+    } else if (type == UserTypes.Banned) {
+      return "Banned";
+    } else {
       return "Other";
     }
   }
 
-  static UserTypes stringToUserType(String typeStr){
-    if(typeStr == "Student"){
+  static UserTypes stringToUserType(String typeStr) {
+    if (typeStr == "Student") {
       return UserTypes.Student;
-    }else if(typeStr == "Admin"){
+    } else if (typeStr == "Admin") {
       return UserTypes.Admin;
-    }else if(typeStr == "E-Board"){
+    } else if (typeStr == "E-Board") {
       return UserTypes.E_Board;
-    }else{
+    } else if (typeStr == "Banned") {
+      return UserTypes.Banned;
+    } else {
       return UserTypes.Other;
     }
   }
-
 }

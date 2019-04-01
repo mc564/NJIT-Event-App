@@ -7,15 +7,18 @@ import '../../blocs/favorite_bloc.dart';
 class CalendarPage extends StatelessWidget {
   final EventBloc _eventBloc;
   final FavoriteBloc _favoriteBloc;
+  final Function _canEdit;
   final DateTime _selectedDay;
 
   CalendarPage(
       {@required EventBloc eventBloc,
       @required FavoriteBloc favoriteBloc,
-      @required DateTime selectedDay})
+      @required DateTime selectedDay,
+      @required Function canEdit})
       : _eventBloc = eventBloc,
         _favoriteBloc = favoriteBloc,
-        _selectedDay = selectedDay;
+        _selectedDay = selectedDay,
+        _canEdit = canEdit;
 
   @override
   Widget build(BuildContext context) {
@@ -34,6 +37,7 @@ class CalendarPage extends StatelessWidget {
                     day: dayPressed,
                     eventBloc: _eventBloc,
                     favoriteBloc: _favoriteBloc,
+                    canEdit: _canEdit,
                     key: PageStorageKey<String>(DateTime.now().toString()));
               },
             ),

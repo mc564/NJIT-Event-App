@@ -13,19 +13,19 @@ class FavoriteBloc {
   FavoriteState _prevState;
   String _ucid;
 
-  FavoriteBloc({@required String ucid, @required List<String> initialFavoriteIds}) {
+  FavoriteBloc({@required String ucid}) {
     _ucid = ucid;
     _favoriteProvider = FavoriteProvider(ucid: _ucid);
     _favoriteErrorsController = StreamController<FavoriteState>.broadcast();
-    _prevState = FavoriteInitial();
     _favoriteController = StreamController<FavoriteState>.broadcast();
-    //initialize method to wait for favoriteprovider to get all events
-    _favoriteProvider.initialize(initialFavoriteIds).then((bool success) {
+    _prevState = FavoriteInitial();
+    _favoriteController.stream.listen((FavoriteState state) {
+      _prevState = state;
+    });
+    _favoriteProvider.initialize().then((bool success) {
       if (success) {
-        FavoriteState firstUpdate =
-            FavoritesUpdated(favorites: _favoriteProvider.allFavorites);
-        _favoriteController.sink.add(firstUpdate);
-        _prevState = firstUpdate;
+        _favoriteController.sink
+            .add(FavoritesUpdated(favorites: _favoriteProvider.allFavorites));
       }
     });
   }
@@ -46,16 +46,13 @@ class FavoriteBloc {
         rollbackFavorites: rollbackFavorites);
     _favoriteErrorsController.sink.add(errorState);
     _favoriteController.sink.add(errorState);
-    _prevState = errorState;
   }
 
   void _alertFavoriteErrorWithoutRollback(Event errorEvent, bool favorited) {
     FavoriteError errorState = FavoriteError(
-        eventId: errorEvent.eventId,
-        ucid: _ucid,
-        favorited: favorited);
+        eventId: errorEvent.eventId, ucid: _ucid, favorited: favorited);
     _favoriteErrorsController.sink.add(errorState);
-    _prevState = errorState;
+    _favoriteController.sink.add(errorState);
   }
 
   void addFavorite(Event event) async {
@@ -63,9 +60,7 @@ class FavoriteBloc {
       bool successfullyAdded = await _favoriteProvider.addFavorite(event);
       List<Event> favorites = _favoriteProvider.allFavorites;
       if (successfullyAdded) {
-        FavoritesUpdated updatedState = FavoritesUpdated(favorites: favorites);
-        _favoriteController.sink.add(updatedState);
-        _prevState = updatedState;
+        _favoriteController.sink.add(FavoritesUpdated(favorites: favorites));
       } else {
         _alertFavoriteError(event, favorites, true);
       }
@@ -79,9 +74,7 @@ class FavoriteBloc {
       bool successfullyRemoved = await _favoriteProvider.removeFavorite(event);
       List<Event> favorites = _favoriteProvider.allFavorites;
       if (successfullyRemoved) {
-        FavoritesUpdated updatedState = FavoritesUpdated(favorites: favorites);
-        _favoriteController.sink.add(updatedState);
-        _prevState = updatedState;
+        _favoriteController.sink.add(FavoritesUpdated(favorites: favorites));
       } else {
         _alertFavoriteError(event, favorites, false);
       }

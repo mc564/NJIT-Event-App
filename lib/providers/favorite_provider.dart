@@ -5,22 +5,19 @@ import '../api/database_event_api.dart';
 import '../api/njit_event_api.dart';
 
 class FavoriteProvider {
-  DatabaseEventAPI _dbAPI;
-  NJITEventAPI _njitAPI;
   String _ucid;
   List<Event> _allFavoritedEvents;
 
   FavoriteProvider({@required String ucid}) {
-    _dbAPI = DatabaseEventAPI();
-    _njitAPI = NJITEventAPI();
     _ucid = ucid;
   }
 
   //can be called by the favoriteBLOC to await initialization of the favoriteProvider events
-  Future<bool> initialize(List<String> initialFavoriteIds) async {
+  Future<bool> initialize() async {
     try {
+      List<String> initialFavoriteIds = await DatabaseEventAPI.getFavorites(_ucid);
       List<Event> favorites = await _allFavorites(initialFavoriteIds);
-      if (favorites != null && favorites.length > 0) {
+      if (favorites != null) {
         favorites
             .sort((Event e1, Event e2) => e1.startTime.compareTo(e2.startTime));
         _allFavoritedEvents = favorites;
@@ -52,7 +49,7 @@ class FavoriteProvider {
   Future<bool> addFavorite(Event event) async {
     try {
       event.favorited = true;
-      bool success = await _dbAPI.addFavorite(event.eventId, _ucid);
+      bool success = await DatabaseEventAPI.addFavorite(event.eventId, _ucid);
       if (success) {
         _allFavoritedEvents.add(event);
         _allFavoritedEvents
@@ -71,7 +68,7 @@ class FavoriteProvider {
   Future<bool> removeFavorite(Event event) async {
     try {
       event.favorited = false;
-      bool success = await _dbAPI.removeFavorite(event.eventId, _ucid);
+      bool success = await DatabaseEventAPI.removeFavorite(event.eventId, _ucid);
       if (success) {
         _allFavoritedEvents.removeWhere(
             (Event faveEvent) => faveEvent.eventId == event.eventId);
@@ -92,7 +89,6 @@ class FavoriteProvider {
       List<Event> allFavorites = List<Event>();
       List<String> dbFaveIds = List<String>();
       List<String> njitFaveIds = List<String>();
-      //change this to bulk get events with id for both apis
       for (int i = 0; i < initialFavoriteIds.length; i++) {
         String eventId = initialFavoriteIds[i];
         if (eventId.length > 20) {
@@ -101,8 +97,10 @@ class FavoriteProvider {
           njitFaveIds.add(eventId);
         }
       }
-      allFavorites.addAll(await _dbAPI.getEventsWithIds(dbFaveIds));
-      allFavorites.addAll(await _njitAPI.getEventsWithIds(njitFaveIds));
+      if (dbFaveIds.length > 0)
+        allFavorites.addAll(await DatabaseEventAPI.getEventsWithIds(dbFaveIds));
+      if (njitFaveIds.length > 0)
+        allFavorites.addAll(await NJITEventAPI.getEventsWithIds(njitFaveIds));
       return allFavorites;
     } catch (error) {
       throw Exception(

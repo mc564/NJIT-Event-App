@@ -3,6 +3,7 @@ import './pages/home/home.dart';
 import './pages/login/login.dart';
 import './blocs/user_bloc.dart';
 import 'dart:async';
+import './models/authentication_results.dart';
 
 void main() => runApp(MyApp());
 
@@ -18,28 +19,28 @@ class _MyAppState extends State<MyApp> {
   UserBloc _userBloc;
   StreamSubscription _navigationListener;
 
+  void _navigate(BuildContext context, AuthenticationResults user) {
+    _navigationListener.cancel();
+    if (user.authenticated && !user.banned) {
+      Navigator.of(context).pushReplacementNamed('/home');
+    } else {
+      Navigator.of(context).pushReplacementNamed('/login');
+    }
+  }
+
   void _initializeNavigationListener(BuildContext buildContext) {
-    _navigationListener = _userBloc.userRequests.listen((dynamic state) {
+    _navigationListener = _userBloc.userAuthRequests.listen((dynamic state) {
       if (state is UserAuthInitial) {
-        _navigationListener.cancel();
-        if (state.authenticated) {
-          Navigator.of(buildContext).pushReplacementNamed('/home');
-        } else {
-          Navigator.of(buildContext).pushReplacementNamed('/login');
-        }
+        _navigate(buildContext, state.authResults);
       } else if (state is UserAuthDone) {
-        _navigationListener.cancel();
-        if (state.authenticated) {
-          Navigator.of(buildContext).pushReplacementNamed('/home');
-        } else {
-          Navigator.of(buildContext).pushReplacementNamed('/login');
-        }
+        _navigate(buildContext, state.authResults);
       }
     });
   }
 
   @override
   void initState() {
+    print('in main initstate');
     _userBloc = UserBloc();
     _userBloc.autoAuthenticate();
 
@@ -49,6 +50,7 @@ class _MyAppState extends State<MyApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+        debugShowCheckedModeBanner: false,
         title: 'Flutter Demo',
         theme: ThemeData(
           primarySwatch: Colors.blue,

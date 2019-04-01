@@ -1,8 +1,23 @@
 import 'package:flutter/material.dart';
 import './organization_widgets.dart';
 import './register_org.dart';
+import '../../blocs/organization_bloc.dart';
+import '../../blocs/event_bloc.dart';
+import '../../models/organization.dart';
 
 class OrganizationPage extends StatefulWidget {
+  final OrganizationBloc _organizationBloc;
+  final EventBloc _eventBloc;
+  final String _ucid;
+
+  OrganizationPage(
+      {@required OrganizationBloc organizationBloc,
+      @required EventBloc eventBloc,
+      @required String ucid})
+      : _organizationBloc = organizationBloc,
+        _eventBloc = eventBloc,
+        _ucid = ucid;
+
   @override
   State<StatefulWidget> createState() {
     return _OrganizationPageState();
@@ -10,6 +25,49 @@ class OrganizationPage extends StatefulWidget {
 }
 
 class _OrganizationPageState extends State<OrganizationPage> {
+  StreamBuilder _buildOrganizationCards() {
+    return StreamBuilder<OrganizationState>(
+      stream: widget._organizationBloc.viewableOrganizations,
+      initialData: widget._organizationBloc.viewableOrgsInitialState,
+      builder:
+          (BuildContext context, AsyncSnapshot<OrganizationState> snapshot) {
+        OrganizationState state = snapshot.data;
+        if (state is OrganizationsLoading) {
+          return Center(child: CircularProgressIndicator());
+        } else if (state is OrganizationsLoaded) {
+          List<Organization> orgs = state.organizations;
+          if (orgs.length == 0)
+            return Center(child: Text('No active organizations currently!'));
+
+          List<OrganizationCard> cards = List<OrganizationCard>();
+          for (Organization org in orgs) {
+            cards.add(
+              OrganizationCard(
+                eventBloc: widget._eventBloc,
+                organizationBloc: widget._organizationBloc,
+                organization: org,
+                ucid: widget._ucid,
+              ),
+            );
+          }
+
+          return Container(
+            height: 500,
+            child: ListView.builder(
+              itemCount: cards.length,
+              itemBuilder: (BuildContext context, int index) {
+                return cards[index];
+              },
+            ),
+          );
+        } else if (state is OrganizationError) {
+          print("org error: " + state.errorMsg);
+          return Text('An error occurred!');
+        }
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -32,7 +90,6 @@ class _OrganizationPageState extends State<OrganizationPage> {
       body: Container(
         margin: EdgeInsets.all(10),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -48,7 +105,9 @@ class _OrganizationPageState extends State<OrganizationPage> {
                       context,
                       MaterialPageRoute(
                         builder: (BuildContext context) =>
-                            RegisterOrganizationPage(),
+                            RegisterOrganizationPage(
+                              organizationBloc: widget._organizationBloc,
+                            ),
                       ),
                     );
                     print('clicked');
@@ -56,10 +115,8 @@ class _OrganizationPageState extends State<OrganizationPage> {
                 ),
               ],
             ),
-            OrganizationCard(),
-            OrganizationCard(),
-            OrganizationCard(),
-            OrganizationCard(),
+            SizedBox(height: 10),
+            _buildOrganizationCards(),
           ],
         ),
       ),

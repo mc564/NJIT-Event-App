@@ -1,24 +1,26 @@
 import 'package:flutter/material.dart';
+import 'package:quiver/collection.dart';
+import 'package:intl/intl.dart';
+
 import '../api/database_event_api.dart';
 import '../api/njit_event_api.dart';
+
 import '../models/event.dart';
 import '../models/category.dart';
 import '../models/location.dart';
 import '../models/sort.dart';
 import '../models/filter.dart';
 import '../models/event_details.dart';
+import '../models/organization.dart';
+
 import './cosine_similarity_provider.dart';
 import './metrics_provider.dart';
 import './favorite_provider.dart';
-import 'package:quiver/collection.dart';
-import 'package:intl/intl.dart';
 
 //utility methods to deal with event lists, including sorting, filtering and adding events
 //TODO change everything to block fetching...
 class EventListProvider {
   _EventCache _cache;
-  NJITEventAPI _njitAPI;
-  DatabaseEventAPI _dbAPI;
   MetricsProvider _metricsProvider;
   FavoriteProvider _favoriteProvider;
   List<Category> _filterCategories;
@@ -35,8 +37,6 @@ class EventListProvider {
 
   EventListProvider({@required FavoriteProvider favoriteProvider}) {
     _cache = _EventCache();
-    _njitAPI = NJITEventAPI();
-    _dbAPI = DatabaseEventAPI();
     _metricsProvider = MetricsProvider();
     _favoriteProvider = favoriteProvider;
     _filterCategories = List<Category>();
@@ -131,7 +131,33 @@ class EventListProvider {
     }
   }
 
-//TODO try to make getEvents methods cleaner looking
+  void deleteDupEdited(List<Event> dbEvents, List<Event> apiEvents) {
+    for (Event event in dbEvents) {
+      if (event.eventId.length < 20) {
+        apiEvents
+            .removeWhere((Event event2) => event2.eventId == event.eventId);
+      }
+    }
+  }
+
+  Future<List<Event>> refetchEventsOnDay(DateTime time,
+      [bool filtered = true]) async {
+    try {
+      List<Event> events = [];
+      final List<Event> apiEvents = await NJITEventAPI.eventsOnDay(time);
+      final List<Event> dbEvents = await DatabaseEventAPI.eventsOnDay(time);
+      deleteDupEdited(dbEvents, apiEvents);
+
+      events.addAll(apiEvents);
+      events.addAll(dbEvents);
+      _cache.addList(events);
+      return await _filterAndSort(events, filtered);
+    } catch (error) {
+      throw Exception("refreshEventsOnDay failed in EventListProvider: " +
+          error.toString());
+    }
+  }
+
   Future<List<Event>> getEventsOnDay(DateTime time,
       [bool filtered = true]) async {
     print("[MODEL] getting events on day");
@@ -146,8 +172,9 @@ class EventListProvider {
       if (cacheResults != null) {
         return await _filterAndSort(cacheResults, filtered);
       }
-      final List<Event> apiEvents = await _njitAPI.eventsOnDay(time);
-      final List<Event> dbEvents = await _dbAPI.eventsOnDay(time);
+      final List<Event> apiEvents = await NJITEventAPI.eventsOnDay(time);
+      final List<Event> dbEvents = await DatabaseEventAPI.eventsOnDay(time);
+      deleteDupEdited(dbEvents, apiEvents);
       events.addAll(apiEvents);
       events.addAll(dbEvents);
       _cache.addList(events);
@@ -177,7 +204,31 @@ class EventListProvider {
     }
   }
 
-  //modify to edit cache...?..donno
+  Future<List<Event>> refetchEventsBetween(DateTime start, DateTime end,
+      [bool filtered = true]) async {
+    print("[MODEL] getting events between");
+    List<Event> events = [];
+    try {
+      final List<Event> apiEvents =
+          await NJITEventAPI.eventsBetween(start, end);
+      final List<Event> dbEvents =
+          await DatabaseEventAPI.eventsBetween(start, end);
+      deleteDupEdited(dbEvents, apiEvents);
+      events.addAll(apiEvents);
+      events.addAll(dbEvents);
+      Map<DateTime, List<Event>> toAddToCache = splitEventsByDay(events);
+      for (List<Event> eventsOnOneDay in toAddToCache.values) {
+        _cache.addList(eventsOnOneDay);
+      }
+
+      return await _filterAndSort(events, filtered);
+    } catch (error) {
+      throw Exception(
+          "Retrieving events from either NJIT events api or database failed: " +
+              error.toString());
+    }
+  }
+
   Future<List<Event>> getEventsBetween(DateTime start, DateTime end,
       [bool filtered = true]) async {
     print("[MODEL] getting events between");
@@ -207,8 +258,11 @@ class EventListProvider {
         events = [];
       }
 
-      final List<Event> apiEvents = await _njitAPI.eventsBetween(start, end);
-      final List<Event> dbEvents = await _dbAPI.eventsBetween(start, end);
+      final List<Event> apiEvents =
+          await NJITEventAPI.eventsBetween(start, end);
+      final List<Event> dbEvents =
+          await DatabaseEventAPI.eventsBetween(start, end);
+      deleteDupEdited(dbEvents, apiEvents);
       events.addAll(apiEvents);
       events.addAll(dbEvents);
       Map<DateTime, List<Event>> toAddToCache = splitEventsByDay(events);
@@ -224,6 +278,39 @@ class EventListProvider {
     }
   }
 
+  void _filterForOrganization(List<Event> toFilter, Organization org) {
+    toFilter.removeWhere((Event event) => event.organization != org.name);
+  }
+
+  //basically gets events 2 weeks before today and also events 2 weeks after today
+  //done in 2 requests because can't get them all in 1 request at one time.
+  //and then filters for events by organization org
+  Future<RecentEvents> getRecentEvents(Organization org) async {
+    DateTime now = DateTime.now();
+    DateTime earlierStart = now.subtract(Duration(days: 14));
+    DateTime laterEnd = now.add(Duration(days: 14));
+    List<Event> pastEvents = await getEventsBetween(
+        earlierStart, now.subtract(Duration(days: 1)), false);
+    List<Event> upcomingEvents = await getEventsBetween(now, laterEnd, false);
+    _filterForOrganization(pastEvents, org);
+    _filterForOrganization(upcomingEvents, org);
+    return RecentEvents(pastEvents: pastEvents, upcomingEvents: upcomingEvents);
+  }
+
+  Future<RecentEvents> refetchRecentEvents(Organization org) async {
+    DateTime now = DateTime.now();
+    DateTime earlierStart = now.subtract(Duration(days: 14));
+    DateTime laterEnd = now.add(Duration(days: 14));
+    List<Event> pastEvents = await refetchEventsBetween(
+        earlierStart, now.subtract(Duration(days: 1)), false);
+    List<Event> upcomingEvents =
+        await refetchEventsBetween(now, laterEnd, false);
+    _filterForOrganization(pastEvents, org);
+    _filterForOrganization(upcomingEvents, org);
+    return RecentEvents(pastEvents: pastEvents, upcomingEvents: upcomingEvents);
+  }
+
+  //TODO change this for use with admins and eboard members when adding
   Future<List<Event>> getSimilarEvents(Event event) async {
     print("[MODEL] getting similar events");
 
@@ -249,7 +336,7 @@ class EventListProvider {
 
   Future<bool> addEvent(Event event) {
     print("[MODEL] adding event");
-    return _dbAPI.addEvent(event).then((bool success) {
+    return DatabaseEventAPI.addEvent(event).then((bool success) {
       if (success) {
         return true;
       } else {

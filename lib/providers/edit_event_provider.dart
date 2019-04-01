@@ -1,10 +1,13 @@
+import '../api/database_event_api.dart';
 import '../models/event.dart';
-import 'package:uuid/uuid.dart';
 import '../models/location.dart';
 import '../models/category.dart';
 
-class AddEventProvider {
+import 'package:flutter/material.dart';
+
+class EditEventProvider {
   //form variables
+  Event _eventToEdit;
   String _id;
   String _location;
   String _title;
@@ -14,9 +17,9 @@ class AddEventProvider {
   String _description;
   String _category;
 
-  AddEventProvider() {
-    print('in add event provider constructor!');
-    clear();
+  EditEventProvider({@required Event eventToEdit}) {
+    _eventToEdit = eventToEdit;
+    setFormVariables();
   }
 
   String get id => _id;
@@ -27,7 +30,7 @@ class AddEventProvider {
   String get organization => _organization;
   String get description => _description;
   String get category => _category;
-  //all selectable categories in the add event page
+
   List<String> get allSelectableCategories {
     List<String> categories = List<String>();
     CategoryHelper.categoryFrom.forEach((String string, Category category) {
@@ -35,18 +38,16 @@ class AddEventProvider {
     });
     return categories;
   }
-  //all selectable locations
 
-  void clear() {
-    _id = null;
-    _location = null;
-    _title = null;
-    DateTime now = DateTime.now();
-    _startDateTime = now;
-    _endDateTime = now;
-    _organization = null;
-    _description = null;
-    _category = null;
+  void setFormVariables() {
+    _id = _eventToEdit.eventId;
+    _location = _eventToEdit.location;
+    _title = _eventToEdit.title;
+    _startDateTime = _eventToEdit.startTime;
+    _endDateTime = _eventToEdit.endTime;
+    _organization = _eventToEdit.organization;
+    _description = _eventToEdit.description;
+    _category = CategoryHelper.getString(_eventToEdit.category);
   }
 
   void setID(String id) {
@@ -62,12 +63,10 @@ class AddEventProvider {
   }
 
   void setStartTime(DateTime startTime) {
-    print('in add event provider, set start date to : ' + startTime.toString());
     _startDateTime = startTime;
   }
 
   void setEndTime(DateTime endTime) {
-    print('in add event provider, set end date to : ' + startTime.toString());
     _endDateTime = endTime;
   }
 
@@ -104,13 +103,6 @@ class AddEventProvider {
       return null;
   }
 
-  String descriptionValidator(String desc) {
-    if (desc == null || desc.isEmpty)
-      return 'Description is required.';
-    else
-      return null;
-  }
-
   String categoryValidator(String category) {
     if (category == null || category.isEmpty)
       return 'Category is required.';
@@ -119,11 +111,8 @@ class AddEventProvider {
   }
 
   Event getEventFromFormData() {
-    print('getting event from data to add to db');
-    print('start: ' + startTime.toString() + " end: " + endTime.toString());
-    Uuid idGen = Uuid();
     Event event = Event(
-        eventId: idGen.v4(),
+        eventId: _id,
         location: _location,
         title: _title,
         startTime: _startDateTime,
@@ -132,9 +121,20 @@ class AddEventProvider {
         description: _description,
         category: CategoryHelper.getCategory(_category),
         locationCode: LocationHelper.getLocationCode(_location),
-        favorited: false);
+        favorited: _eventToEdit.favorited);
     return event;
   }
-}
 
-//TODO edit add and edit page validators so that they factor in max length as well
+  Future<bool> editEvent(Event event) {
+    print("[MODEL] editing an event");
+    return DatabaseEventAPI.editEvent(event).then((bool success) {
+      if (success) {
+        return true;
+      } else {
+        throw Exception("Editing an event failed.");
+      }
+    }).catchError((error) {
+      throw Exception("Editing an event failed: " + error.toString());
+    });
+  }
+}

@@ -8,6 +8,7 @@ import 'dart:async';
 class DailyEventList extends StatefulWidget {
   final FavoriteBloc _favoriteBloc;
   final EventBloc _eventBloc;
+  final Function _canEdit;
   final DateTime _day;
 
   DateTime get day => _day;
@@ -16,11 +17,13 @@ class DailyEventList extends StatefulWidget {
       {@required DateTime day,
       @required EventBloc eventBloc,
       @required FavoriteBloc favoriteBloc,
+      @required Function canEdit,
       Key key})
       : assert(day != null && eventBloc != null),
         _day = day,
         _eventBloc = eventBloc,
         _favoriteBloc = favoriteBloc,
+        _canEdit = canEdit,
         super(key: key);
 
   @override
@@ -48,8 +51,8 @@ class _DailyEventListState extends State<DailyEventList> {
     return ListView.builder(
       itemCount: events.length,
       itemBuilder: (BuildContext context, int index) {
-        return EventListTile(
-            events[index], colors[index % colors.length], widget._favoriteBloc, widget._eventBloc);
+        return EventListTile(events[index], colors[index % colors.length],
+            widget._favoriteBloc, widget._eventBloc, widget._canEdit);
       },
     );
   }
@@ -65,6 +68,10 @@ class _DailyEventListState extends State<DailyEventList> {
     });
   }
 
+  Future<void> _refresh() async {
+    widget._eventBloc.refetchDailyEvents(widget._day);
+  }
+
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<EventListState>(
@@ -72,29 +79,32 @@ class _DailyEventListState extends State<DailyEventList> {
       initialData: widget._eventBloc.dailyEventsInitialState,
       builder: (BuildContext context, AsyncSnapshot<EventListState> snapshot) {
         EventListState state = snapshot.data;
+        Widget child;
+
         print("eventbloc state is: " + state.runtimeType.toString());
         if (state is EventListError) {
-          return Center(
-            child: Text('There was an error! 😱, please try again!'),
-          );
+          child = Text('There was an error! 😱, please try again!');
         } else if (state is EventListLoading) {
-          return Center(
-            child: CircularProgressIndicator(),
-          );
+          child = CircularProgressIndicator();
         } else if (state is DailyEventListLoaded) {
           DailyEventListLoaded eventListObject = state;
-          //TODO test whether creating these pages in advance would be faster....?
-          return _buildPage(eventListObject.events);
+          child = _buildPage(eventListObject.events);
         } else {
-          return Center(
-              child: Text(
-                  'There was an error with the streams, most probably! Please refresh...💩'));
+          child = Text(
+              'There was an error with the streams, most probably! Please refresh...💩');
         }
+
+        return Center(
+          child: RefreshIndicator(
+            child: child,
+            onRefresh: () => _refresh(),
+          ),
+        );
       },
     );
   }
 
-  dispose(){
+  dispose() {
     _favoriteErrorSubscription.cancel();
     super.dispose();
   }

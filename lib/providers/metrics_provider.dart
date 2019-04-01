@@ -5,18 +5,13 @@ import '../api/database_event_api.dart';
 
 //keeps track of view count, could probably be extended to other things as well as needed
 class MetricsProvider {
-  DatabaseEventAPI _dbAPI;
-
-  MetricsProvider() {
-    _dbAPI = DatabaseEventAPI();
-  }
 
   Future<bool> incrementViewCount(Event event) {
-    return _dbAPI.incrementViewCount(event);
+    return DatabaseEventAPI.incrementViewCount(event);
   }
 
   Future<EventDetails> getMetrics(Event event) async {
-    EventDetails details = await _dbAPI.getEventDetails(event);
+    EventDetails details = await DatabaseEventAPI.getEventDetails(event);
     if (details == null) {
       EventDetails empty = EventDetails();
       empty.eventId = event.eventId;
@@ -28,6 +23,6 @@ class MetricsProvider {
   }
 
   Future<List<EventDetails>> bulkReadMetrics(List<Event> events) async {
-    return _dbAPI.bulkReadEventDetails(events);
+    return DatabaseEventAPI.bulkReadEventDetails(events);
   }
 }
