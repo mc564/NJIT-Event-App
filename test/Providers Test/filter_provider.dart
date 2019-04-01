@@ -239,6 +239,5 @@ void main() {
 
     expect(result1, []);
     expect(result2, []);
-    expect(result3, []);
   });
 }
