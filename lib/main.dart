@@ -1,28 +1,80 @@
 import 'package:flutter/material.dart';
 import './pages/home/home.dart';
+import './pages/login/login.dart';
+import './blocs/user_bloc.dart';
+import 'dart:async';
+import './models/authentication_results.dart';
 
 void main() => runApp(MyApp());
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   // This widget is the root of your application.
+  @override
+  State<StatefulWidget> createState() {
+    return _MyAppState();
+  }
+}
+
+class _MyAppState extends State<MyApp> {
+  UserBloc _userBloc;
+  StreamSubscription _navigationListener;
+
+  void _navigate(BuildContext context, AuthenticationResults user) {
+    _navigationListener.cancel();
+    if (user.authenticated && !user.banned) {
+      Navigator.of(context).pushReplacementNamed('/home');
+    } else {
+      Navigator.of(context).pushReplacementNamed('/login');
+    }
+  }
+
+  void _initializeNavigationListener(BuildContext buildContext) {
+    _navigationListener = _userBloc.userAuthRequests.listen((dynamic state) {
+      if (state is UserAuthInitial) {
+        _navigate(buildContext, state.authResults);
+      } else if (state is UserAuthDone) {
+        _navigate(buildContext, state.authResults);
+      }
+    });
+  }
+
+  @override
+  void initState() {
+    print('in main initstate');
+    _userBloc = UserBloc();
+    _userBloc.autoAuthenticate();
+
+    super.initState();
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+        debugShowCheckedModeBanner: false,
         title: 'Flutter Demo',
         theme: ThemeData(
-          // This is the theme of your application.
-          //
-          // Try running your application with "flutter run". You'll see the
-          // application has a blue toolbar. Then, without quitting the app, try
-          // changing the primarySwatch below to Colors.green and then invoke
-          // "hot reload" (press "r" in the console where you ran "flutter run",
-          // or simply save your changes to "hot reload" in a Flutter IDE).
-          // Notice that the counter didn't reset back to zero; the application
-          // is not restarted.
           primarySwatch: Colors.blue,
         ),
         routes: {
-          '/': (BuildContext context) => HomePage(),
+          //can only use the '/' route on startup...otherwise use either home or login route
+          '/': (BuildContext context) =>
+              Builder(builder: (BuildContext builderContext) {
+                _initializeNavigationListener(builderContext);
+                return Scaffold(
+                  body: Center(
+                    child: CircularProgressIndicator(),
+                  ),
+                );
+              }),
+          '/home': (BuildContext context) => HomePage(userBloc: _userBloc),
+          '/login': (BuildContext context) => LoginPage(userBloc: _userBloc),
         });
+  }
+
+  @override
+  void dispose() {
+    _navigationListener.cancel();
+    _userBloc.dispose();
+    super.dispose();
   }
 }

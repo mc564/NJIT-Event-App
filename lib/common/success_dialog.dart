@@ -25,7 +25,7 @@ class _SuccessDialogState extends State<SuccessDialog>
       ..forward()
       ..addStatusListener((status) {
         if (status == AnimationStatus.completed) {
-          Navigator.pushReplacementNamed(context, '/');
+          Navigator.pushReplacementNamed(context, '/home');
         }
       });
   }

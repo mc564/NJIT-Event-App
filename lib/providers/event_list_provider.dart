@@ -1,20 +1,28 @@
+import 'package:flutter/material.dart';
+import 'package:quiver/collection.dart';
+import 'package:intl/intl.dart';
+
 import '../api/database_event_api.dart';
 import '../api/njit_event_api.dart';
+
 import '../models/event.dart';
 import '../models/category.dart';
 import '../models/location.dart';
 import '../models/sort.dart';
 import '../models/filter.dart';
+import '../models/event_details.dart';
+import '../models/organization.dart';
+
 import './cosine_similarity_provider.dart';
-import 'package:quiver/collection.dart';
-import 'package:intl/intl.dart';
+import './metrics_provider.dart';
+import './favorite_provider.dart';
 
 //utility methods to deal with event lists, including sorting, filtering and adding events
 //TODO change everything to block fetching...
 class EventListProvider {
   _EventCache _cache;
-  NJITEventAPI _njitAPI;
-  DatabaseEventAPI _dbAPI;
+  MetricsProvider _metricsProvider;
+  FavoriteProvider _favoriteProvider;
   List<Category> _filterCategories;
   List<Location> _filterLocations;
   List<String> _filterOrganizations;
@@ -27,21 +35,70 @@ class EventListProvider {
   List<Location> get selectedLocations => List<Location>.from(_filterLocations);
   Sort get sortType => _sort;
 
-  EventListProvider() {
+  EventListProvider({@required FavoriteProvider favoriteProvider}) {
     _cache = _EventCache();
-    _njitAPI = NJITEventAPI();
-    _dbAPI = DatabaseEventAPI();
+    _metricsProvider = MetricsProvider();
+    _favoriteProvider = favoriteProvider;
     _filterCategories = List<Category>();
     _filterLocations = List<Location>();
     _filterOrganizations = List<String>();
     _sort = Sort.Date;
   }
 
-  void _sortEvents(List<Event> list) {
+  double _relevanceScore(Event event, List<Event> faves,
+      Map<String, EventDetails> eventIdToMetrics) {
+    int thisWeekViewCount = 0;
+    int lastWeekViewCount = 0;
+    if (eventIdToMetrics.containsKey(event.eventId)) {
+      EventDetails metrics = eventIdToMetrics[event.eventId];
+      thisWeekViewCount = metrics.thisWeekViewCount;
+      lastWeekViewCount = metrics.lastWeekViewCount;
+    }
+
+    double viewScore =
+        0.75 * (thisWeekViewCount / 100.0) + 0.25 * (lastWeekViewCount / 100);
+    int totalFaves = faves.length == 0 ? 1 : faves.length;
+    //^avoid the divide by 0 error
+    int categoryMatchCount =
+        faves.where((Event fave) => fave.category == event.category).length;
+    int orgMatchCount = faves
+        .where((Event fave) => fave.organization == event.organization)
+        .length;
+    double categoryScore = categoryMatchCount / totalFaves;
+    double orgScore = orgMatchCount / totalFaves;
+    double score = viewScore * 0.5 + categoryScore * 0.25 + orgScore * 0.25;
+    return score;
+  }
+
+  Future<bool> _sortEvents(List<Event> list) async {
     if (_sort == Sort.Date) {
       list.sort((a, b) => a.startTime.compareTo(b.startTime));
+      return true;
     } else if (_sort == Sort.Relevance) {
-      //TODO implement this sort once I have users and favoriting and stuff
+      List<Event> faves = _favoriteProvider.allFavorites;
+      //get metrics for all events in list
+      List<EventDetails> detailObjects =
+          await _metricsProvider.bulkReadMetrics(list);
+
+      Map<String, EventDetails> eventIdToMetrics = Map<String, EventDetails>();
+
+      for (int i = 0; i < detailObjects.length; i++) {
+        EventDetails metrics = detailObjects[i];
+        eventIdToMetrics[metrics.eventId] = metrics;
+      }
+      //precalculate all relevancescores for all list events and pass them to the function
+      Map<String, double> relScore = Map<String, double>();
+      for (int i = 0; i < list.length; i++) {
+        Event event = list[i];
+        relScore[event.eventId] =
+            _relevanceScore(event, faves, eventIdToMetrics);
+      }
+
+      list.sort((Event a, Event b) =>
+          relScore[b.eventId].compareTo(relScore[a.eventId]));
+      return true;
+    } else {
+      return false;
     }
   }
 
@@ -63,7 +120,44 @@ class EventListProvider {
     return filteredList;
   }
 
-//TODO try to make getEvents methods cleaner looking
+  Future<List<Event>> _filterAndSort(List<Event> events, bool filtered) async {
+    if (filtered) {
+      List<Event> filteredEvents = _filterEvents(events);
+      await _sortEvents(filteredEvents);
+      return filteredEvents;
+    } else {
+      await _sortEvents(events);
+      return events;
+    }
+  }
+
+  void deleteDupEdited(List<Event> dbEvents, List<Event> apiEvents) {
+    for (Event event in dbEvents) {
+      if (event.eventId.length < 20) {
+        apiEvents
+            .removeWhere((Event event2) => event2.eventId == event.eventId);
+      }
+    }
+  }
+
+  Future<List<Event>> refetchEventsOnDay(DateTime time,
+      [bool filtered = true]) async {
+    try {
+      List<Event> events = [];
+      final List<Event> apiEvents = await NJITEventAPI.eventsOnDay(time);
+      final List<Event> dbEvents = await DatabaseEventAPI.eventsOnDay(time);
+      deleteDupEdited(dbEvents, apiEvents);
+
+      events.addAll(apiEvents);
+      events.addAll(dbEvents);
+      _cache.addList(events);
+      return await _filterAndSort(events, filtered);
+    } catch (error) {
+      throw Exception("refreshEventsOnDay failed in EventListProvider: " +
+          error.toString());
+    }
+  }
+
   Future<List<Event>> getEventsOnDay(DateTime time,
       [bool filtered = true]) async {
     print("[MODEL] getting events on day");
@@ -76,26 +170,15 @@ class EventListProvider {
       else
         print('cache results are: ' + cacheResults.length.toString());
       if (cacheResults != null) {
-        if (!filtered) {
-          _sortEvents(cacheResults);
-          return cacheResults;
-        }
-        List<Event> filteredEvents = _filterEvents(cacheResults);
-        _sortEvents(filteredEvents);
-        return filteredEvents;
+        return await _filterAndSort(cacheResults, filtered);
       }
-      final List<Event> apiEvents = await _njitAPI.eventsOnDay(time);
-      final List<Event> dbEvents = await _dbAPI.eventsOnDay(time);
+      final List<Event> apiEvents = await NJITEventAPI.eventsOnDay(time);
+      final List<Event> dbEvents = await DatabaseEventAPI.eventsOnDay(time);
+      deleteDupEdited(dbEvents, apiEvents);
       events.addAll(apiEvents);
       events.addAll(dbEvents);
       _cache.addList(events);
-      if (!filtered) {
-        _sortEvents(events);
-        return events;
-      }
-      List<Event> filteredEvents = _filterEvents(events);
-      _sortEvents(filteredEvents);
-      return filteredEvents;
+      return await _filterAndSort(events, filtered);
     } catch (error) {
       throw Exception(
           "Retreiving events for day failed in EventListProvider: " +
@@ -121,7 +204,31 @@ class EventListProvider {
     }
   }
 
-  //modify to edit cache...?..donno
+  Future<List<Event>> refetchEventsBetween(DateTime start, DateTime end,
+      [bool filtered = true]) async {
+    print("[MODEL] getting events between");
+    List<Event> events = [];
+    try {
+      final List<Event> apiEvents =
+          await NJITEventAPI.eventsBetween(start, end);
+      final List<Event> dbEvents =
+          await DatabaseEventAPI.eventsBetween(start, end);
+      deleteDupEdited(dbEvents, apiEvents);
+      events.addAll(apiEvents);
+      events.addAll(dbEvents);
+      Map<DateTime, List<Event>> toAddToCache = splitEventsByDay(events);
+      for (List<Event> eventsOnOneDay in toAddToCache.values) {
+        _cache.addList(eventsOnOneDay);
+      }
+
+      return await _filterAndSort(events, filtered);
+    } catch (error) {
+      throw Exception(
+          "Retrieving events from either NJIT events api or database failed: " +
+              error.toString());
+    }
+  }
+
   Future<List<Event>> getEventsBetween(DateTime start, DateTime end,
       [bool filtered = true]) async {
     print("[MODEL] getting events between");
@@ -146,19 +253,16 @@ class EventListProvider {
         newStart = DateTime(newStart.year, newStart.month, newStart.day);
       }
       if (cacheHasAllDays) {
-        if (!filtered) {
-          _sortEvents(events);
-          return events;
-        }
-        events = _filterEvents(events);
-        _sortEvents(events);
-        return events;
+        return await _filterAndSort(events, filtered);
       } else {
         events = [];
       }
 
-      final List<Event> apiEvents = await _njitAPI.eventsBetween(start, end);
-      final List<Event> dbEvents = await _dbAPI.eventsBetween(start, end);
+      final List<Event> apiEvents =
+          await NJITEventAPI.eventsBetween(start, end);
+      final List<Event> dbEvents =
+          await DatabaseEventAPI.eventsBetween(start, end);
+      deleteDupEdited(dbEvents, apiEvents);
       events.addAll(apiEvents);
       events.addAll(dbEvents);
       Map<DateTime, List<Event>> toAddToCache = splitEventsByDay(events);
@@ -166,13 +270,7 @@ class EventListProvider {
         _cache.addList(eventsOnOneDay);
       }
 
-      if (!filtered) {
-        _sortEvents(events);
-        return events;
-      }
-      events = _filterEvents(events);
-      _sortEvents(events);
-      return events;
+      return await _filterAndSort(events, filtered);
     } catch (error) {
       throw Exception(
           "Retrieving events from either NJIT events api or database failed: " +
@@ -180,25 +278,56 @@ class EventListProvider {
     }
   }
 
-  Future<List<Event>> getSimilarEvents(Event event) {
+  void _filterForOrganization(List<Event> toFilter, Organization org) {
+    toFilter.removeWhere((Event event) => event.organization != org.name);
+  }
+
+  //basically gets events 2 weeks before today and also events 2 weeks after today
+  //done in 2 requests because can't get them all in 1 request at one time.
+  //and then filters for events by organization org
+  Future<RecentEvents> getRecentEvents(Organization org) async {
+    DateTime now = DateTime.now();
+    DateTime earlierStart = now.subtract(Duration(days: 14));
+    DateTime laterEnd = now.add(Duration(days: 14));
+    List<Event> pastEvents = await getEventsBetween(
+        earlierStart, now.subtract(Duration(days: 1)), false);
+    List<Event> upcomingEvents = await getEventsBetween(now, laterEnd, false);
+    _filterForOrganization(pastEvents, org);
+    _filterForOrganization(upcomingEvents, org);
+    return RecentEvents(pastEvents: pastEvents, upcomingEvents: upcomingEvents);
+  }
+
+  Future<RecentEvents> refetchRecentEvents(Organization org) async {
+    DateTime now = DateTime.now();
+    DateTime earlierStart = now.subtract(Duration(days: 14));
+    DateTime laterEnd = now.add(Duration(days: 14));
+    List<Event> pastEvents = await refetchEventsBetween(
+        earlierStart, now.subtract(Duration(days: 1)), false);
+    List<Event> upcomingEvents =
+        await refetchEventsBetween(now, laterEnd, false);
+    _filterForOrganization(pastEvents, org);
+    _filterForOrganization(upcomingEvents, org);
+    return RecentEvents(pastEvents: pastEvents, upcomingEvents: upcomingEvents);
+  }
+
+  //TODO change this for use with admins and eboard members when adding
+  Future<List<Event>> getSimilarEvents(Event event) async {
     print("[MODEL] getting similar events");
 
     DateTime earlierStart = event.startTime.subtract(Duration(days: 14));
     DateTime laterEnd = event.endTime.add(Duration(days: 14));
 
     try {
-      return getEventsBetween(earlierStart, laterEnd, false)
-          .then((List<Event> recentEvents) {
-        List<Event> rtn = [];
-        CosineSimilarityProvider similarityCalc = CosineSimilarityProvider();
-        recentEvents.forEach((Event recentEvent) {
-          if (similarityCalc.areSimilar(event.title, recentEvent.title))
-            rtn.add(recentEvent);
-        });
-        //keep the list items with high cosine similarity (titles only) and add them to the list
-        _sortEvents(rtn);
-        return rtn;
+      List<Event> recentEvents =
+          await getEventsBetween(earlierStart, laterEnd, false);
+      List<Event> rtn = [];
+      CosineSimilarityProvider similarityCalc = CosineSimilarityProvider();
+      recentEvents.forEach((Event recentEvent) {
+        if (similarityCalc.areSimilar(event.title, recentEvent.title))
+          rtn.add(recentEvent);
       });
+      //keep the list items with high cosine similarity (titles only) and add them to the list
+      return rtn;
     } catch (error) {
       throw Exception(
           "Failed to get similar events in EventsModel: " + error.toString());
@@ -207,7 +336,7 @@ class EventListProvider {
 
   Future<bool> addEvent(Event event) {
     print("[MODEL] adding event");
-    return _dbAPI.addEvent(event).then((bool success) {
+    return DatabaseEventAPI.addEvent(event).then((bool success) {
       if (success) {
         return true;
       } else {

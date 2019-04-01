@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import './category.dart';
 import './location.dart';
 
@@ -12,6 +13,7 @@ class Event {
   final String organization;
   final Category category;
   final String description;
+  bool favorited;
 
   Event({
     @required this.eventId,
@@ -23,11 +25,37 @@ class Event {
     @required this.organization,
     @required this.category,
     @required this.description,
+    @required this.favorited,
   });
 
   @override
   String toString() {
-    return "Event[title: " + title + "]";
+    DateFormat dateFormatter = DateFormat("EEE, MMM d, ").add_jm();
+    return "-----Event-----\n" +
+        "Title: " +
+        title +
+        "\nLocation: " +
+        location +
+        "\nCategory: " +
+        CategoryHelper.getString(category) +
+        "\nOrganization: " +
+        organization +
+        "\nStart Time: " +
+        dateFormatter.format(startTime) +
+        "\nEnd Time: " +
+        dateFormatter.format(endTime) +
+        "\nDescription: " +
+        description +
+        "\n---------------";
   }
 }
 
+//within 2 weeks of today (both in the past and towards the future)
+class RecentEvents {
+  final List<Event> pastEvents;
+  final List<Event> upcomingEvents;
+  RecentEvents(
+      {@required List<Event> pastEvents, @required List<Event> upcomingEvents})
+      : pastEvents = pastEvents,
+        upcomingEvents = upcomingEvents;
+}
