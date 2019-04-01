@@ -1,43 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-class DropDownButtonFormField extends FormField<String> {
-  DropDownButtonFormField(
-      {String hint,
-      List<DropdownMenuItem> items,
-      Function onChanged,
-      String initialValue = null,
-      FormFieldSetter<String> onSaved,
-      FormFieldValidator<String> validator,
-      bool autovalidate = false})
-      : super(
-            onSaved: onSaved,
-            validator: validator,
-            initialValue: initialValue,
-            autovalidate: autovalidate,
-            builder: (FormFieldState<String> state) {
-              return Column(
-                children: <Widget>[
-                  DropdownButton(
-                    hint: Text(hint),
-                    items: items,
-                    onChanged: (value) {
-                      state.didChange(value);
-                      onChanged(value);
-                    },
-                    value: state.value,
-                  ),
-                  state.hasError
-                      ? Text(
-                          state.errorText,
-                          style: TextStyle(color: Colors.red),
-                        )
-                      : Container(),
-                ],
-              );
-            });
-}
-
 class DateRangePicker extends StatefulWidget {
   final DateTime _initialStartTime;
   final DateTime _initialEndTime;
@@ -45,22 +8,24 @@ class DateRangePicker extends StatefulWidget {
   final Function _onEndChanged;
 
   DateRangePicker(
-      {DateTime initialStartTime,
+      {GlobalKey<DateRangePickerState> key,
+      DateTime initialStartTime,
       DateTime initialEndTime,
       Function onStartChanged,
       Function onEndChanged})
       : _initialStartTime = initialStartTime,
         _initialEndTime = initialEndTime,
         _onStartChanged = onStartChanged,
-        _onEndChanged = onEndChanged;
+        _onEndChanged = onEndChanged,
+        super(key: key);
 
   @override
   State<StatefulWidget> createState() {
-    return _DateRangePickerState();
+    return DateRangePickerState();
   }
 }
 
-class _DateRangePickerState extends State<DateRangePicker> {
+class DateRangePickerState extends State<DateRangePicker> {
   DateTime _startDateTime;
   DateTime _endDateTime;
 
@@ -69,6 +34,13 @@ class _DateRangePickerState extends State<DateRangePicker> {
     super.initState();
     _startDateTime = widget._initialStartTime;
     _endDateTime = widget._initialEndTime;
+  }
+
+  void setStartAndEndTime(DateTime startTime, DateTime endTime) {
+    setState(() {
+      _startDateTime = startTime;
+      _endDateTime = endTime;
+    });
   }
 
   @override
@@ -127,11 +99,11 @@ class DateTimePicker extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: <Widget>[
-          Icon(Icons.timer, size: 25.0, color: Colors.yellow),
+          Icon(Icons.timer, size: 25.0, color: Colors.black),
           SizedBox(width: 5),
           Text(
             _label,
-            style: TextStyle(fontSize: 14.0),
+            style: TextStyle(fontSize: 14.0, fontWeight: FontWeight.w600),
           ),
           SizedBox(width: 10),
           DatePickerButton(_dateTime, (DateTime date) {
@@ -217,9 +189,7 @@ class TimePickerButton extends StatelessWidget {
       child: Text(
         formattedTime(),
         style: TextStyle(
-          color: Colors.black,
-          fontSize: 14.0,
-        ),
+            color: Colors.black, fontSize: 14.0, fontWeight: FontWeight.w600),
       ),
     );
   }
@@ -251,9 +221,7 @@ class DatePickerButton extends StatelessWidget {
       child: Text(
         formatter.format(_date),
         style: TextStyle(
-          color: Colors.black,
-          fontSize: 14.0,
-        ),
+            color: Colors.black, fontSize: 14.0, fontWeight: FontWeight.w600),
       ),
     );
   }

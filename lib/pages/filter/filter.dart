@@ -209,13 +209,17 @@ class _FilterPageState extends State<FilterPage> {
       return Text('• Error! Error! •');
     } else if (state is FilterComplete) {
       return Center(child: Text('Filtering Complete! ☺'));
-    } else {
-      //filtersSelected
+    } else if (state is FiltersSelected) {
+      FiltersSelected selected = state;
       return RelevanceOrDateSortButton(
+        initialSort: selected.sort,
         onSortChanged: (Sort sortType) {
+          print('sort set is : ' + sortType.toString());
           _filterBloc.setSort(sortType);
         },
       );
+    } else {
+      return Text('how da heck did you get here');
     }
   }
 
@@ -269,7 +273,6 @@ class _FilterPageState extends State<FilterPage> {
                   ),
                   onPressed: () {
                     _filterBloc.filter();
-                    //TODO don't check for state here, see if I can do this without timers.
                     Navigator.of(context).pop();
                   }),
             ],
