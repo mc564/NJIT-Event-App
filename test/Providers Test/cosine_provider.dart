@@ -1,6 +1,8 @@
 import '../../lib/providers/cosine_similarity_provider.dart';
 import 'package:test_api/test_api.dart';
 
+//Removed all tests related to null variables because that's a big error.
+
 void main(){
 
   CosineSimilarityProvider sample = CosineSimilarityProvider();
@@ -36,22 +38,6 @@ void main(){
 
     expect(result, 0);
   });
-
-  //Never allow null to enter an equation. Flutter gets very very angry.
-  /*test('Test: Vector Magnitudes, null', (){
-
-    List<int> vector = new List(5);
-
-    vector[0] = null;
-    vector[1] = null;
-    vector[2] = null;
-    vector[3] = null;
-    vector[4] = null;
-
-    double result = sample.vectorMagnitude(vector);
-
-    expect(result, 0);
-  });*/
 
   test('Test: Dot Product', () {
 
@@ -96,28 +82,6 @@ void main(){
 
     expect(result, 0);
   });
-
-  /*test('Test: Dot Product, null', () {
-
-    List<int> vector1 = new List(5);
-    List<int> vector2 = new List(5);
-
-    vector1[0] = null;
-    vector1[1] = null;
-    vector1[2] = null;
-    vector1[3] = null;
-    vector1[4] = null;
-
-    vector2[0] = null;
-    vector2[1] = null;
-    vector2[2] = null;
-    vector2[3] = null;
-    vector2[4] = null;
-
-    double result = sample.dotProduct(vector1, vector2);
-
-    expect(result, 0);
-  });*/
 
   //Onto the words
 
@@ -175,40 +139,7 @@ void main(){
     expect(result, 0);
 
   });
-  /*
-  test('Test: Word Similarity, 1st null', (){
-
-    var word1 = null;
-    var word2 = 'matt';
-
-    var result = sample.cosineSimilarityWords(word1, word2);
-
-    expect(result, 0);
-
-  });
-
-  test('Test: Word Similarity, 2nd null', (){
-
-    var word1 = 'bike';
-    var word2 = null;
-
-    var result = sample.cosineSimilarityWords(word1, word2);
-
-    expect(result, 0);
-
-  });
-
-  test('Test: Word Similarity, Both Null', (){
-
-    var word1 = null;
-    var word2 = null;
-
-    var result = sample.cosineSimilarityWords(word1, word2);
-
-    expect(result, 0);
-
-  });*/
-
+  
   test('Test: Word Similarity, 1st empty', (){
 
     var word1 = '';
@@ -310,40 +241,6 @@ void main(){
 
   });
 
-  /*
-  test('Test: Letter Similarity, 1st Null', (){
-
-    var word1 = null;
-    var word2 = 'matt';
-
-    var result = sample.cosineSimilarityCharacters(word1, word2);
-
-    expect(result, 0);
-
-  });
-
-  test('Test: Letter Similarity, 2nd Null', (){
-
-    var word1 = 'bike';
-    var word2 = null;
-
-    var result = sample.cosineSimilarityCharacters(word1, word2);
-
-    expect(result, 0);
-
-  });
-
-  test('Test: Letter Similarity, both null', (){
-
-    var word1 = null;
-    var word2 = null;
-
-    var result = sample.cosineSimilarityCharacters(word1, word2);
-
-    expect(result, 0);
-
-  });*/
-
   test('Test: Letter Similarity, 1st empty', (){
 
     var word1 = '';
@@ -433,40 +330,6 @@ void main(){
     expect(result, false);
 
   });
-
-  /*test('Test: Word Comparison, 1st null', (){
-
-      var word1 = null;
-      var word2 = 'matt';
-
-      var result = sample.areSimilar(word1, word2);
-
-      expect(result, false);
-
-  });
-
-  test('Test: Word Comparison, 2nd Null', (){
-
-    var word1 = 'bike';
-    var word2 = null;
-
-    var result = sample.areSimilar(word1, word2);
-
-    expect(result, false);
-
-  });
-
-  test('Test: Word Comparison, Both Null', (){
-
-    var word1 = null;
-    var word2 = null;
-
-    var result = sample.areSimilar(word1, word2);
-
-    expect(result, false);
-
-  });*/
-
 
   test('Test: Word Comparison, 1st empty', (){
 
