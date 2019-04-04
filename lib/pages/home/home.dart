@@ -257,11 +257,14 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Center _buildStartupView() {
-    return Center(
+  Container _buildStartupView() {
+    return Container(
+      alignment: Alignment.center,
+      margin: EdgeInsets.all(20),
       child: Column(
         children: <Widget>[
-          Text('welcome to njit event planner!\n choose a view to begin'),
+          Text('Welcome to the NJIT Event Planner!\nChoose a view to begin.', textAlign: TextAlign.center,),
+          SizedBox(height: 20),
           Image.asset('images/welcome.png'),
         ],
       ),

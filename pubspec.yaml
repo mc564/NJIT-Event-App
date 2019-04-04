@@ -74,6 +74,9 @@ flutter:
          - asset: fonts/Montserrat-Regular.otf
          - asset: fonts/Montserrat-SemiBold.otf
          - asset: fonts/Montserrat-Light.otf
+     - family: Eutemia
+       fonts:
+         - asset: fonts/Eutemia.ttf
   #       - asset: fonts/Schyler-Italic.ttf
   #         style: italic
   #   - family: Trajan Pro

@@ -3,7 +3,6 @@ import 'dart:async';
 
 import '../../models/event.dart';
 
-import '../../common/suggestion_dialog.dart';
 import '../../common/success_dialog.dart';
 import '../../common/error_dialog.dart';
 import '../../common/date_range_picker.dart';
@@ -12,7 +11,9 @@ import '../../common/drop_down_button_form_field.dart';
 import '../../blocs/add_bloc.dart';
 
 import '../../providers/event_list_provider.dart';
-import '../../providers/organization_provider.dart';
+import '../../providers/organization/organization_provider.dart';
+
+import './add_widgets.dart';
 
 class AddPage extends StatefulWidget {
   final EventListProvider _eventListProvider;
@@ -275,25 +276,27 @@ class _AddPageState extends State<AddPage> {
         ucid: widget._ucid,
         isAdmin: widget._isAdmin,
         onInitialized: () {
-          setState(() {
-            _organizationDropdownItems = List<DropdownMenuItem<String>>();
-            _addEventBloc.allSelectableOrganizations
-                .forEach((String organization) {
-              _organizationDropdownItems.add(
-                DropdownMenuItem(
-                  value: organization,
-                  child: Padding(
-                    padding: EdgeInsets.only(left: 10),
-                    child: Text(
-                      _cutShort(organization, 80),
-                      style: TextStyle(
-                          color: Colors.white, fontWeight: FontWeight.w600),
+          if (mounted) {
+            setState(() {
+              _organizationDropdownItems = List<DropdownMenuItem<String>>();
+              _addEventBloc.allSelectableOrganizations
+                  .forEach((String organization) {
+                _organizationDropdownItems.add(
+                  DropdownMenuItem(
+                    value: organization,
+                    child: Padding(
+                      padding: EdgeInsets.only(left: 10),
+                      child: Text(
+                        _cutShort(organization, 80),
+                        style: TextStyle(
+                            color: Colors.white, fontWeight: FontWeight.w600),
+                      ),
                     ),
                   ),
-                ),
-              );
+                );
+              });
             });
-          });
+          }
         });
     _formKey = GlobalKey<FormState>();
     _categoryDropdownItems = List<DropdownMenuItem<String>>();

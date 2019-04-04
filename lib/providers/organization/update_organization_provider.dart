@@ -1,5 +1,5 @@
-import '../models/organization.dart';
-import '../api/database_event_api.dart';
+import '../../models/organization.dart';
+import '../../api/database_event_api.dart';
 
 class UpdateOrganizationProvider {
   Organization _originalOrg;
@@ -9,6 +9,8 @@ class UpdateOrganizationProvider {
   int _maxNameLength;
   int _maxDescriptionLength;
   int _maxReasonLength;
+  int _maxUCIDLength;
+  int _maxRoleLength;
 
   UpdateOrganizationProvider() {
     clear();
@@ -17,6 +19,8 @@ class UpdateOrganizationProvider {
     //TODO below length is arbitrary, but might want to go back and calculate
     //limits later..
     _maxReasonLength = 500;
+    _maxUCIDLength = 10;
+    _maxRoleLength = 256;
   }
 
   Organization get organization => Organization(
@@ -28,10 +32,11 @@ class UpdateOrganizationProvider {
         regularMembers:
             List<OrganizationMember>.from(_orgWithUpdates.regularMembers),
       );
-      
+
   String get reason => _updateReason;
 
   void clear() {
+    _originalOrg = Organization();
     _orgWithUpdates = Organization();
     _updateReason = '';
   }
@@ -226,6 +231,10 @@ class UpdateOrganizationProvider {
             orElse: () => null) !=
         null) {
       return 'Duplicate E-board member exists.';
+    } else if (ucid.length > _maxUCIDLength) {
+      return 'UCID must be less than length ' + _maxUCIDLength.toString() + '.';
+    } else if (role.length > _maxRoleLength) {
+      return 'Role must be less than length ' + _maxUCIDLength.toString() + '.';
     } else
       return null;
   }
@@ -238,6 +247,8 @@ class UpdateOrganizationProvider {
             orElse: () => null) !=
         null) {
       return 'Duplicate regular member exists.';
+    } else if (ucid.length > _maxUCIDLength) {
+      return 'UCID must be less than length ' + _maxUCIDLength.toString() + '.';
     } else {
       return null;
     }
@@ -259,6 +270,24 @@ class UpdateOrganizationProvider {
     } catch (error) {
       throw Exception(
           'Error in UpdateOrganizationProvider function registerOrganization: ' +
+              error.toString());
+    }
+  }
+
+    Future<bool> requestReactivation() async {
+    try {
+      bool requestSubmitted =
+          await DatabaseEventAPI.requestReactivation(_orgWithUpdates);
+      clear();
+      if (requestSubmitted) {
+        return true;
+      } else {
+        throw Exception(
+            'Error in UpdateOrganizationProvider function requestReactivation, failed to request reactivation.');
+      }
+    } catch (error) {
+      throw Exception(
+          'Error in UpdateOrganizationProvider function requestReactivation: ' +
               error.toString());
     }
   }

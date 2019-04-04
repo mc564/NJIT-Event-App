@@ -69,7 +69,7 @@ class _EventListTileState extends State<EventListTile> {
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Text(cutShort(widget._event.title, 45),
+            Text(cutShort(widget._event.title, 40),
                 style: TextStyle(fontSize: 18)),
             Text(cutShort(widget._event.location, 35),
                 style: TextStyle(fontSize: 15)),

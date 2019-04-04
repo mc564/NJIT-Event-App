@@ -33,29 +33,32 @@ class _SuccessDialogState extends State<SuccessDialog>
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      content: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: <Widget>[
-          Icon(
-            Icons.sentiment_satisfied,
-            size: 90.0,
-            color:Colors.yellow,
-          ),
-          SizedBox(height: 10.0),
-          Text(widget._successMessage),
-          SizedBox(height: 10.0),
-          RedirectingCountdown(
-            animation: StepTween(
-              begin: _secondsCountdown,
-              end: 0,
-            ).animate(_controller),
-          ),
-          FlatButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text('No, take me back', style: TextStyle(color:Colors.red)),
-          ),
-        ],
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: <Widget>[
+            Icon(
+              Icons.sentiment_satisfied,
+              size: 90.0,
+              color: Colors.yellow,
+            ),
+            SizedBox(height: 10.0),
+            Text(widget._successMessage),
+            SizedBox(height: 10.0),
+            RedirectingCountdown(
+              animation: StepTween(
+                begin: _secondsCountdown,
+                end: 0,
+              ).animate(_controller),
+            ),
+            FlatButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child:
+                  Text('No, take me back', style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -66,7 +69,6 @@ class _SuccessDialogState extends State<SuccessDialog>
     super.dispose();
   }
 }
-
 
 class RedirectingCountdown extends AnimatedWidget {
   RedirectingCountdown({Key key, this.animation})

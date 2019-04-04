@@ -13,10 +13,14 @@ class AddEventProvider {
   String _organization;
   String _description;
   String _category;
+  int _standardFieldMaxLength;
+  int _descriptionMaxLength;
 
   AddEventProvider() {
     print('in add event provider constructor!');
     clear();
+    _standardFieldMaxLength = 256;
+    _descriptionMaxLength = 1000;
   }
 
   String get id => _id;
@@ -86,10 +90,15 @@ class AddEventProvider {
   String titleValidator(String title) {
     if (title == null || title.isEmpty)
       return 'Title is required.';
+    else if (title.length > _standardFieldMaxLength)
+      return 'Title must be shorter than ' +
+          _standardFieldMaxLength.toString() +
+          ' characters.';
     else
       return null;
   }
 
+  //organization length should be validated because of constrained options (dropdown)
   String orgValidator(String org) {
     if (org == null || org.isEmpty)
       return 'Organization is required.';
@@ -100,6 +109,10 @@ class AddEventProvider {
   String locationValidator(String loc) {
     if (loc == null || loc.isEmpty)
       return 'Location is required.';
+    else if (loc.length > _standardFieldMaxLength)
+      return 'Location must be shorter than ' +
+          _standardFieldMaxLength.toString() +
+          ' characters.';
     else
       return null;
   }
@@ -107,10 +120,15 @@ class AddEventProvider {
   String descriptionValidator(String desc) {
     if (desc == null || desc.isEmpty)
       return 'Description is required.';
+    else if (desc.length > _descriptionMaxLength)
+      return 'Description must be shorter than ' +
+          _descriptionMaxLength.toString() +
+          ' characters.';
     else
       return null;
   }
 
+  //category length should be validated because of constrained options (dropdown)
   String categoryValidator(String category) {
     if (category == null || category.isEmpty)
       return 'Category is required.';

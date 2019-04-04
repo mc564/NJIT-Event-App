@@ -112,7 +112,7 @@ class FavoriteGridTile extends StatelessWidget {
               children: <Widget>[
                 Container(
                   padding: EdgeInsets.only(left: 3),
-                  width: 110,
+                  width: 100,
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.start,
                     crossAxisAlignment: CrossAxisAlignment.start,

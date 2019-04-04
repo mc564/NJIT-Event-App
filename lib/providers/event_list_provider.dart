@@ -72,7 +72,7 @@ class EventListProvider {
 
   Future<bool> _sortEvents(List<Event> list) async {
     if (_sort == Sort.Date) {
-      list.sort((a, b) => a.startTime.compareTo(b.startTime));
+      _sortByDate(list);
       return true;
     } else if (_sort == Sort.Relevance) {
       List<Event> faves = _favoriteProvider.allFavorites;
@@ -100,6 +100,11 @@ class EventListProvider {
     } else {
       return false;
     }
+  }
+
+  void _sortByDate(List<Event> events) {
+    if (events == null || events.length <= 1) return;
+    events.sort((a, b) => a.startTime.compareTo(b.startTime));
   }
 
   List<Event> _filterEvents(List<Event> list) {
@@ -282,31 +287,47 @@ class EventListProvider {
     toFilter.removeWhere((Event event) => event.organization != org.name);
   }
 
-  //basically gets events 2 weeks before today and also events 2 weeks after today
-  //done in 2 requests because can't get them all in 1 request at one time.
+  //basically gets events 1 weeks before today and also events 2 weeks after today
   //and then filters for events by organization org
   Future<RecentEvents> getRecentEvents(Organization org) async {
     DateTime now = DateTime.now();
-    DateTime earlierStart = now.subtract(Duration(days: 14));
+    DateTime earlierStart = now.subtract(Duration(days: 7));
     DateTime laterEnd = now.add(Duration(days: 14));
-    List<Event> pastEvents = await getEventsBetween(
-        earlierStart, now.subtract(Duration(days: 1)), false);
-    List<Event> upcomingEvents = await getEventsBetween(now, laterEnd, false);
+    List<Event> allEvents =
+        await getEventsBetween(earlierStart, laterEnd, false);
+    List<Event> pastEvents = List<Event>();
+    List<Event> upcomingEvents = List<Event>();
+    for (Event event in allEvents) {
+      if (event.startTime.isBefore(now))
+        pastEvents.add(event);
+      else
+        upcomingEvents.add(event);
+    }
     _filterForOrganization(pastEvents, org);
     _filterForOrganization(upcomingEvents, org);
+    _sortByDate(pastEvents);
+    _sortByDate(upcomingEvents);
     return RecentEvents(pastEvents: pastEvents, upcomingEvents: upcomingEvents);
   }
 
   Future<RecentEvents> refetchRecentEvents(Organization org) async {
     DateTime now = DateTime.now();
-    DateTime earlierStart = now.subtract(Duration(days: 14));
+    DateTime earlierStart = now.subtract(Duration(days: 7));
     DateTime laterEnd = now.add(Duration(days: 14));
-    List<Event> pastEvents = await refetchEventsBetween(
-        earlierStart, now.subtract(Duration(days: 1)), false);
-    List<Event> upcomingEvents =
-        await refetchEventsBetween(now, laterEnd, false);
+    List<Event> allEvents =
+        await refetchEventsBetween(earlierStart, laterEnd, false);
+    List<Event> pastEvents = List<Event>();
+    List<Event> upcomingEvents = List<Event>();
+    for (Event event in allEvents) {
+      if (event.startTime.isBefore(now))
+        pastEvents.add(event);
+      else
+        upcomingEvents.add(event);
+    }
     _filterForOrganization(pastEvents, org);
     _filterForOrganization(upcomingEvents, org);
+    _sortByDate(pastEvents);
+    _sortByDate(upcomingEvents);
     return RecentEvents(pastEvents: pastEvents, upcomingEvents: upcomingEvents);
   }
 
@@ -314,7 +335,7 @@ class EventListProvider {
   Future<List<Event>> getSimilarEvents(Event event) async {
     print("[MODEL] getting similar events");
 
-    DateTime earlierStart = event.startTime.subtract(Duration(days: 14));
+    DateTime earlierStart = event.startTime.subtract(Duration(days: 7));
     DateTime laterEnd = event.endTime.add(Duration(days: 14));
 
     try {

@@ -26,6 +26,7 @@ class _EditPageState extends State<EditPage> {
   StreamSubscription<EditFormState> _navigationListener;
   GlobalKey<FormState> _formKey;
   List<DropdownMenuItem<String>> _categoryDropdownItems;
+  Event _currentlyEditing;
 
   TextFormField _buildTitleField() {
     return TextFormField(
@@ -37,7 +38,7 @@ class _EditPageState extends State<EditPage> {
           fillColor: Colors.pink[50],
           border: InputBorder.none,
         ),
-        initialValue: widget._event.title,
+        initialValue: _currentlyEditing.title,
         validator: _editEventBloc.titleValidator,
         onSaved: (String value) {
           _editEventBloc.setTitle(value);
@@ -56,7 +57,7 @@ class _EditPageState extends State<EditPage> {
           fillColor: Colors.pink[100],
           border: InputBorder.none,
         ),
-        initialValue: widget._event.organization,
+        initialValue: _currentlyEditing.organization,
         validator: _editEventBloc.organizationValidator,
         onSaved: (String value) {
           _editEventBloc.setOrganization(value);
@@ -69,7 +70,7 @@ class _EditPageState extends State<EditPage> {
       items: _categoryDropdownItems,
       color: Colors.pink[200],
       textColor: Colors.black,
-      initialValue: CategoryHelper.getString(widget._event.category),
+      initialValue: CategoryHelper.getString(_currentlyEditing.category),
       validator: _editEventBloc.categoryValidator,
       onSaved: (String value) {
         _editEventBloc.setCategory(value);
@@ -87,7 +88,7 @@ class _EditPageState extends State<EditPage> {
           fillColor: Colors.pink[50],
           border: InputBorder.none,
         ),
-        initialValue: widget._event.location,
+        initialValue: _currentlyEditing.location,
         validator: _editEventBloc.locationValidator,
         onSaved: (String value) {
           _editEventBloc.setLocation(value);
@@ -105,15 +106,16 @@ class _EditPageState extends State<EditPage> {
           fillColor: Colors.pink[100],
           border: InputBorder.none,
         ),
-        initialValue: widget._event.description,
+        validator: _editEventBloc.descriptionValidator,
+        initialValue: _currentlyEditing.description,
         onSaved: (String value) {
           _editEventBloc.setDescription(value);
         });
   }
 
   DateRangePicker _buildDateRangeField() {
-    DateTime startTime = widget._event.startTime;
-    DateTime endTime = widget._event.endTime;
+    DateTime startTime = _currentlyEditing.startTime;
+    DateTime endTime = _currentlyEditing.endTime;
 
     return DateRangePicker(
       initialStartTime: startTime,
@@ -215,8 +217,9 @@ class _EditPageState extends State<EditPage> {
   @override
   void initState() {
     super.initState();
+    _currentlyEditing = widget._event;
     _formKey = GlobalKey<FormState>();
-    _editEventBloc = EditEventBloc(eventToEdit: widget._event);
+    _editEventBloc = EditEventBloc(initialEventToEdit: widget._event);
     _categoryDropdownItems = List<DropdownMenuItem<String>>();
     _editEventBloc.allSelectableCategories.forEach((String category) {
       _categoryDropdownItems.add(
@@ -239,7 +242,10 @@ class _EditPageState extends State<EditPage> {
       if (state is FormSubmitError) {
         _showErrorDialog(state);
       } else if (state is FormSubmitted) {
-        _showSuccessDialog(state.submittedEvent);
+        Event editedEvent = state.submittedEvent;
+        _currentlyEditing = editedEvent;
+        _showSuccessDialog(editedEvent);
+        _editEventBloc.setEventToEdit(editedEvent);
       }
     });
   }

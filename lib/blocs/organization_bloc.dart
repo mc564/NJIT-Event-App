@@ -3,8 +3,9 @@ import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
 import 'package:equatable/equatable.dart';
 
-import '../providers/organization_provider.dart';
-import '../providers/update_organization_provider.dart';
+import '../providers/organization/organization_provider.dart';
+import '../providers/organization/update_organization_provider.dart';
+import '../providers/organization/organization_message_provider.dart';
 
 import '../providers/message_provider.dart';
 import '../providers/user_provider.dart';
@@ -19,30 +20,40 @@ class OrganizationBloc {
   final StreamController<OrganizationState> _orgUpdatingController;
   //stream for active organizations
   final StreamController<OrganizationState> _viewableOrgsController;
-  //stream for organizations awaiting approval
+
+  final StreamController<OrganizationState> _inactiveOrgsController;
+
   final StreamController<OrganizationState> _awaitingApprovalOrgsController;
 
+  final StreamController<OrganizationState> _awaitingReactivationOrgsController;
+
   final StreamController<OrganizationState> _awaitingEboardChangeOrgsController;
+
+  final StreamController<OrganizationState> _awaitingInactivationOrgsController;
 
   //general organization related functions in this provider
   final OrganizationProvider _orgProvider;
   //the below provider does everything from registering to editing eboard members, all form stuff, etc.
   final UpdateOrganizationProvider _updateOrgProvider;
   //these 2 are used to send messages
-  final MessageProvider _messageProvider;
+  final OrganizationMessageProvider _organizationMessageProvider;
   final UserProvider _userProvider;
   final String _ucid;
   final bool _isAdmin;
 
   OrganizationState _prevUpdatedOrgState;
   OrganizationState _prevViewableOrgsState;
+  OrganizationState _prevInactiveOrgsState;
   OrganizationState _prevAwaitingApprovalOrgsState;
   OrganizationState _prevAwaitingEboardChangeOrgsState;
+  OrganizationState _prevAwaitingInactivationOrgsState;
+  OrganizationState _prevAwaitingReactivationOrgsState;
 
   OrganizationBloc(
       {@required MessageProvider messageProvider,
       @required UserProvider userProvider})
-      : _messageProvider = messageProvider,
+      : _organizationMessageProvider = OrganizationMessageProvider(
+            messageProvider: messageProvider, ucid: userProvider.ucid),
         _userProvider = userProvider,
         _orgProvider = OrganizationProvider(),
         _updateOrgProvider = UpdateOrganizationProvider(),
@@ -50,22 +61,34 @@ class OrganizationBloc {
             StreamController<OrganizationState>.broadcast(),
         _viewableOrgsController =
             StreamController<OrganizationState>.broadcast(),
+        _inactiveOrgsController =
+            StreamController<OrganizationState>.broadcast(),
         _awaitingApprovalOrgsController =
             StreamController<OrganizationState>.broadcast(),
         _awaitingEboardChangeOrgsController =
+            StreamController<OrganizationState>.broadcast(),
+        _awaitingInactivationOrgsController =
+            StreamController<OrganizationState>.broadcast(),
+        _awaitingReactivationOrgsController =
             StreamController<OrganizationState>.broadcast(),
         _ucid = userProvider.ucid,
         _isAdmin = userProvider.userTypes.contains(UserTypes.Admin) {
     _prevUpdatedOrgState = OrganizationBeforeUpdates(
         organization: _updateOrgProvider.organization);
+    fetchInactiveOrgs();
     fetchViewableOrgs();
     fetchOrgsAwaitingApproval();
     fetchOrgsAwaitingEboardChange();
+    fetchOrgsAwaitingInactivation();
+    fetchOrgsAwaitingReactivation();
     _orgUpdatingController.stream.listen((OrganizationState state) {
       _prevUpdatedOrgState = state;
     });
     _viewableOrgsController.stream.listen((OrganizationState state) {
       _prevViewableOrgsState = state;
+    });
+    _inactiveOrgsController.stream.listen((OrganizationState state) {
+      _prevInactiveOrgsState = state;
     });
     _awaitingApprovalOrgsController.stream.listen((OrganizationState state) {
       _prevAwaitingApprovalOrgsState = state;
@@ -74,14 +97,27 @@ class OrganizationBloc {
         .listen((OrganizationState state) {
       _prevAwaitingEboardChangeOrgsState = state;
     });
+    _awaitingInactivationOrgsController.stream
+        .listen((OrganizationState state) {
+      _prevAwaitingInactivationOrgsState = state;
+    });
+    _awaitingReactivationOrgsController.stream
+        .listen((OrganizationState state) {
+      _prevAwaitingReactivationOrgsState = state;
+    });
   }
 
   OrganizationState get updatingOrgInitialState => _prevUpdatedOrgState;
   OrganizationState get viewableOrgsInitialState => _prevViewableOrgsState;
+  OrganizationState get inactiveOrgsInitialState => _prevInactiveOrgsState;
   OrganizationState get orgsAwaitingApprovalInitialState =>
       _prevAwaitingApprovalOrgsState;
   OrganizationState get orgsAwaitingEboardChangeInitialState =>
       _prevAwaitingEboardChangeOrgsState;
+  OrganizationState get orgsAwaitingInactivationInitialState =>
+      _prevAwaitingInactivationOrgsState;
+  OrganizationState get orgsAwaitingReactivationInitialState =>
+      _prevAwaitingReactivationOrgsState;
 
   Function get reasonValidator => _updateOrgProvider.reasonValidator;
   Function get nameValidator => _updateOrgProvider.nameValidator;
@@ -94,10 +130,15 @@ class OrganizationBloc {
 
   Stream get organizationUpdateRequests => _orgUpdatingController.stream;
   Stream get viewableOrganizations => _viewableOrgsController.stream;
+  Stream get inactiveOrganizations => _inactiveOrgsController.stream;
   Stream get organizationsAwaitingApproval =>
       _awaitingApprovalOrgsController.stream;
   Stream get organizationsAwaitingEboardChange =>
       _awaitingEboardChangeOrgsController.stream;
+  Stream get organizationsAwaitingInactivation =>
+      _awaitingInactivationOrgsController.stream;
+  Stream get organizationsAwaitingReactivation =>
+      _awaitingReactivationOrgsController.stream;
 
   OrganizationProvider get organizationProvider => _orgProvider;
 
@@ -106,7 +147,7 @@ class OrganizationBloc {
   }
 
   //can't send a request if one is in progress
-  Future<bool> canSendOrganizationRequest(Organization organization) async {
+  bool canSendOrganizationRequest(Organization organization) {
     return _orgProvider.canSendOrganizationRequest(organization);
   }
 
@@ -122,6 +163,20 @@ class OrganizationBloc {
     } catch (error) {
       _viewableOrgsController.sink.add(OrganizationError(
           errorMsg: 'Error in organization BLOC fetchViewableOrgs method: ' +
+              error.toString()));
+    }
+  }
+
+  void fetchInactiveOrgs() async {
+    try {
+      _inactiveOrgsController.sink.add(OrganizationsLoading());
+      List<Organization> inactiveOrgs =
+          await _orgProvider.allInactiveOrganizations();
+      _inactiveOrgsController.sink
+          .add(OrganizationsLoaded(organizations: inactiveOrgs));
+    } catch (error) {
+      _inactiveOrgsController.sink.add(OrganizationError(
+          errorMsg: 'Error in organization BLOC fetchInactiveOrgs method: ' +
               error.toString()));
     }
   }
@@ -156,12 +211,43 @@ class OrganizationBloc {
     }
   }
 
+  void fetchOrgsAwaitingInactivation() async {
+    try {
+      _awaitingInactivationOrgsController.sink.add(OrganizationsLoading());
+      List<Organization> awaitingInactivation =
+          await _orgProvider.allOrganizationsAwaitingInactivation();
+      _awaitingInactivationOrgsController.sink
+          .add(OrganizationsLoaded(organizations: awaitingInactivation));
+    } catch (error) {
+      _awaitingInactivationOrgsController.sink.add(OrganizationError(
+          errorMsg:
+              'Error in organization BLOC fetchOrgsAwaitingInactivation method: ' +
+                  error.toString()));
+    }
+  }
+
+  void fetchOrgsAwaitingReactivation() async {
+    try {
+      _awaitingReactivationOrgsController.sink.add(OrganizationsLoading());
+      List<Organization> awaitingReactivation =
+          await _orgProvider.allOrganizationsAwaitingReactivation();
+      _awaitingReactivationOrgsController.sink
+          .add(OrganizationsLoaded(organizations: awaitingReactivation));
+    } catch (error) {
+      _awaitingReactivationOrgsController.sink.add(OrganizationError(
+          errorMsg:
+              'Error in organization BLOC fetchOrgsAwaitingReactivation method: ' +
+                  error.toString()));
+    }
+  }
+
   /* ORGANIZATION REGISTRATION AND EDITING FORM SETTERS */
 
   //basically clears the provider (used in initState by ui)
   //so that every form can start from a clear slate
   void clearStorage() {
     _updateOrgProvider.clear();
+    alertOrganizationChanged();
   }
 
   void alertOrganizationChanged() {
@@ -209,190 +295,78 @@ class OrganizationBloc {
     alertOrganizationChanged();
   }
 
-  /* ORGANIZATION REGISTRATION FUNCTIONS */
+  /* ALERT DIFFERENT TYPES OF ERROR FUNCTIONS */
 
-  Future<bool> _sendMessageToAdminsAboutRegistration(
-      Organization orgRegistered) async {
-    try {
-      String orgName = orgRegistered.name;
-      DateFormat expirationFormatter = new DateFormat('yyyy-MM-dd');
-      DateFormat registrationDateFormatter = new DateFormat('E, MMMM dd');
-      DateTime curr = DateTime.now();
-      DateTime expirationDate = curr.add(Duration(days: 14));
-      String title = 'Please Approve Or Deny Organization Registration for [' +
-          orgName +
-          ']';
-      String messageBody = 'User ' +
-          _ucid +
-          " requested registration of their organization " +
-          orgName +
-          " on " +
-          registrationDateFormatter.format(curr) +
-          ". Please review the request and respond with the appropriate action on the Administration page. " +
-          " This message expires on " +
-          expirationFormatter.format(expirationDate) +
-          ".";
-      bool messagesSent = await _messageProvider.sendMessageToAdmins(
-          _ucid, title, messageBody, expirationDate);
-      if (messagesSent) {
-        return true;
-      } else {
-        return false;
-      }
-    } catch (error) {
-      throw Exception(
-          'Error sending message alerting admins of organization registration: ' +
-              error.toString());
-    }
-  }
-
-  //updates registration stream
-  void _alertRegistrationError(String errorMsg) {
+  void _alertUpdateError(String errorMsg) {
     _orgUpdatingController.sink.add(OrganizationError(errorMsg: errorMsg));
   }
 
-  void submitOrganizationRegistration() async {
-    try {
-      Organization orgToRegister = _updateOrgProvider.organization;
-      _orgUpdatingController.sink
-          .add(OrganizationRegistering(organization: orgToRegister));
-      bool successfullyAdded = await _updateOrgProvider.registerOrganization();
-      if (successfullyAdded) {
-        bool successfullySentAdminAlerts =
-            await _sendMessageToAdminsAboutRegistration(orgToRegister);
-        if (!successfullySentAdminAlerts) {
-          _alertRegistrationError(
-              'Failed to send admins messages about registration, please try again!');
-        } else {
-          _orgUpdatingController.sink
-              .add(OrganizationRegistered(organization: orgToRegister));
-          _updateOrgProvider.clear();
-        }
-      } else {
-        _alertRegistrationError(
-            'Submitting organization registration failed, please try again!');
-      }
-    } catch (error) {
-      _alertRegistrationError(
-          'Submitting organization registration failed: ' + error.toString());
-    }
+  void _alertEboardChangeError(String errorMsg) {
+    _awaitingEboardChangeOrgsController.sink
+        .add(OrganizationError(errorMsg: errorMsg));
   }
 
-  /* ORGS AWAITING APPROVAL STREAM FUNCTIONS */
+  void _alertInactivationError(String errorMsg) {
+    _awaitingInactivationOrgsController
+        .add(OrganizationError(errorMsg: errorMsg));
+  }
+
+  void _alertReactivationError(String errorMsg) {
+    _awaitingReactivationOrgsController
+        .add(OrganizationError(errorMsg: errorMsg));
+  }
 
   void _alertAwaitApprovalError(String errorMsg) {
     _awaitingApprovalOrgsController.sink
         .add(OrganizationError(errorMsg: errorMsg));
   }
 
-  Future<bool> _messageEBoardMembersAboutApproval(Organization org) async {
-    try {
-      String orgName = org.name;
-      DateFormat dateFormatter = new DateFormat('E yyyy-MM-dd');
-      DateTime now = DateTime.now();
-      DateTime expiryDate = now.add(Duration(days: 14));
-      List<String> recipientUCIDS = List<String>();
-      for (OrganizationMember eBoardMember in org.eBoardMembers) {
-        recipientUCIDS.add(eBoardMember.ucid);
-      }
-      String title = 'Your Registration For The Organization [' +
-          orgName +
-          '] Has Been Approved!';
-      String messageBody = 'Congratulations, your organization ' +
-          orgName +
-          ' has been accepted into the NJIT Event Planner App as of ' +
-          dateFormatter.format(now) +
-          '! As an E-Board member, ' +
-          'we thought you would like to know of this update. Thanks for your continued patronage! This message ' +
-          'expires ' +
-          dateFormatter.format(expiryDate) +
-          '.';
+  /* ORGANIZATION REGISTRATION FUNCTIONS */
 
-      bool messagesSent = await _messageProvider.sendMessage(
-          _ucid, recipientUCIDS, title, messageBody, expiryDate);
-      if (messagesSent) {
-        return true;
+  void submitOrganizationRegistration() async {
+    try {
+      Organization orgToRegister = _updateOrgProvider.organization;
+      _orgUpdatingController.sink
+          .add(OrganizationUpdating(organization: orgToRegister));
+      bool successfullyAdded = await _updateOrgProvider.registerOrganization();
+      if (successfullyAdded) {
+        bool successfullySentAdminAlerts = await _organizationMessageProvider
+            .sendMessageToAdminsAboutRegistration(orgToRegister);
+        if (!successfullySentAdminAlerts) {
+          _alertUpdateError(
+              'Failed to send admins messages about registration, please try again!');
+        } else {
+          _orgUpdatingController.sink
+              .add(OrganizationUpdated(updatedOrganization: orgToRegister));
+          _updateOrgProvider.clear();
+          fetchOrgsAwaitingApproval();
+        }
       } else {
-        return false;
+        _alertUpdateError(
+            'Submitting organization registration failed, please try again!');
       }
     } catch (error) {
-      throw Exception(
-          'Error sending message alerting eboard members of organization registration approval: ' +
-              error.toString());
+      _alertUpdateError(
+          'Submitting organization registration failed: ' + error.toString());
     }
-  }
-
-  Future<bool> _messageEBoardMembersAboutRejection(
-      String reasonforRejection, Organization org) async {
-    try {
-      String orgName = org.name;
-      DateFormat dateFormatter = new DateFormat('E yyyy-MM-dd');
-      DateTime now = DateTime.now();
-      DateTime expiryDate = now.add(Duration(days: 14));
-      List<String> recipientUCIDS = List<String>();
-      for (OrganizationMember eBoardMember in org.eBoardMembers) {
-        recipientUCIDS.add(eBoardMember.ucid);
-      }
-      String title = 'Your Registration For The Organization [' +
-          orgName +
-          '] Has Been Rejected';
-      String messageBody = 'Your organization ' +
-          orgName +
-          ' has been rejected from the NJIT Event Planner App as of ' +
-          dateFormatter.format(now) +
-          '. The reason for rejection is as followed: [ ' +
-          reasonforRejection +
-          ' ] As an E-Board member, ' +
-          'we thought you would like to know of this update. Thank you for your attempt and we would be glad' +
-          ' to look at any further organization registrations! This message ' +
-          'expires ' +
-          dateFormatter.format(expiryDate) +
-          '.';
-
-      bool messagesSent = await _messageProvider.sendMessage(
-          _ucid, recipientUCIDS, title, messageBody, expiryDate);
-      if (messagesSent) {
-        return true;
-      } else {
-        return false;
-      }
-    } catch (error) {
-      throw Exception(
-          'Error sending message alerting eboard members of organization registration rejection: ' +
-              error.toString());
-    }
-  }
-
-  //must assign eBoarod user types to users after their org has been approved
-  Future<bool> _assignEboardMemberUserTypes(
-      List<OrganizationMember> eBoardMembers) async {
-    for (OrganizationMember eBoardMember in eBoardMembers) {
-      bool successfullySetUserType =
-          await _userProvider.setEboardUserType(eBoardMember.ucid);
-      if (!successfullySetUserType) return false;
-    }
-    return true;
   }
 
   void approveOrganization(Organization org) async {
     try {
+      _awaitingApprovalOrgsController
+          .add(OrganizationUpdating(organization: org));
       bool success = await _orgProvider.approveOrganization(org);
       if (!success) {
         _alertAwaitApprovalError(
             'Error in approveOrganization function of organization BLOC');
       } else {
-        bool messagedSuccessfully =
-            await _messageEBoardMembersAboutApproval(org);
+        bool messagedSuccessfully = await _organizationMessageProvider
+            .messageEBoardMembersAboutApproval(org);
         if (!messagedSuccessfully) {
           _alertAwaitApprovalError(
               'Error in approveOrganization function of organization BLOC, failed to send messages alerting eBoardMembers of approval.');
         }
-        bool assignUserTypes =
-            await _assignEboardMemberUserTypes(org.eBoardMembers);
-        if (!assignUserTypes) {
-          _alertAwaitApprovalError(
-              'Error in approveOrganization function of organization BLOC, failed to change eBoardMembers user types.');
-        }
+
         fetchViewableOrgs();
         fetchOrgsAwaitingApproval();
       }
@@ -405,13 +379,15 @@ class OrganizationBloc {
 
   void rejectOrganization(String reasonForRejection, Organization org) async {
     try {
+      _awaitingApprovalOrgsController
+          .add(OrganizationUpdating(organization: org));
       bool success = await _orgProvider.removeOrganization(org);
       if (!success) {
         _alertAwaitApprovalError(
             'Error in rejectOrganization function of organization BLOC');
       } else {
-        bool messagedSuccessfully =
-            await _messageEBoardMembersAboutRejection(reasonForRejection, org);
+        bool messagedSuccessfully = await _organizationMessageProvider
+            .messageEBoardMembersAboutRejection(reasonForRejection, org);
         if (!messagedSuccessfully) {
           _alertAwaitApprovalError(
               "Error in rejectOrganization function of organization BLOC, failed to message eboard members about rejection.");
@@ -426,11 +402,90 @@ class OrganizationBloc {
     }
   }
 
-  /* ORGANIZATION EDITING FUNCTIONS */
+  /* ORG REACTIVATION functions */
 
-  void _alertUpdateError(String errorMsg) {
-    _orgUpdatingController.sink.add(OrganizationError(errorMsg: errorMsg));
+  void submitRequestForReactivation() async {
+    try {
+      Organization orgToReactivate = _updateOrgProvider.organization;
+      _orgUpdatingController.sink
+          .add(OrganizationUpdating(organization: orgToReactivate));
+      bool successfullyRequested =
+          await _updateOrgProvider.requestReactivation();
+      if (successfullyRequested) {
+        bool successfullySentAdminAlerts = await _organizationMessageProvider
+            .sendMessageToAdminsAboutReactivationRequest(orgToReactivate);
+        if (!successfullySentAdminAlerts) {
+          _alertUpdateError(
+              'Failed to send admins messages about reactivation, please try again!');
+        } else {
+          _orgUpdatingController.sink
+              .add(OrganizationUpdated(updatedOrganization: orgToReactivate));
+          _updateOrgProvider.clear();
+          fetchOrgsAwaitingReactivation();
+          fetchInactiveOrgs();
+        }
+      } else {
+        _alertUpdateError(
+            'Submitting organization reactivation request failed, please try again!');
+      }
+    } catch (error) {
+      _alertUpdateError(
+          'Submitting organization reactivation request failed: ' +
+              error.toString());
+    }
   }
+
+  void rejectOrganizationRevival(Organization org, String reason) async {
+    try {
+      _awaitingReactivationOrgsController.sink
+          .add(OrganizationUpdating(organization: org));
+      bool success = await _orgProvider.rejectRevival(org);
+      if (!success) {
+        _alertReactivationError(
+            'Error in rejectOrganizationRevival function of organization BLOC');
+      } else {
+        bool messagedSuccessfully = await _organizationMessageProvider
+            .messageEboardMembersAboutRejectedRevival(reason, org);
+        if (!messagedSuccessfully) {
+          _alertReactivationError(
+              'Error in rejectOrganizationRevival function of organization BLOC, failed to send messages alerting eBoardMembers of rejection.');
+        }
+        fetchInactiveOrgs();
+        fetchOrgsAwaitingReactivation();
+      }
+    } catch (error) {
+      _alertReactivationError(
+          'Error in rejectOrganizationRevival function of organization BLOC: ' +
+              error.toString());
+    }
+  }
+
+  void approveOrganizationRevival(Organization org) async {
+    try {
+      _awaitingReactivationOrgsController.sink
+          .add(OrganizationUpdating(organization: org));
+      bool success = await _orgProvider.approveRevival(org);
+      if (!success) {
+        _alertReactivationError(
+            'Error in approveOrganizationRevival function of organization BLOC');
+      } else {
+        bool messagedSuccessfully = await _organizationMessageProvider
+            .messageMembersAboutApprovedRevival(org);
+        if (!messagedSuccessfully) {
+          _alertReactivationError(
+              'Error in approveOrganizationRevival function of organization BLOC, failed to send messages alerting members of approval.');
+        }
+        fetchViewableOrgs();
+        fetchOrgsAwaitingReactivation();
+      }
+    } catch (error) {
+      _alertReactivationError(
+          'Error in approveOrganizationRevival function of organization BLOC: ' +
+              error.toString());
+    }
+  }
+
+  /* GENERAL UPDATE FUNCTION */
 
   void submitOrganizationUpdates() async {
     try {
@@ -441,7 +496,8 @@ class OrganizationBloc {
       if (successfullyUpdated) {
         _orgUpdatingController.sink
             .add(OrganizationUpdated(updatedOrganization: orgWithUpdates));
-        _updateOrgProvider.clear();
+        //can probably just change in ui upon success
+        //unoptimistic updating apparently
       } else {
         _alertUpdateError(
             'Submitting organization updates failed, please try again!');
@@ -452,45 +508,8 @@ class OrganizationBloc {
     }
   }
 
-  Future<bool> _sendMessageToAdminsAboutEboardChangeRequest(
-      Organization orgChanged, String reason) async {
-    try {
-      String orgName = orgChanged.name;
-      DateFormat expirationFormatter = new DateFormat('yyyy-MM-dd');
-      DateFormat requestDateFormatter = new DateFormat('E, MMMM dd');
-      DateTime curr = DateTime.now();
-      DateTime expirationDate = curr.add(Duration(days: 14));
-      String title =
-          'Please Approve Or Deny Organization E-Board Change Request for [' +
-              orgName +
-              ']';
-      String messageBody = 'User ' +
-          _ucid +
-          " requested an E-Board change for their organization " +
-          orgName +
-          " on " +
-          requestDateFormatter.format(curr) +
-          ".The reason provided for this change is as followed: [" +
-          reason +
-          "] Please review the request and respond with the appropriate action on the Administration page. " +
-          " This message expires on " +
-          expirationFormatter.format(expirationDate) +
-          ".";
-      bool messagesSent = await _messageProvider.sendMessageToAdmins(
-          _ucid, title, messageBody, expirationDate);
-      if (messagesSent) {
-        return true;
-      } else {
-        return false;
-      }
-    } catch (error) {
-      throw Exception(
-          'Error sending message alerting admins of organization E-Board change request: ' +
-              error.toString());
-    }
-  }
+/*EBOARD CHANGES FUNCTIONS */
 
-//TODO make a function that bulk sets e-board members?...
   void requestEboardChanges() async {
     try {
       Organization orgWithUpdates = _updateOrgProvider.organization;
@@ -499,13 +518,14 @@ class OrganizationBloc {
           .add(OrganizationUpdating(organization: orgWithUpdates));
       bool successfullyUpdated = await _updateOrgProvider.requestEboardChange();
       if (successfullyUpdated) {
-        bool successfullyMessaged =
-            await _sendMessageToAdminsAboutEboardChangeRequest(
+        bool successfullyMessaged = await _organizationMessageProvider
+            .sendMessageToAdminsAboutEboardChangeRequest(
                 orgWithUpdates, reason);
         if (successfullyMessaged) {
           _orgUpdatingController.sink
               .add(OrganizationUpdated(updatedOrganization: orgWithUpdates));
           _updateOrgProvider.clear();
+          fetchOrgsAwaitingEboardChange();
         } else {
           _alertUpdateError(
               'Sending messages alerting admins of this E-Board change request failed.');
@@ -520,30 +540,143 @@ class OrganizationBloc {
     }
   }
 
-  void approveEboardChanges(Organization org) async {
+  void approveEboardChanges(OrganizationUpdateRequestData orgData) async {
     try {
-      bool success = await _orgProvider.approveEboardChange(org);
+      _awaitingEboardChangeOrgsController.sink
+          .add(OrganizationUpdating(organization: orgData.updated));
+      bool success = await _orgProvider.approveEboardChange(orgData.updated);
       if (!success) {
-        print('error...');
-        _alertUpdateError(
+        _alertEboardChangeError(
             'Error in approveEboardChanges function of organization BLOC');
       } else {
-        /*
-        bool messagedSuccessfully =
-            await _messageEBoardMembersAboutApproval(org);
+        bool messagedSuccessfully = await _organizationMessageProvider
+            .messageEboardMembersAboutApprovedEboardChangeRequest(orgData);
         if (!messagedSuccessfully) {
-          _alertUpdateError(
+          _alertEboardChangeError(
               'Error in approveEboardChanges function of organization BLOC, failed to send messages alerting eBoardMembers of approval.');
         }
-        */
+
         print('SUCCESS!');
         fetchViewableOrgs();
         fetchOrgsAwaitingEboardChange();
       }
     } catch (error) {
-      print('error...'+error.toString());
-      _alertUpdateError(
+      _alertEboardChangeError(
           'Error in approveEboardChanges function of organization BLOC: ' +
+              error.toString());
+    }
+  }
+
+  void rejectEboardChanges(
+      OrganizationUpdateRequestData orgData, String reason) async {
+    try {
+      _awaitingEboardChangeOrgsController.sink
+          .add(OrganizationUpdating(organization: orgData.updated));
+      bool success = await _orgProvider.rejectEboardChanges(orgData.updated);
+      if (!success) {
+        _alertEboardChangeError(
+            'Error in rejectEboardChanges function of organization BLOC');
+      } else {
+        bool messagedSuccessfully = await _organizationMessageProvider
+            .messageEboardMembersAboutRejectedEboardChangeRequest(
+                orgData, reason);
+        if (!messagedSuccessfully) {
+          _alertEboardChangeError(
+              'Error in rejectEboardChanges function of organization BLOC, failed to send messages alerting eBoardMembers of rejection.');
+        }
+
+        fetchViewableOrgs();
+        fetchOrgsAwaitingEboardChange();
+      }
+    } catch (error) {
+      _alertEboardChangeError(
+          'Error in rejectEboardChanges function of organization BLOC: ' +
+              error.toString());
+    }
+  }
+
+  /* INACTIVATION FUNCTIONS */
+  void requestOrganizationInactivation(
+      Organization organization, String reason) async {
+    try {
+      _orgUpdatingController.sink
+          .add(OrganizationUpdating(organization: organization));
+      bool successfullyRequested = await _orgProvider.setOrganizationStatus(
+          OrganizationStatus.AWAITING_INACTIVATION, organization);
+
+      if (successfullyRequested) {
+        bool successfullyMessaged = await _organizationMessageProvider
+            .sendMessageToAdminsAboutInactivationRequest(organization, reason);
+        if (successfullyMessaged) {
+          //TODO change this later but I cheat for now -> changing of status
+          //should be done in UI
+          organization.setStatus(OrganizationStatus.AWAITING_INACTIVATION);
+          _orgUpdatingController.sink
+              .add(OrganizationUpdated(updatedOrganization: organization));
+          _updateOrgProvider.clear();
+          fetchOrgsAwaitingInactivation();
+        } else {
+          _alertUpdateError(
+              'Sending messages alerting admins of this organization inactivation request failed.');
+        }
+      } else {
+        _alertUpdateError(
+            'Requesting organization inactivation failed, please try again!');
+      }
+    } catch (error) {
+      _alertUpdateError(
+          'Requesting organization inactivation failed:' + error.toString());
+    }
+  }
+
+  void refuseOrganizationInactivation(Organization org, String reason) async {
+    try {
+      _awaitingInactivationOrgsController.sink
+          .add(OrganizationUpdating(organization: org));
+      bool success = await _orgProvider.setOrganizationStatus(
+          OrganizationStatus.ACTIVE, org);
+      if (!success) {
+        _alertInactivationError(
+            'Error in refuseOrganizationInactivation function of organization BLOC');
+      } else {
+        bool messagedSuccessfully = await _organizationMessageProvider
+            .messageEboardMembersAboutRefusedInactivationRequest(org, reason);
+        if (!messagedSuccessfully) {
+          _alertInactivationError(
+              'Error in refuseOrganizationInactivation function of organization BLOC, failed to send messages alerting eBoardMembers of refusal.');
+        }
+        fetchViewableOrgs();
+        fetchOrgsAwaitingInactivation();
+      }
+    } catch (error) {
+      _alertInactivationError(
+          'Error in refuseOrganizationInactivation function of organization BLOC: ' +
+              error.toString());
+    }
+  }
+
+  void inactivateOrganization(Organization org) async {
+    try {
+      _awaitingInactivationOrgsController.sink
+          .add(OrganizationUpdating(organization: org));
+      bool success = await _orgProvider.inactivateOrganization(org);
+      if (!success) {
+        _alertInactivationError(
+            'Error in inactivateOrganization function of organization BLOC');
+      } else {
+        bool messagedSuccessfully = await _organizationMessageProvider
+            .messageMembersAboutInactivation(org);
+        if (!messagedSuccessfully) {
+          _alertInactivationError(
+              'Error in inactivateOrganization function of organization BLOC, failed to send messages alerting members of inactivation.');
+        }
+        fetchViewableOrgs();
+        fetchInactiveOrgs();
+        fetchOrgsAwaitingInactivation();
+      }
+    } catch (error) {
+      _alertInactivationError(
+          'Error in inactivateOrganization function of organization BLOC: ' +
               error.toString());
     }
   }
@@ -551,31 +684,16 @@ class OrganizationBloc {
   void dispose() {
     _orgUpdatingController.close();
     _viewableOrgsController.close();
+    _inactiveOrgsController.close();
     _awaitingApprovalOrgsController.close();
+    _awaitingEboardChangeOrgsController.close();
+    _awaitingInactivationOrgsController.close();
+    _awaitingReactivationOrgsController.close();
   }
 }
 
 abstract class OrganizationState extends Equatable {
   OrganizationState([List args = const []]) : super(args);
-}
-
-//keeps track of organization variables before clicking the register button
-class OrganizationBeforeUpdates extends OrganizationState {
-  final Organization organization;
-  OrganizationBeforeUpdates({@required this.organization})
-      : super([organization]);
-}
-
-//basically loading state once submit button clicked
-class OrganizationRegistering extends OrganizationState {
-  final Organization organization;
-  OrganizationRegistering({@required this.organization})
-      : super([organization]);
-}
-
-class OrganizationRegistered extends OrganizationState {
-  final Organization organization;
-  OrganizationRegistered({@required this.organization}) : super([organization]);
 }
 
 class OrganizationError extends OrganizationState {
@@ -600,6 +718,13 @@ class OrganizationUpdateRequestsLoaded extends OrganizationState {
       {@required List<OrganizationUpdateRequestData> requestData})
       : requestData = requestData,
         super([requestData]);
+}
+
+//keeps track of organization variables before clicking the register button
+class OrganizationBeforeUpdates extends OrganizationState {
+  final Organization organization;
+  OrganizationBeforeUpdates({@required this.organization})
+      : super([organization]);
 }
 
 class OrganizationUpdating extends OrganizationState {

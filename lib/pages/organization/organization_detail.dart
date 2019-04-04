@@ -8,7 +8,11 @@ import '../../blocs/event_bloc.dart';
 import '../../models/organization.dart';
 import '../../models/event.dart';
 
+import '../../common/single_input_field.dart';
+
 import './change_eboard_members.dart';
+import './add_or_remove_members.dart';
+import './modify_description.dart';
 
 class OrganizationDetailPage extends StatefulWidget {
   final OrganizationBloc _organizationBloc;
@@ -53,119 +57,145 @@ class _OrganizationDetailPageState extends State<OrganizationDetailPage> {
 
   void _showEboardActionDialog(BuildContext context) async {
     showDialog(
-      context: context,
-      builder: (BuildContext context) => Center(
-            child: FutureBuilder(
-                future: widget._organizationBloc
-                    .canSendOrganizationRequest(widget._organization),
-                builder: (BuildContext context, AsyncSnapshot<bool> snapshot) {
-                  if (!snapshot.hasData) {
-                    return Dialog(
-                      child: Center(
-                        child: CircularProgressIndicator(),
-                      ),
-                    );
-                  }
-
-                  bool canSendRequests = snapshot.data;
-                  return Dialog(
-                    child: Container(
-                      margin: EdgeInsets.all(20),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: <Widget>[
-                          Row(
-                            children: <Widget>[
-                              Text(
-                                'Organization Settings',
-                                style: TextStyle(fontSize: 20),
-                              ),
-                              SizedBox(width: 10),
-                              Icon(Icons.settings),
-                            ],
-                          ),
-                          Divider(color: Colors.black),
-                          Text(
-                            'E-Board Members',
-                            style: TextStyle(fontSize: 18),
-                          ),
-                          FlatButton(
-                            child: Text(
-                              'Send A Change Of E-Board Members Request',
-                              style: TextStyle(color: Colors.blue),
-                            ),
-                            onPressed: () {
-                              if (canSendRequests) {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (BuildContext context) =>
-                                        ChangeOfEboardMembersPage(
-                                          organization: widget._organization,
-                                          organizationBloc:
-                                              widget._organizationBloc,
-                                        ),
-                                  ),
-                                );
-                              } else {
-                                _showRequestsInProgressDialog();
-                              }
-                            },
-                          ),
-                          Divider(color: Colors.black),
-                          Text(
-                            'Regular Members',
-                            style: TextStyle(fontSize: 20),
-                          ),
-                          FlatButton(
-                            child: Text(
-                              'Add/Remove Members',
-                              style: TextStyle(color: Colors.blue),
-                            ),
-                            onPressed: () {},
-                          ),
-                          Divider(color: Colors.black),
-                          Text(
-                            'General Settings',
-                            style: TextStyle(fontSize: 18),
-                          ),
-                          FlatButton(
-                            child: Text(
-                              'Modify Description',
-                              style: TextStyle(color: Colors.blue),
-                            ),
-                            onPressed: () {},
-                          ),
-                          FlatButton(
-                            child: Text(
-                              'Send A Request To Inactivate Group',
-                              style: TextStyle(color: Colors.blue),
-                            ),
-                            onPressed: () {
-                              if (canSendRequests) {
-                              } else {
-                                _showRequestsInProgressDialog();
-                              }
-                            },
-                          ),
-                          Divider(color: Colors.black),
-                          FlatButton(
-                            child: Text(
-                              'Return',
-                              style: TextStyle(color: Colors.blue),
-                            ),
-                            onPressed: () {
-                              Navigator.of(context).pop();
-                            },
-                          ),
-                        ],
-                      ),
+        context: context,
+        builder: (BuildContext context) {
+          return Center(
+            child: Dialog(
+              child: Container(
+                margin: EdgeInsets.all(20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    Row(
+                      children: <Widget>[
+                        Text(
+                          'Organization Settings',
+                          style: TextStyle(fontSize: 20),
+                        ),
+                        SizedBox(width: 10),
+                        Icon(Icons.settings),
+                      ],
                     ),
-                  );
-                }),
-          ),
-    );
+                    SizedBox(height: 10),
+                    Divider(color: Colors.black),
+                    Text(
+                      'E-Board Members',
+                      style: TextStyle(fontSize: 18),
+                    ),
+                    FlatButton(
+                      child: Text(
+                        'Send A Change Of E-Board Members Request',
+                        style: TextStyle(color: Colors.blue),
+                      ),
+                      onPressed: () {
+                        if (widget._organizationBloc
+                            .canSendOrganizationRequest(widget._organization)) {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (BuildContext context) =>
+                                  ChangeOfEboardMembersPage(
+                                    organization: widget._organization,
+                                    organizationBloc: widget._organizationBloc,
+                                  ),
+                            ),
+                          );
+                        } else {
+                          _showRequestsInProgressDialog();
+                        }
+                      },
+                    ),
+                    Divider(color: Colors.black),
+                    Text(
+                      'Regular Members',
+                      style: TextStyle(fontSize: 20),
+                    ),
+                    FlatButton(
+                      child: Text(
+                        'Add/Remove Members',
+                        style: TextStyle(color: Colors.blue),
+                      ),
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (BuildContext context) =>
+                                  AddOrRemoveMembersPage(
+                                      organizationBloc:
+                                          widget._organizationBloc,
+                                      organization: widget._organization)),
+                        );
+                      },
+                    ),
+                    Divider(color: Colors.black),
+                    Text(
+                      'General Settings',
+                      style: TextStyle(fontSize: 18),
+                    ),
+                    FlatButton(
+                      child: Text(
+                        'Modify Description',
+                        style: TextStyle(color: Colors.blue),
+                      ),
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (BuildContext context) =>
+                                ModifyDescriptionPage(
+                                    organizationBloc: widget._organizationBloc,
+                                    organization: widget._organization),
+                          ),
+                        );
+                      },
+                    ),
+                    FlatButton(
+                      child: Text(
+                        'Send A Request To Inactivate Group',
+                        style: TextStyle(color: Colors.blue),
+                      ),
+                      onPressed: () {
+                        if (widget._organizationBloc
+                            .canSendOrganizationRequest(widget._organization)) {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (BuildContext context) {
+//TODO change to actual page - I need to know if this actually succeeded or not
+//so I can change the organization status and prevent sending a request again once
+//an inactivation request has been sent
+                              return SingleInputFieldPage(
+                                  title: 'Send An Inactivation Request',
+                                  subtitle:
+                                      'Please provide a reason for this organization\'s inactivation.',
+                                  onSubmit: (String reason) {
+                                    widget._organizationBloc
+                                        .requestOrganizationInactivation(
+                                            widget._organization, reason);
+                                  });
+                            }),
+                          );
+                        } else {
+                          _showRequestsInProgressDialog();
+                        }
+                      },
+                    ),
+                    Divider(color: Colors.black),
+                    FlatButton(
+                      child: Text(
+                        'Return',
+                        style: TextStyle(color: Colors.blue),
+                      ),
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        });
   }
 
   Widget _buildEboardButton(BuildContext context) {
@@ -256,6 +286,7 @@ class _OrganizationDetailPageState extends State<OrganizationDetailPage> {
           title:
               Text('There\'s been a REAL 😕 error, please restart your app!')));
     }
+    //TODO used to be a container with height 300
     return Container(
       height: 300,
       child: ListView.builder(
@@ -278,7 +309,7 @@ class _OrganizationDetailPageState extends State<OrganizationDetailPage> {
       List<Event> pastEvents = state.recentEvents.pastEvents;
       if (pastEvents == null || pastEvents.length == 0) {
         tiles.add(ListTile(
-            title: Text('No past events within the last 2 weeks. 😌')));
+            title: Text('No past events within the last week. 😌')));
       } else {
         for (Event event in pastEvents) {
           tiles.add(
@@ -327,6 +358,24 @@ class _OrganizationDetailPageState extends State<OrganizationDetailPage> {
     );
   }
 
+  RichText _buildMembersSection() {
+    List<OrganizationMember> eBoardMembers = widget._organization.eBoardMembers;
+    List<OrganizationMember> regularMembers =
+        widget._organization.regularMembers;
+    List<TextSpan> children = List<TextSpan>();
+    children.add(TextSpan(text: 'Members ', style: TextStyle(color: Colors.blue)));
+    for (OrganizationMember eBoardMember in eBoardMembers) {
+      children.add(TextSpan(
+          text: '👑 ' + eBoardMember.ucid+' ',
+          style: TextStyle(color: Color(0xff800000))));
+    }
+    for (OrganizationMember regularMember in regularMembers) {
+      children.add(TextSpan(
+          text: '⚬ ' + regularMember.ucid+' ', style: TextStyle(color: Colors.blue)));
+    }
+    return RichText(text: TextSpan(children: children));
+  }
+
   Widget _buildBody() {
     return SingleChildScrollView(
       child: Container(
@@ -348,6 +397,38 @@ class _OrganizationDetailPageState extends State<OrganizationDetailPage> {
                 ),
               ],
             ),
+            _buildMembersSection(),
+            /*
+            SizedBox(height: 10),
+            Text('E-Board Members:'),
+            Container(
+                height: 100,
+                child: ListView.builder(
+                  shrinkWrap: false,
+                  itemCount: widget._organization.eBoardMembers.length,
+                  itemBuilder: (BuildContext content, int index) {
+                    return Text(
+                      widget._organization.eBoardMembers[index].ucid,
+                      textAlign: TextAlign.center,
+                    );
+                    //);
+                  },
+                )),
+            SizedBox(height: 10),
+            Text('Regular Members:'),
+            Container(
+                height: 100,
+                child: ListView.builder(
+                  shrinkWrap: false,
+                  itemCount: widget._organization.regularMembers.length,
+                  itemBuilder: (BuildContext content, int index) {
+                    return Text(
+                      widget._organization.regularMembers[index].ucid,
+                      textAlign: TextAlign.center,
+                    );
+                  },
+                )),
+                */
             SizedBox(height: 10),
             Text(widget._organization.description),
             SizedBox(height: 10),

@@ -43,6 +43,7 @@ class FilterProvider {
 
   /* CATEGORY OPERATIONS */
 
+//add and remove category aren't used..
   void addCategory(Category category) {
     _selectedCategories.add(category);
   }
@@ -57,6 +58,7 @@ class FilterProvider {
 
   /* LOCATION OPERATIONS */
 
+  //add and remove location aren't used either
   void addLocation(Location location) {
     _selectedLocations.add(location);
   }

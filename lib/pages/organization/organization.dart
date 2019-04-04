@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import './organization_widgets.dart';
 import './register_org.dart';
+import './inactive_organizations.dart';
 import '../../blocs/organization_bloc.dart';
 import '../../blocs/event_bloc.dart';
 import '../../models/organization.dart';
@@ -91,13 +92,13 @@ class _OrganizationPageState extends State<OrganizationPage> {
         margin: EdgeInsets.all(10),
         child: Column(
           children: <Widget>[
+            Text('Don\'t see yours?'),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: <Widget>[
-                Text('Don\'t see yours?'),
                 FlatButton(
                   child: Text(
-                    'Register an organization',
+                    'Register',
                     style: TextStyle(color: Colors.blue),
                   ),
                   onPressed: () {
@@ -110,9 +111,26 @@ class _OrganizationPageState extends State<OrganizationPage> {
                             ),
                       ),
                     );
-                    print('clicked');
                   },
                 ),
+                Text('or'),
+                FlatButton(
+                  child: Text(
+                    'Reactivate',
+                    style: TextStyle(color: Colors.blue),
+                  ),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (BuildContext context) =>
+                            InactiveOrganizationsPage(
+                                organizationBloc: widget._organizationBloc),
+                      ),
+                    );
+                  },
+                ),
+                Text('an organization'),
               ],
             ),
             SizedBox(height: 10),

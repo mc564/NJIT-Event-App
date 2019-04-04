@@ -4,7 +4,7 @@ import 'package:equatable/equatable.dart';
 
 import '../providers/event_list_provider.dart';
 import '../providers/add_event_provider.dart';
-import '../providers/organization_provider.dart';
+import '../providers/organization/organization_provider.dart';
 
 import '../models/event.dart';
 import '../models/organization.dart';

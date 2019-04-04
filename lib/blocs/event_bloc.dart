@@ -123,7 +123,8 @@ class EventBloc {
   void refetchRecentEvents(Organization org) async {
     try {
       _recentEventsController.sink.add(EventListLoading());
-      RecentEvents recentEvents = await _eventListProvider.refetchRecentEvents(org);
+      RecentEvents recentEvents =
+          await _eventListProvider.refetchRecentEvents(org);
       _markFavoritedEvents(recentEvents.pastEvents);
       _markFavoritedEvents(recentEvents.upcomingEvents);
       _recentEventsController.sink

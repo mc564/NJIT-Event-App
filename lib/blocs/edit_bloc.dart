@@ -10,31 +10,31 @@ import '../models/event.dart';
 class EditEventBloc {
   final StreamController<EditFormState> _formController;
   final EditEventProvider _editEventProvider;
-  FormReady _initialState;
+  EditFormState _prevState;
 
-  EditEventBloc({@required Event eventToEdit})
-      : _editEventProvider = EditEventProvider(eventToEdit: eventToEdit),
+  EditEventBloc({@required initialEventToEdit})
+      : _editEventProvider = EditEventProvider(initialEventToEdit: initialEventToEdit),
         _formController = StreamController.broadcast() {
-    print('in editbloc constructor!!');
-    _initialState = FormReady(
-      description: _editEventProvider.description,
-      title: _editEventProvider.title,
-      organization: _editEventProvider.organization,
-      category: _editEventProvider.category,
-      endDateTime: _editEventProvider.endTime,
-      startDateTime: _editEventProvider.startTime,
-      location: _editEventProvider.location,
-    );
+    _formController.stream.listen((EditFormState state) {
+      _prevState = state;
+    });
   }
 
-  FormReady get initialState => _initialState;
+  EditFormState get initialState => _prevState;
   Function get titleValidator => _editEventProvider.titleValidator;
+  Function get descriptionValidator => _editEventProvider.descriptionValidator;
   Function get locationValidator => _editEventProvider.locationValidator;
   Function get organizationValidator => _editEventProvider.orgValidator;
   Function get categoryValidator => _editEventProvider.categoryValidator;
-  List<String> get allSelectableCategories => _editEventProvider.allSelectableCategories;
+  List<String> get allSelectableCategories =>
+      _editEventProvider.allSelectableCategories;
 
   Stream get formSubmissions => _formController.stream;
+
+  void setEventToEdit(Event eventToEdit) {
+    _editEventProvider.setEventToEdit(eventToEdit);
+    _alertFormReadyForNextSubmission();
+  }
 
   void setLocation(String location) {
     _editEventProvider.setLocation(location);
@@ -92,19 +92,14 @@ class EditEventBloc {
   }
 
   void _alertFormReadyForNextSubmission() {
-    //delay a little to give the ui time to react to the formsubmitted on the stream
-    //then push the formready state to the stream to let the ui know the form is ready
-    //for another submission
-    Future.delayed(Duration(milliseconds: 100)).then((_) {
-      _formController.sink.add(FormReady(
-          description: _editEventProvider.description,
-          title: _editEventProvider.title,
-          organization: _editEventProvider.organization,
-          category: _editEventProvider.category,
-          endDateTime: _editEventProvider.endTime,
-          startDateTime: _editEventProvider.startTime,
-          location: _editEventProvider.location));
-    });
+    _formController.sink.add(FormReady(
+        description: _editEventProvider.description,
+        title: _editEventProvider.title,
+        organization: _editEventProvider.organization,
+        category: _editEventProvider.category,
+        endDateTime: _editEventProvider.endTime,
+        startDateTime: _editEventProvider.startTime,
+        location: _editEventProvider.location));
   }
 
   void submitForm() async {
@@ -117,7 +112,6 @@ class EditEventBloc {
         _alertFormSubmitError();
       } else {
         _alertFormSubmitted(editedEvent);
-        _alertFormReadyForNextSubmission();
       }
     } catch (error) {
       _alertFormSubmitErrorCustom(error);
