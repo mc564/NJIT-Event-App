@@ -7,13 +7,13 @@ import 'package:test_api/test_api.dart';
 
 void main() {
 
-  List<Category> cat =  new List(5);
-  List<Category> cat2 =  new List(5);
-  List<String> org = new List(5);
-  List<String> org2 = new List(5);
-  List<String> org3 = new List(5);
-  List<Location> loc = new List(5);
-  List<Location> loc2 = new List(5);
+  List<Category> cat =  new List();
+  List<Category> cat2 =  new List();
+  List<String> org = new List();
+  List<String> org2 = new List();
+  List<String> org3 = new List();
+  List<Location> loc = new List();
+  List<Location> loc2 = new List();
 
   Sort sort;
 
@@ -177,11 +177,6 @@ void main() {
     expect(result3, []);
   });
 
-  //////////////////////////////////////////////////////////////////////////////////////////////////
-
-  //Sadly, testing has shown that these functions are fundamentally broken.  Or at the very least, I can't make them work
-
-  /*
   test('Test: Add Category', (){
 
     filter2.addCategory(Category.AlumniAndUniversity);
@@ -244,5 +239,4 @@ void main() {
 
     expect(result, 'Rutgers');
   });
-  */
 }
