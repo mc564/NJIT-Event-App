@@ -1,24 +1,29 @@
 import 'package:flutter/material.dart';
 import '../../blocs/favorite_bloc.dart';
+import '../../blocs/event_bloc.dart';
+import '../../blocs/edit_bloc.dart';
 import '../../models/event.dart';
 import '../detail/event_detail.dart';
 import 'package:intl/intl.dart';
 
 class FavoriteGridTile extends StatelessWidget {
+  final EditEventBloc _editBloc;
   final FavoriteBloc _favoriteBloc;
-  final Function _addViewToEvent;
+  final EventBloc _eventBloc;
   final Function _canEditEvent;
   final Event _event;
   final int _color;
 
   FavoriteGridTile(
-      {@required FavoriteBloc favoriteBloc,
-      @required Function addViewToEvent,
+      {@required EditEventBloc editBloc,
+      @required FavoriteBloc favoriteBloc,
+      @required EventBloc eventBloc,
       @required Function canEditEvent,
       @required Event event,
       @required int color})
-      : _favoriteBloc = favoriteBloc,
-        _addViewToEvent = addViewToEvent,
+      : _editBloc = editBloc,
+        _favoriteBloc = favoriteBloc,
+        _eventBloc = eventBloc,
         _canEditEvent = canEditEvent,
         _event = event,
         _color = color;
@@ -38,7 +43,8 @@ class FavoriteGridTile extends StatelessWidget {
                 FlatButton(
                     child: Text('Yes, continue'),
                     onPressed: () {
-                      _favoriteBloc.removeFavorite(toRemove);
+                      _favoriteBloc.sink
+                          .add(RemoveFavorite(eventToUnfavorite: toRemove));
                       Navigator.of(context).pop();
                     }),
               ]),
@@ -134,13 +140,14 @@ class FavoriteGridTile extends StatelessWidget {
                     alignment: Alignment.centerLeft,
                     icon: Icon(Icons.info),
                     onPressed: () {
-                      _addViewToEvent(_event);
+                      _eventBloc.sink.add(AddViewToEvent(event: _event));
                       Navigator.push(
                         context,
                         MaterialPageRoute(
                           builder: (BuildContext context) => EventDetailPage(
                                 event: _event,
                                 canEdit: _canEditEvent,
+                                editBloc: _editBloc,
                               ),
                         ),
                       );

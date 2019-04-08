@@ -1,19 +1,17 @@
-import 'dart:convert';
 import '../api/database_event_api.dart';
 import '../models/message.dart';
 
 class MessageProvider {
-  HtmlEscape encoder = HtmlEscape();
   Future<bool> sendMessage(String senderUCID, List<String> recipientUCIDS,
       String title, String body, DateTime expirationDate) {
     return DatabaseEventAPI.sendMessage(
-        senderUCID, recipientUCIDS, encoder.convert(title), encoder.convert(body), expirationDate);
+        senderUCID, recipientUCIDS, title, body, expirationDate);
   }
 
   Future<bool> sendMessageToAdmins(
       String senderUCID, String title, String body, DateTime expirationDate) {
     return DatabaseEventAPI.sendMessageToAdmins(
-        senderUCID,  encoder.convert(title),  encoder.convert(body), expirationDate);
+        senderUCID, title, body, expirationDate);
   }
 
   Future<List<Message>> fetchMessages(String ucid) async {

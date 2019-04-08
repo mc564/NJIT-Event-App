@@ -13,7 +13,7 @@ class FavoriteProvider {
   }
 
   //can be called by the favoriteBLOC to await initialization of the favoriteProvider events
-  Future<bool> initialize() async {
+  Future<bool> fetchFavorites() async {
     try {
       List<String> initialFavoriteIds = await DatabaseEventAPI.getFavorites(_ucid);
       List<Event> favorites = await _allFavorites(initialFavoriteIds);
@@ -24,7 +24,7 @@ class FavoriteProvider {
       }
       return true;
     } catch (error) {
-      throw Exception('huh, failed to initialize in FavoriteProvider, error: ' +
+      throw Exception('huh, failed to fetchFavorites in FavoriteProvider, error: ' +
           error.toString());
     }
   }

@@ -18,7 +18,6 @@ import './metrics_provider.dart';
 import './favorite_provider.dart';
 
 //utility methods to deal with event lists, including sorting, filtering and adding events
-//TODO change everything to block fetching...
 class EventListProvider {
   _EventCache _cache;
   MetricsProvider _metricsProvider;
@@ -30,10 +29,21 @@ class EventListProvider {
 
   List<Category> get selectedCategories =>
       List<Category>.from(_filterCategories);
+
   List<String> get selectedOrganizations =>
       List<String>.from(_filterOrganizations);
+
   List<Location> get selectedLocations => List<Location>.from(_filterLocations);
+
   Sort get sortType => _sort;
+
+  Map<DateTime, List<Event>> get filteredCacheEvents {
+    List<Event> cachedEvents = _cache.allEvents;
+    cachedEvents = _filterEvents(cachedEvents);
+    Map<DateTime, List<Event>> dateMappedEvents =
+        splitEventsByDay(cachedEvents);
+    return dateMappedEvents;
+  }
 
   EventListProvider({@required FavoriteProvider favoriteProvider}) {
     _cache = _EventCache();
@@ -402,6 +412,14 @@ class _EventCache {
     _startDayKeyFormatter = DateFormat('MMM d y');
   }
 
+  List<Event> get allEvents {
+    List<Event> allEvents = List<Event>();
+    for(List<Event> eventList in _cache.values){
+      allEvents.addAll(eventList);
+    }
+    return allEvents;
+  }
+
   //remove a list if one is found with the same key and add in a new list
   void addList(List<Event> events) {
     if (events == null || events.length == 0) return;
@@ -409,7 +427,6 @@ class _EventCache {
     _cache.remove(key);
     List<Event> val = _cache.putIfAbsent(key, () => <Event>[]);
     val.addAll(events);
-    print('cache length: ' + _cache.length.toString());
   }
 
   List<Event> getListFor(DateTime day) {

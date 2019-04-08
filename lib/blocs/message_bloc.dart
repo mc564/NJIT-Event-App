@@ -6,24 +6,30 @@ import 'package:equatable/equatable.dart';
 
 class MessageBloc {
   final MessageProvider _messageProvider;
+  final StreamController<MessageEvent> _requestsController;
   final StreamController<MessageState> _messageController;
   final String _ucid;
   MessageState _prevState;
+
   MessageBloc({@required String ucid})
       : _ucid = ucid,
         _messageProvider = MessageProvider(),
-        _messageController = StreamController<MessageState>.broadcast() {
+        _messageController = StreamController<MessageState>.broadcast(),
+        _requestsController = StreamController<MessageEvent>.broadcast() {
     _prevState = MessagesLoading();
     _messageController.stream.listen((MessageState state) {
       _prevState = state;
     });
-
     reloadMessages();
+    _requestsController.stream.forEach((MessageEvent event) {
+      event.execute(this);
+    });
   }
 
   MessageProvider get messageProvider => _messageProvider;
   MessageState get initialState => _prevState;
   Stream get messages => _messageController.stream;
+  StreamSink<MessageEvent> get sink => _requestsController.sink;
 
   void _alertError(String errorMsg) {
     _messageController.sink.add(MessageError(errorMsg: errorMsg));
@@ -81,9 +87,43 @@ class MessageBloc {
 
   void dispose() {
     _messageController.close();
+    _requestsController.close();
   }
 }
 
+/*MESSAGE BLOC input EVENTS */
+abstract class MessageEvent extends Equatable {
+  MessageEvent([List args = const []]) : super(args);
+  void execute(MessageBloc messageBloc);
+}
+
+class ReloadMessages extends MessageEvent {
+  void execute(MessageBloc messageBloc) {
+    messageBloc.reloadMessages();
+  }
+}
+
+class SetMessageToRead extends MessageEvent {
+  final Message message;
+  SetMessageToRead({@required Message message})
+      : message = message,
+        super([message]);
+  void execute(MessageBloc messageBloc) {
+    messageBloc.setMessageToRead(message);
+  }
+}
+
+class RemoveMessage extends MessageEvent {
+  final Message message;
+  RemoveMessage({@required Message message})
+      : message = message,
+        super([message]);
+  void execute(MessageBloc messageBloc) {
+    messageBloc.removeMessage(message);
+  }
+}
+
+/* MESSAGE BLOC output STATES */
 abstract class MessageState extends Equatable {
   MessageState([List args = const []]) : super(args);
 }

@@ -125,12 +125,12 @@ class _OrganizationActionsPendingPageState
             rejectionPageTitle: 'Reason for Inactivation Refusal',
             rejectionPageSubtitle:
                 '(What is the reason for refusing this organization\'s inactivation? Please type in an answer below.)',
-            onRejection: (String reason) => widget._organizationBloc
-                .refuseOrganizationInactivation(
-                    orgRequestingInactivation, reason),
+            onRejection: (String reason) => widget._organizationBloc.sink.add(
+                RefuseOrganizationInactivation(
+                    organization: orgRequestingInactivation, reason: reason)),
             onApproval: () {
-              widget._organizationBloc
-                  .inactivateOrganization(orgRequestingInactivation);
+              widget._organizationBloc.sink.add(InactivateOrganization(
+                  organization: orgRequestingInactivation));
               Navigator.of(context).pop();
             },
           );
@@ -187,10 +187,12 @@ class _OrganizationActionsPendingPageState
             rejectionPageTitle: 'Reason for Rejection',
             rejectionPageSubtitle:
                 '(What is the reason for this organization\'s E-Board change request rejection? Please type in an answer below.)',
-            onRejection: (String reason) => widget._organizationBloc
-                .rejectEboardChanges(orgUpdateRequest, reason),
+            onRejection: (String reason) => widget._organizationBloc.sink.add(
+                RejectEboardChanges(
+                    requestData: orgUpdateRequest, reason: reason)),
             onApproval: () {
-              widget._organizationBloc.approveEboardChanges(orgUpdateRequest);
+              widget._organizationBloc.sink
+                  .add(ApproveEboardChanges(requestData: orgUpdateRequest));
               Navigator.of(context).pop();
             },
           );
@@ -245,10 +247,11 @@ class _OrganizationActionsPendingPageState
           rejectionPageTitle: 'Reason for Rejection',
           rejectionPageSubtitle:
               '(What is the reason for this organization revival rejection? Please type in an answer below.)',
-          onRejection: (String reason) =>
-              widget._organizationBloc.rejectOrganizationRevival(org, reason),
+          onRejection: (String reason) => widget._organizationBloc.sink.add(
+              RejectOrganizationRevival(organization: org, reason: reason)),
           onApproval: () {
-            widget._organizationBloc.approveOrganizationRevival(org);
+            widget._organizationBloc.sink
+                .add(ApproveOrganizationRevival(organization: org));
             Navigator.of(context).pop();
           },
         );
@@ -304,10 +307,12 @@ class _OrganizationActionsPendingPageState
           rejectionPageTitle: 'Reason for Rejection',
           rejectionPageSubtitle:
               '(What is the reason for this organization registration rejection? Please type in an answer below.)',
-          onRejection: (String reason) =>
-              widget._organizationBloc.rejectOrganization(reason, org),
+          onRejection: (String reason) => widget._organizationBloc.sink.add(
+              RejectOrganizationRegistration(
+                  reason: reason, organization: org)),
           onApproval: () {
-            widget._organizationBloc.approveOrganization(org);
+            widget._organizationBloc.sink
+                .add(ApproveOrganizationRegistration(organization: org));
             Navigator.of(context).pop();
           },
         );

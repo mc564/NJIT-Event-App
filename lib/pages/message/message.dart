@@ -27,7 +27,7 @@ class _MessagePageState extends State<MessagePage> {
   }
 
   Future<void> _refresh() async {
-    widget._messageBloc.reloadMessages();
+    widget._messageBloc.sink.add(ReloadMessages());
   }
 
   void _showAreYouSureDeleteDialog(Message message) {
@@ -46,7 +46,7 @@ class _MessagePageState extends State<MessagePage> {
               FlatButton(
                 child: Text('Yes'),
                 onPressed: () {
-                  widget._messageBloc.removeMessage(message);
+                  widget._messageBloc.sink.add(RemoveMessage(message: message));
                   Navigator.of(context).pop();
                 },
               ),
@@ -117,7 +117,7 @@ class _MessagePageState extends State<MessagePage> {
         if (message.messageRead == false) {
           setState(() {
             message.messageRead = true;
-            widget._messageBloc.setMessageToRead(message);
+            widget._messageBloc.sink.add(SetMessageToRead(message: message));
           });
         }
         Navigator.push(
@@ -176,7 +176,7 @@ class _MessagePageState extends State<MessagePage> {
                         itemCount: messages.length,
                         itemBuilder: (BuildContext context, int index) {
                           Message message = messages[index];
-                          //TODO cut down on message length?..
+
                           return _buildMessageListTile(message);
                         },
                       ),

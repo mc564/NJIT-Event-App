@@ -5,16 +5,29 @@ import 'package:intl/intl.dart';
 import '../pages/detail/event_detail.dart';
 import '../blocs/favorite_bloc.dart';
 import '../blocs/event_bloc.dart';
+import '../blocs/edit_bloc.dart';
 
 class EventListTile extends StatefulWidget {
   final Event _event;
   final int _color;
   final FavoriteBloc _favoriteBloc;
+  final EditEventBloc _editBloc;
   final EventBloc _eventBloc;
   final Function _canEdit;
 
-  EventListTile(this._event, this._color, this._favoriteBloc, this._eventBloc,
-      this._canEdit);
+  EventListTile(
+      {@required Event event,
+      @required int color,
+      @required FavoriteBloc favoriteBloc,
+      @required EditEventBloc editBloc,
+      @required EventBloc eventBloc,
+      @required Function canEdit})
+      : _event = event,
+        _color = color,
+        _favoriteBloc = favoriteBloc,
+        _editBloc = editBloc,
+        _eventBloc = eventBloc,
+        _canEdit = canEdit;
 
   @override
   State<StatefulWidget> createState() {
@@ -115,6 +128,7 @@ class _EventListTileState extends State<EventListTile> {
                         builder: (BuildContext context) => EventDetailPage(
                               event: widget._event,
                               canEdit: widget._canEdit,
+                              editBloc: widget._editBloc,
                             ),
                       ),
                     );

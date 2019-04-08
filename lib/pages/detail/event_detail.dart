@@ -1,16 +1,26 @@
 import 'package:flutter/material.dart';
-import '../../models/event.dart';
-import '../edit/edit.dart';
-import '../../models/category.dart';
 import 'package:intl/intl.dart';
 
+import '../../blocs/edit_bloc.dart';
+
+import '../../models/category.dart';
+import '../../models/event.dart';
+
+import '../edit/edit.dart';
+
+//TODO if edited, then run some function to refetch events for that day or whathave you
 class EventDetailPage extends StatefulWidget {
+  final EditEventBloc _editBloc;
   final Event _event;
   final Function _canEdit;
 
-  EventDetailPage({@required Event event, @required Function canEdit})
+  EventDetailPage(
+      {@required Event event,
+      @required Function canEdit,
+      @required EditEventBloc editBloc})
       : _canEdit = canEdit,
-        _event = event;
+        _event = event,
+        _editBloc = editBloc;
 
   @override
   State<StatefulWidget> createState() {
@@ -40,7 +50,8 @@ class _EventDetailPageState extends State<EventDetailPage> {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (BuildContext context) => EditPage(widget._event),
+            builder: (BuildContext context) =>
+                EditPage(event: widget._event, editBloc: widget._editBloc),
           ),
         );
       },

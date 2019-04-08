@@ -19,10 +19,29 @@ class EditEventProvider {
   int _standardFieldMaxLength;
   int _descriptionMaxLength;
 
-  EditEventProvider({@required Event initialEventToEdit}) {
-    setEventToEdit(initialEventToEdit);
+  EditEventProvider() {
     _standardFieldMaxLength = 256;
     _descriptionMaxLength = 1000;
+    _eventToEdit = Event(
+      eventId: null,
+      location: null,
+      organization: null,
+      locationCode: null,
+      favorited: false,
+      description: null,
+      title: null,
+      category: Category.Miscellaneous,
+      startTime: null,
+      endTime: null,
+    );
+    _id = _eventToEdit.eventId;
+    _location = _eventToEdit.location;
+    _title = _eventToEdit.title;
+    _startDateTime = _eventToEdit.startTime;
+    _endDateTime = _eventToEdit.endTime;
+    _organization = _eventToEdit.organization;
+    _description = _eventToEdit.description;
+    _category = CategoryHelper.getString(_eventToEdit.category);
   }
 
   String get id => _id;

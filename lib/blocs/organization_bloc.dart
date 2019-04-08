@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
 import 'package:equatable/equatable.dart';
 
@@ -16,6 +15,7 @@ import '../models/user.dart';
 
 //manages the organizations
 class OrganizationBloc {
+  final StreamController<OrganizationEvent> _requestsController;
   //stream for org editing (change description, edit members etc.) and registration requests
   final StreamController<OrganizationState> _orgUpdatingController;
   //stream for active organizations
@@ -37,7 +37,7 @@ class OrganizationBloc {
   final UpdateOrganizationProvider _updateOrgProvider;
   //these 2 are used to send messages
   final OrganizationMessageProvider _organizationMessageProvider;
-  final UserProvider _userProvider;
+
   final String _ucid;
   final bool _isAdmin;
 
@@ -54,9 +54,9 @@ class OrganizationBloc {
       @required UserProvider userProvider})
       : _organizationMessageProvider = OrganizationMessageProvider(
             messageProvider: messageProvider, ucid: userProvider.ucid),
-        _userProvider = userProvider,
         _orgProvider = OrganizationProvider(),
         _updateOrgProvider = UpdateOrganizationProvider(),
+        _requestsController = StreamController<OrganizationEvent>.broadcast(),
         _orgUpdatingController =
             StreamController<OrganizationState>.broadcast(),
         _viewableOrgsController =
@@ -105,6 +105,9 @@ class OrganizationBloc {
         .listen((OrganizationState state) {
       _prevAwaitingReactivationOrgsState = state;
     });
+    _requestsController.stream.forEach((OrganizationEvent event) {
+      event.execute(this);
+    });
   }
 
   OrganizationState get updatingOrgInitialState => _prevUpdatedOrgState;
@@ -128,6 +131,7 @@ class OrganizationBloc {
       _updateOrgProvider.regularMemberValidator;
   bool get enoughEBoardMembers => _updateOrgProvider.enoughEBoardMembers();
 
+  StreamSink<OrganizationEvent> get sink => _requestsController.sink;
   Stream get organizationUpdateRequests => _orgUpdatingController.stream;
   Stream get viewableOrganizations => _viewableOrgsController.stream;
   Stream get inactiveOrganizations => _inactiveOrgsController.stream;
@@ -247,52 +251,52 @@ class OrganizationBloc {
   //so that every form can start from a clear slate
   void clearStorage() {
     _updateOrgProvider.clear();
-    alertOrganizationChanged();
+    _alertOrganizationChanged();
   }
 
-  void alertOrganizationChanged() {
+  void _alertOrganizationChanged() {
     _orgUpdatingController.sink.add(OrganizationBeforeUpdates(
         organization: _updateOrgProvider.organization));
   }
 
   void setOrgToEdit(Organization org) {
     _updateOrgProvider.setOrganizationToEdit(org);
-    alertOrganizationChanged();
+    _alertOrganizationChanged();
   }
 
   void setReasonForUpdate(String reason) {
     _updateOrgProvider.setReason(reason);
-    alertOrganizationChanged();
+    _alertOrganizationChanged();
   }
 
   void setName(String name) {
     _updateOrgProvider.setName(name);
-    alertOrganizationChanged();
+    _alertOrganizationChanged();
   }
 
   void setDescription(String description) {
     _updateOrgProvider.setDescription(description);
-    alertOrganizationChanged();
+    _alertOrganizationChanged();
   }
 
   void addEboardMember(String ucid, String role) {
     _updateOrgProvider.addEboardMember(ucid, role);
-    alertOrganizationChanged();
+    _alertOrganizationChanged();
   }
 
   void removeEboardMember(String ucid, String role) {
     _updateOrgProvider.removeEboardMember(ucid, role);
-    alertOrganizationChanged();
+    _alertOrganizationChanged();
   }
 
   void addRegularMember(String ucid) {
     _updateOrgProvider.addRegularMember(ucid);
-    alertOrganizationChanged();
+    _alertOrganizationChanged();
   }
 
   void removeRegularMember(String ucid) {
     _updateOrgProvider.removeRegularMember(ucid);
-    alertOrganizationChanged();
+    _alertOrganizationChanged();
   }
 
   /* ALERT DIFFERENT TYPES OF ERROR FUNCTIONS */
@@ -598,6 +602,7 @@ class OrganizationBloc {
   /* INACTIVATION FUNCTIONS */
   void requestOrganizationInactivation(
       Organization organization, String reason) async {
+        print('requesting org inactivation');
     try {
       _orgUpdatingController.sink
           .add(OrganizationUpdating(organization: organization));
@@ -605,6 +610,7 @@ class OrganizationBloc {
           OrganizationStatus.AWAITING_INACTIVATION, organization);
 
       if (successfullyRequested) {
+        print('SUCCESSfully requested inactivation');
         bool successfullyMessaged = await _organizationMessageProvider
             .sendMessageToAdminsAboutInactivationRequest(organization, reason);
         if (successfullyMessaged) {
@@ -689,9 +695,276 @@ class OrganizationBloc {
     _awaitingEboardChangeOrgsController.close();
     _awaitingInactivationOrgsController.close();
     _awaitingReactivationOrgsController.close();
+    _requestsController.close();
   }
 }
 
+/*ORGANIZATION BLOC input EVENTS */
+abstract class OrganizationEvent extends Equatable {
+  OrganizationEvent([List args = const []]) : super(args);
+  void execute(OrganizationBloc organizationBloc);
+}
+
+class FetchViewableOrganizations extends OrganizationEvent {
+  void execute(OrganizationBloc organizationBloc) {
+    organizationBloc.fetchViewableOrgs();
+  }
+}
+
+class FetchInactiveOrganizations extends OrganizationEvent {
+  void execute(OrganizationBloc organizationBloc) {
+    organizationBloc.fetchInactiveOrgs();
+  }
+}
+
+class FetchOrganizationsAwaitingApproval extends OrganizationEvent {
+  void execute(OrganizationBloc organizationBloc) {
+    organizationBloc.fetchOrgsAwaitingApproval();
+  }
+}
+
+class FetchOrganizationsAwaitingEboardChange extends OrganizationEvent {
+  void execute(OrganizationBloc organizationBloc) {
+    organizationBloc.fetchOrgsAwaitingEboardChange();
+  }
+}
+
+class FetchOrganizationsAwaitingInactivation extends OrganizationEvent {
+  void execute(OrganizationBloc organizationBloc) {
+    organizationBloc.fetchOrgsAwaitingInactivation();
+  }
+}
+
+class FetchOrganizationsAwaitingReactivation extends OrganizationEvent {
+  void execute(OrganizationBloc organizationBloc) {
+    organizationBloc.fetchOrgsAwaitingReactivation();
+  }
+}
+
+class ClearStorage extends OrganizationEvent {
+  void execute(OrganizationBloc organizationBloc) {
+    organizationBloc.clearStorage();
+  }
+}
+
+class SetOrganizationToEdit extends OrganizationEvent {
+  final Organization organization;
+  SetOrganizationToEdit({@required Organization organization})
+      : organization = organization,
+        super([organization]);
+  void execute(OrganizationBloc organizationBloc) {
+    organizationBloc.setOrgToEdit(organization);
+  }
+}
+
+class SetReasonForUpdate extends OrganizationEvent {
+  final String reason;
+  SetReasonForUpdate({@required String reason})
+      : reason = reason,
+        super([reason]);
+  void execute(OrganizationBloc organizationBloc) {
+    organizationBloc.setReasonForUpdate(reason);
+  }
+}
+
+class SetName extends OrganizationEvent {
+  final String name;
+  SetName({@required String name})
+      : name = name,
+        super([name]);
+  void execute(OrganizationBloc organizationBloc) {
+    organizationBloc.setName(name);
+  }
+}
+
+class SetDescription extends OrganizationEvent {
+  final String description;
+  SetDescription({@required String description})
+      : description = description,
+        super([description]);
+  void execute(OrganizationBloc organizationBloc) {
+    organizationBloc.setDescription(description);
+  }
+}
+
+class AddEboardMember extends OrganizationEvent {
+  final String ucid;
+  final String role;
+  AddEboardMember({@required String ucid, @required String role})
+      : ucid = ucid,
+        role = role,
+        super([ucid, role]);
+  void execute(OrganizationBloc organizationBloc) {
+    organizationBloc.addEboardMember(ucid, role);
+  }
+}
+
+class RemoveEboardMember extends OrganizationEvent {
+  final String ucid;
+  final String role;
+  RemoveEboardMember({@required String ucid, @required String role})
+      : ucid = ucid,
+        role = role,
+        super([ucid, role]);
+  void execute(OrganizationBloc organizationBloc) {
+    organizationBloc.removeEboardMember(ucid, role);
+  }
+}
+
+class AddRegularMember extends OrganizationEvent {
+  final String ucid;
+  AddRegularMember({@required String ucid})
+      : ucid = ucid,
+        super([ucid]);
+  void execute(OrganizationBloc organizationBloc) {
+    organizationBloc.addRegularMember(ucid);
+  }
+}
+
+class RemoveRegularMember extends OrganizationEvent {
+  final String ucid;
+  RemoveRegularMember({@required String ucid})
+      : ucid = ucid,
+        super([ucid]);
+  void execute(OrganizationBloc organizationBloc) {
+    organizationBloc.removeRegularMember(ucid);
+  }
+}
+
+class SubmitOrganizationRegistration extends OrganizationEvent {
+  void execute(OrganizationBloc organizationBloc) {
+    organizationBloc.submitOrganizationRegistration();
+  }
+}
+
+class ApproveOrganizationRegistration extends OrganizationEvent {
+  final Organization organization;
+  ApproveOrganizationRegistration({@required Organization organization})
+      : organization = organization,
+        super([organization]);
+  void execute(OrganizationBloc organizationBloc) {
+    organizationBloc.approveOrganization(organization);
+  }
+}
+
+class RejectOrganizationRegistration extends OrganizationEvent {
+  final Organization organization;
+  final String reason;
+  RejectOrganizationRegistration(
+      {@required Organization organization, @required String reason})
+      : organization = organization,
+        reason = reason,
+        super([organization, reason]);
+  void execute(OrganizationBloc organizationBloc) {
+    organizationBloc.rejectOrganization(reason, organization);
+  }
+}
+
+class SubmitRequestForReactivation extends OrganizationEvent {
+  void execute(OrganizationBloc organizationBloc) {
+    organizationBloc.submitRequestForReactivation();
+  }
+}
+
+class RejectOrganizationRevival extends OrganizationEvent {
+  final Organization organization;
+  final String reason;
+  RejectOrganizationRevival(
+      {@required Organization organization, @required String reason})
+      : organization = organization,
+        reason = reason,
+        super([organization, reason]);
+  void execute(OrganizationBloc organizationBloc) {
+    organizationBloc.rejectOrganizationRevival(organization, reason);
+  }
+}
+
+class ApproveOrganizationRevival extends OrganizationEvent {
+  final Organization organization;
+  ApproveOrganizationRevival({@required Organization organization})
+      : organization = organization,
+        super([organization]);
+  void execute(OrganizationBloc organizationBloc) {
+    organizationBloc.approveOrganizationRevival(organization);
+  }
+}
+
+class SubmitOrganizationUpdates extends OrganizationEvent {
+  void execute(OrganizationBloc organizationBloc) {
+    organizationBloc.submitOrganizationUpdates();
+  }
+}
+
+class RequestEboardChanges extends OrganizationEvent {
+  void execute(OrganizationBloc organizationBloc) {
+    organizationBloc.requestEboardChanges();
+  }
+}
+
+class ApproveEboardChanges extends OrganizationEvent {
+  final OrganizationUpdateRequestData requestData;
+  ApproveEboardChanges({@required OrganizationUpdateRequestData requestData})
+      : requestData = requestData,
+        super([requestData]);
+  void execute(OrganizationBloc organizationBloc) {
+    organizationBloc.approveEboardChanges(requestData);
+  }
+}
+
+class RejectEboardChanges extends OrganizationEvent {
+  final OrganizationUpdateRequestData requestData;
+  final String reason;
+  RejectEboardChanges(
+      {@required OrganizationUpdateRequestData requestData,
+      @required String reason})
+      : requestData = requestData,
+        reason = reason,
+        super([requestData, reason]);
+  void execute(OrganizationBloc organizationBloc) {
+    organizationBloc.rejectEboardChanges(requestData, reason);
+  }
+}
+
+class RequestOrganizationInactivation extends OrganizationEvent {
+  final Organization organization;
+  final String reason;
+  RequestOrganizationInactivation(
+      {@required Organization organization, @required String reason})
+      : organization = organization,
+        reason = reason,
+        super([organization, reason]);
+
+  void execute(OrganizationBloc organizationBloc) {
+    organizationBloc.requestOrganizationInactivation(organization, reason);
+  }
+}
+
+class RefuseOrganizationInactivation extends OrganizationEvent {
+  final Organization organization;
+  final String reason;
+  RefuseOrganizationInactivation(
+      {@required Organization organization, @required String reason})
+      : organization = organization,
+        reason = reason,
+        super([organization, reason]);
+
+  void execute(OrganizationBloc organizationBloc) {
+    organizationBloc.refuseOrganizationInactivation(organization, reason);
+  }
+}
+
+class InactivateOrganization extends OrganizationEvent {
+  final Organization organization;
+  InactivateOrganization({@required Organization organization})
+      : organization = organization,
+        super([organization]);
+
+  void execute(OrganizationBloc organizationBloc) {
+    organizationBloc.inactivateOrganization(organization);
+  }
+}
+
+/* ORGANIZATION BLOC output STATES */
 abstract class OrganizationState extends Equatable {
   OrganizationState([List args = const []]) : super(args);
 }

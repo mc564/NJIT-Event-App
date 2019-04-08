@@ -111,7 +111,7 @@ class _LoginPageState extends State<LoginPage> {
               return;
             }
             _formKey.currentState.save();
-            widget._userBloc.authenticate();
+            widget._userBloc.sink.add(Authenticate());
           },
         );
       },
@@ -147,7 +147,7 @@ class _LoginPageState extends State<LoginPage> {
         }
       },
       onSaved: (String value) {
-        widget._userBloc.setUCID(value);
+        widget._userBloc.sink.add(SetUCID(ucid: value));
       },
     );
   }
@@ -182,7 +182,7 @@ class _LoginPageState extends State<LoginPage> {
         }
       },
       onSaved: (String value) {
-        widget._userBloc.setPassword(value);
+        widget._userBloc.sink.add(SetPassword(password: value));
       },
     );
   }

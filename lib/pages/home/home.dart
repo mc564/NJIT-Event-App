@@ -7,6 +7,7 @@ import '../../blocs/favorite_bloc.dart';
 import '../../blocs/user_bloc.dart';
 import '../../blocs/message_bloc.dart';
 import '../../blocs/organization_bloc.dart';
+import '../../blocs/edit_bloc.dart';
 
 import './home_widgets.dart';
 
@@ -22,6 +23,7 @@ import '../admin/admin.dart';
 import '../message/message.dart';
 
 import '../../models/user.dart';
+import '../../models/event.dart';
 
 enum View { daily, weekly, monthly }
 
@@ -38,6 +40,7 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   EventBloc _eventBloc;
+  EditEventBloc _editBloc;
   DateBloc _dateBloc;
   SearchBloc _searchBloc;
   FavoriteBloc _favoriteBloc;
@@ -76,6 +79,7 @@ class _HomePageState extends State<HomePage> {
             context,
             MaterialPageRoute(
               builder: (BuildContext context) => AddPage(
+                    editBloc: _editBloc,
                     eventListProvider: _eventBloc.eventListProvider,
                     orgProvider: _organizationBloc.organizationProvider,
                     isAdmin:
@@ -89,6 +93,7 @@ class _HomePageState extends State<HomePage> {
             context,
             MaterialPageRoute(
               builder: (BuildContext context) => SearchPage(
+                    editBloc: _editBloc,
                     searchBloc: _searchBloc,
                     favoriteBloc: _favoriteBloc,
                     eventBloc: _eventBloc,
@@ -97,15 +102,16 @@ class _HomePageState extends State<HomePage> {
             ),
           );
         } else if (value == 'log out') {
-          widget._userBloc.logout();
+          widget._userBloc.sink.add(Logout());
           Navigator.pushReplacementNamed(context, '/login');
         } else if (value == 'favorites') {
           Navigator.push(
             context,
             MaterialPageRoute(
               builder: (BuildContext context) => FavoritesPage(
+                    editBloc: _editBloc,
                     favoriteBloc: _favoriteBloc,
-                    addViewToEvent: _eventBloc.addView,
+                    eventBloc: _eventBloc,
                     canEditEvent: _organizationBloc.canEdit,
                   ),
             ),
@@ -126,6 +132,7 @@ class _HomePageState extends State<HomePage> {
             context,
             MaterialPageRoute(
               builder: (BuildContext context) => AdminPage(
+                    editBloc: _editBloc,
                     organizationBloc: _organizationBloc,
                     userBloc: widget._userBloc,
                     eventListProvider: _eventBloc.eventListProvider,
@@ -207,7 +214,7 @@ class _HomePageState extends State<HomePage> {
                     MaterialPageRoute(builder: (BuildContext context) {
                       return FilterPage(
                           searchBloc: _searchBloc,
-                          eventListProvider: _eventBloc.eventListProvider,
+                          eventBloc: _eventBloc,
                           viewDay: dateState.day);
                     }),
                   );
@@ -237,6 +244,7 @@ class _HomePageState extends State<HomePage> {
 
   DailyEventList _buildDailyView(DateLoaded dateState) {
     return DailyEventList(
+        editBloc: _editBloc,
         eventBloc: _eventBloc,
         favoriteBloc: _favoriteBloc,
         day: dateState.day,
@@ -250,8 +258,10 @@ class _HomePageState extends State<HomePage> {
 
   CalendarPage _buildMonthlyView(DateLoaded state) {
     return CalendarPage(
+      editBloc: _editBloc,
       eventBloc: _eventBloc,
       favoriteBloc: _favoriteBloc,
+      dateBloc: _dateBloc,
       selectedDay: state.day,
       canEdit: _organizationBloc.canEdit,
     );
@@ -263,7 +273,10 @@ class _HomePageState extends State<HomePage> {
       margin: EdgeInsets.all(20),
       child: Column(
         children: <Widget>[
-          Text('Welcome to the NJIT Event Planner!\nChoose a view to begin.', textAlign: TextAlign.center,),
+          Text(
+            'Welcome to the NJIT Event Planner!\nChoose a view to begin.',
+            textAlign: TextAlign.center,
+          ),
           SizedBox(height: 20),
           Image.asset('images/welcome.png'),
         ],
@@ -274,21 +287,21 @@ class _HomePageState extends State<HomePage> {
   void _setDate(int page) {
     if (_view == View.daily) {
       if (page > _prevPage) {
-        _dateBloc.toNextDay();
+        _dateBloc.sink.add(ToNextDay());
       } else if (page < _prevPage) {
-        _dateBloc.toPrevDay();
+        _dateBloc.sink.add(ToPrevDay());
       }
     } else if (_view == View.weekly) {
       if (page > _prevPage) {
-        _dateBloc.toNextWeek();
+        _dateBloc.sink.add(ToNextWeek());
       } else if (page < _prevPage) {
-        _dateBloc.toPrevWeek();
+        _dateBloc.sink.add(ToPrevWeek());
       }
     } else if (_view == View.monthly) {
       if (page > _prevPage) {
-        _dateBloc.toNextMonth();
+        _dateBloc.sink.add(ToNextMonth());
       } else if (page < _prevPage) {
-        _dateBloc.toPrevMonth();
+        _dateBloc.sink.add(ToPrevMonth());
       }
     }
     _prevPage = page;
@@ -310,6 +323,8 @@ class _HomePageState extends State<HomePage> {
     _organizationBloc = OrganizationBloc(
         messageProvider: _messageBloc.messageProvider,
         userProvider: widget._userBloc.userProvider);
+    _editBloc = EditEventBloc(
+        searchSink: _searchBloc.sink, favoriteSink: _favoriteBloc.sink);
     _view = null;
     //make it some ridiculously large number to allow scrolling both directions
     int initialPage = 20000;
@@ -363,6 +378,7 @@ class _HomePageState extends State<HomePage> {
     _favoriteBloc.dispose();
     _messageBloc.dispose();
     _organizationBloc.dispose();
+    _editBloc.dispose();
     super.dispose();
   }
 }

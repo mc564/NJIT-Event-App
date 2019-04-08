@@ -12,8 +12,12 @@ import '../../models/category.dart';
 import '../../blocs/edit_bloc.dart';
 
 class EditPage extends StatefulWidget {
+  final EditEventBloc _editBloc;
   final Event _event;
-  EditPage(this._event);
+
+  EditPage({@required Event event, @required EditEventBloc editBloc})
+      : _event = event,
+        _editBloc = editBloc;
 
   @override
   State<StatefulWidget> createState() {
@@ -22,7 +26,6 @@ class EditPage extends StatefulWidget {
 }
 
 class _EditPageState extends State<EditPage> {
-  EditEventBloc _editEventBloc;
   StreamSubscription<EditFormState> _navigationListener;
   GlobalKey<FormState> _formKey;
   List<DropdownMenuItem<String>> _categoryDropdownItems;
@@ -39,9 +42,9 @@ class _EditPageState extends State<EditPage> {
           border: InputBorder.none,
         ),
         initialValue: _currentlyEditing.title,
-        validator: _editEventBloc.titleValidator,
+        validator: widget._editBloc.titleValidator,
         onSaved: (String value) {
-          _editEventBloc.setTitle(value);
+          widget._editBloc.sink.add(SetTitle(value));
         });
   }
 
@@ -58,9 +61,9 @@ class _EditPageState extends State<EditPage> {
           border: InputBorder.none,
         ),
         initialValue: _currentlyEditing.organization,
-        validator: _editEventBloc.organizationValidator,
+        validator: widget._editBloc.organizationValidator,
         onSaved: (String value) {
-          _editEventBloc.setOrganization(value);
+          widget._editBloc.sink.add(SetOrganization(value));
         });
   }
 
@@ -71,9 +74,9 @@ class _EditPageState extends State<EditPage> {
       color: Colors.pink[200],
       textColor: Colors.black,
       initialValue: CategoryHelper.getString(_currentlyEditing.category),
-      validator: _editEventBloc.categoryValidator,
+      validator: widget._editBloc.categoryValidator,
       onSaved: (String value) {
-        _editEventBloc.setCategory(value);
+        widget._editBloc.sink.add(SetCategory(value));
       },
     );
   }
@@ -89,9 +92,9 @@ class _EditPageState extends State<EditPage> {
           border: InputBorder.none,
         ),
         initialValue: _currentlyEditing.location,
-        validator: _editEventBloc.locationValidator,
+        validator: widget._editBloc.locationValidator,
         onSaved: (String value) {
-          _editEventBloc.setLocation(value);
+          widget._editBloc.sink.add(SetLocation(value));
         });
   }
 
@@ -106,10 +109,10 @@ class _EditPageState extends State<EditPage> {
           fillColor: Colors.pink[100],
           border: InputBorder.none,
         ),
-        validator: _editEventBloc.descriptionValidator,
+        validator: widget._editBloc.descriptionValidator,
         initialValue: _currentlyEditing.description,
         onSaved: (String value) {
-          _editEventBloc.setDescription(value);
+          widget._editBloc.sink.add(SetDescription(value));
         });
   }
 
@@ -122,11 +125,11 @@ class _EditPageState extends State<EditPage> {
       initialEndTime: endTime,
       onStartChanged: (DateTime start) {
         print('start time changed to: ' + start.toString());
-        _editEventBloc.setStartTime(start);
+        widget._editBloc.sink.add(SetStartTime(start));
       },
       onEndChanged: (DateTime end) {
         print('end time changed to :' + end.toString());
-        _editEventBloc.setEndTime(end);
+        widget._editBloc.sink.add(SetEndTime(end));
       },
     );
   }
@@ -136,13 +139,13 @@ class _EditPageState extends State<EditPage> {
       return;
     }
     _formKey.currentState.save();
-    _editEventBloc.submitForm();
+    widget._editBloc.sink.add(SubmitForm());
   }
 
   StreamBuilder _buildEditButton() {
     return StreamBuilder<EditFormState>(
-      stream: _editEventBloc.formSubmissions,
-      initialData: _editEventBloc.initialState,
+      stream: widget._editBloc.formSubmissions,
+      initialData: widget._editBloc.initialState,
       builder: (BuildContext context, AsyncSnapshot<EditFormState> snapshot) {
         EditFormState state = snapshot.data;
         if (state is FormSubmitting) {
@@ -219,9 +222,9 @@ class _EditPageState extends State<EditPage> {
     super.initState();
     _currentlyEditing = widget._event;
     _formKey = GlobalKey<FormState>();
-    _editEventBloc = EditEventBloc(initialEventToEdit: widget._event);
     _categoryDropdownItems = List<DropdownMenuItem<String>>();
-    _editEventBloc.allSelectableCategories.forEach((String category) {
+    widget._editBloc.sink.add(SetEventToEdit(_currentlyEditing));
+    widget._editBloc.allSelectableCategories.forEach((String category) {
       _categoryDropdownItems.add(
         DropdownMenuItem(
           value: category,
@@ -238,14 +241,14 @@ class _EditPageState extends State<EditPage> {
     });
 
     _navigationListener =
-        _editEventBloc.formSubmissions.listen((dynamic state) {
+        widget._editBloc.formSubmissions.listen((dynamic state) {
       if (state is FormSubmitError) {
         _showErrorDialog(state);
       } else if (state is FormSubmitted) {
         Event editedEvent = state.submittedEvent;
         _currentlyEditing = editedEvent;
         _showSuccessDialog(editedEvent);
-        _editEventBloc.setEventToEdit(editedEvent);
+        widget._editBloc.sink.add(SetEventToEdit(editedEvent));
       }
     });
   }
@@ -263,7 +266,6 @@ class _EditPageState extends State<EditPage> {
 
   @override
   void dispose() {
-    _editEventBloc.dispose();
     _navigationListener.cancel();
     super.dispose();
   }

@@ -46,9 +46,10 @@ class _RegisterOrganizationPageState extends State<RegisterOrganizationPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _built = true;
       if (_reactivate) {
-        widget._organizationBloc.setOrgToEdit(widget._orgToReactivate);
+        widget._organizationBloc.sink
+            .add(SetOrganizationToEdit(organization: widget._orgToReactivate));
       } else {
-        widget._organizationBloc.clearStorage();
+        widget._organizationBloc.sink.add(ClearStorage());
       }
     });
 
@@ -62,7 +63,7 @@ class _RegisterOrganizationPageState extends State<RegisterOrganizationPage> {
           _initializedName = false;
           _initializedDescription = false;
           _reactivate = false;
-          widget._organizationBloc.clearStorage();
+          widget._organizationBloc.sink.add(ClearStorage());
         });
         showDialog(
             context: context,
@@ -96,7 +97,8 @@ class _RegisterOrganizationPageState extends State<RegisterOrganizationPage> {
             regularMember.ucid + ' - Member',
           ),
           onDeleted: () {
-            widget._organizationBloc.removeRegularMember(regularMember.ucid);
+            widget._organizationBloc.sink
+                .add(RemoveRegularMember(ucid: regularMember.ucid));
           },
         ),
       );
@@ -129,7 +131,7 @@ class _RegisterOrganizationPageState extends State<RegisterOrganizationPage> {
         UCIDAndRoleFormField(
           includeRole: false,
           onSubmitted: (String ucid) {
-            widget._organizationBloc.addRegularMember(ucid);
+            widget._organizationBloc.sink.add(AddRegularMember(ucid: ucid));
           },
           validator: widget._organizationBloc.regularMemberValidator,
         ),
@@ -147,8 +149,8 @@ class _RegisterOrganizationPageState extends State<RegisterOrganizationPage> {
             eBoardMember.ucid + ' - ' + eBoardMember.role,
           ),
           onDeleted: () {
-            widget._organizationBloc
-                .removeEboardMember(eBoardMember.ucid, eBoardMember.role);
+            widget._organizationBloc.sink.add(RemoveEboardMember(
+                ucid: eBoardMember.ucid, role: eBoardMember.role));
           },
         ),
       );
@@ -180,7 +182,7 @@ class _RegisterOrganizationPageState extends State<RegisterOrganizationPage> {
         UCIDAndRoleFormField(
           onSubmitted: (String ucid, String role) {
             print('submitted: ' + ucid + " " + role);
-            widget._organizationBloc.addEboardMember(ucid, role);
+            widget._organizationBloc.sink.add(AddEboardMember(ucid: ucid, role: role));
           },
           validator: widget._organizationBloc.eBoardMemberValidator,
         ),
@@ -219,7 +221,7 @@ class _RegisterOrganizationPageState extends State<RegisterOrganizationPage> {
           ),
           validator: widget._organizationBloc.descriptionValidator,
           onSaved: (String value) {
-            widget._organizationBloc.setDescription(value);
+            widget._organizationBloc.sink.add(SetDescription(description: value));
           },
         ),
       ],
@@ -253,7 +255,7 @@ class _RegisterOrganizationPageState extends State<RegisterOrganizationPage> {
           ),
           validator: widget._organizationBloc.nameValidator,
           onSaved: (String value) {
-            widget._organizationBloc.setName(value);
+            widget._organizationBloc.sink.add(SetName(name: value));
           },
         ),
       ],
@@ -301,11 +303,11 @@ class _RegisterOrganizationPageState extends State<RegisterOrganizationPage> {
             return;
           }
           _formKey.currentState.save();
-          //TODO change this so there is a separate function for organization reactivation
+
           if (_reactivate) {
-            widget._organizationBloc.submitRequestForReactivation();
+            widget._organizationBloc.sink.add(SubmitRequestForReactivation());
           } else {
-            widget._organizationBloc.submitOrganizationRegistration();
+            widget._organizationBloc.sink.add(SubmitOrganizationRegistration());
           }
           _formKey.currentState.reset();
         },

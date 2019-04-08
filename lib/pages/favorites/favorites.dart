@@ -1,21 +1,26 @@
 import 'package:flutter/material.dart';
 import '../../blocs/favorite_bloc.dart';
+import '../../blocs/event_bloc.dart';
+import '../../blocs/edit_bloc.dart';
 import '../../models/event.dart';
 import '../../common/error_dialog.dart';
 import './favorites_widgets.dart';
 import 'dart:async';
 
 class FavoritesPage extends StatefulWidget {
+  final EditEventBloc _editBloc;
   final FavoriteBloc _favoriteBloc;
-  final Function _addViewToEvent;
+  final EventBloc _eventBloc;
   final Function _canEditEvent;
 
   FavoritesPage(
-      {@required FavoriteBloc favoriteBloc,
-      @required Function addViewToEvent,
+      {@required EditEventBloc editBloc,
+      @required FavoriteBloc favoriteBloc,
+      @required EventBloc eventBloc,
       @required Function canEditEvent})
-      : _favoriteBloc = favoriteBloc,
-        _addViewToEvent = addViewToEvent,
+      : _editBloc = editBloc,
+        _favoriteBloc = favoriteBloc,
+        _eventBloc = eventBloc,
         _canEditEvent = canEditEvent;
 
   @override
@@ -102,10 +107,11 @@ class _FavoritesPageState extends State<FavoritesPage> {
 
   FavoriteGridTile _buildTile(Event event, int color) {
     return FavoriteGridTile(
+      editBloc: widget._editBloc,
       favoriteBloc: widget._favoriteBloc,
+      eventBloc: widget._eventBloc,
       event: event,
       color: color,
-      addViewToEvent: widget._addViewToEvent,
       canEditEvent: widget._canEditEvent,
     );
   }

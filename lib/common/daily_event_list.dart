@@ -3,9 +3,11 @@ import './event_list_tile.dart';
 import '../models/event.dart';
 import '../blocs/event_bloc.dart';
 import '../blocs/favorite_bloc.dart';
+import '../blocs/edit_bloc.dart';
 import 'dart:async';
 
 class DailyEventList extends StatefulWidget {
+  final EditEventBloc _editBloc;
   final FavoriteBloc _favoriteBloc;
   final EventBloc _eventBloc;
   final Function _canEdit;
@@ -16,12 +18,14 @@ class DailyEventList extends StatefulWidget {
   DailyEventList(
       {@required DateTime day,
       @required EventBloc eventBloc,
+      @required EditEventBloc editBloc,
       @required FavoriteBloc favoriteBloc,
       @required Function canEdit,
       Key key})
       : assert(day != null && eventBloc != null),
         _day = day,
         _eventBloc = eventBloc,
+        _editBloc = editBloc,
         _favoriteBloc = favoriteBloc,
         _canEdit = canEdit,
         super(key: key);
@@ -51,8 +55,13 @@ class _DailyEventListState extends State<DailyEventList> {
     return ListView.builder(
       itemCount: events.length,
       itemBuilder: (BuildContext context, int index) {
-        return EventListTile(events[index], colors[index % colors.length],
-            widget._favoriteBloc, widget._eventBloc, widget._canEdit);
+        return EventListTile(
+            event: events[index],
+            color: colors[index % colors.length],
+            favoriteBloc: widget._favoriteBloc,
+            editBloc: widget._editBloc,
+            eventBloc: widget._eventBloc,
+            canEdit: widget._canEdit);
       },
     );
   }

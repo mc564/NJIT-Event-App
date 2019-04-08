@@ -78,7 +78,8 @@ class _AddOrRemoveMembersPageState extends State<AddOrRemoveMembersPage> {
       child = IconButton(
         icon: Icon(Icons.delete),
         onPressed: () {
-          widget._organizationBloc.removeRegularMember(member.ucid);
+          widget._organizationBloc.sink
+              .add(RemoveRegularMember(ucid: member.ucid));
         },
       );
     }
@@ -113,7 +114,8 @@ class _AddOrRemoveMembersPageState extends State<AddOrRemoveMembersPage> {
                 child: UCIDAndRoleFormField(
                   includeRole: false,
                   onSubmitted: (String ucid) {
-                    widget._organizationBloc.addRegularMember(ucid);
+                    widget._organizationBloc.sink
+                        .add(AddRegularMember(ucid: ucid));
                   },
                   validator: widget._organizationBloc.regularMemberValidator,
                 ),
@@ -139,7 +141,8 @@ class _AddOrRemoveMembersPageState extends State<AddOrRemoveMembersPage> {
               child: UCIDAndRoleFormField(
                 includeRole: false,
                 onSubmitted: (String ucid) {
-                  widget._organizationBloc.addRegularMember(ucid);
+                  widget._organizationBloc.sink
+                      .add(AddRegularMember(ucid: ucid));
                 },
                 validator: widget._organizationBloc.regularMemberValidator,
               ),
@@ -158,7 +161,8 @@ class _AddOrRemoveMembersPageState extends State<AddOrRemoveMembersPage> {
                     //change this to become a button
                     return _buildTileButton(
                         _build3DEffectTile('SUBMIT', 17, Colors.orange), () {
-                      widget._organizationBloc.submitOrganizationUpdates();
+                      widget._organizationBloc.sink
+                          .add(SubmitOrganizationUpdates());
                     });
                   else {
                     int memberListIndex = ((index / 3) - 1).floor();
@@ -184,24 +188,27 @@ class _AddOrRemoveMembersPageState extends State<AddOrRemoveMembersPage> {
   void initState() {
     super.initState();
     print('in init state of add or remove members');
-    widget._organizationBloc.clearStorage();
-    WidgetsBinding.instance.addPostFrameCallback(
-        (_) => widget._organizationBloc.setOrgToEdit(widget._organization));
+    widget._organizationBloc.sink.add(ClearStorage());
+    WidgetsBinding.instance.addPostFrameCallback((_) => widget
+        ._organizationBloc.sink
+        .add(SetOrganizationToEdit(organization: widget._organization)));
     _navigationListener = widget._organizationBloc.organizationUpdateRequests
         .listen((dynamic state) {
       if (state is OrganizationUpdated) {
-        widget._organization.setMembers(state.updatedOrganization.regularMembers);
-        widget._organizationBloc.setOrgToEdit(state.updatedOrganization);
+        widget._organization
+            .setMembers(state.updatedOrganization.regularMembers);
+        widget._organizationBloc.sink.add(SetOrganizationToEdit(organization: state.updatedOrganization));
         String members = '';
-        for(OrganizationMember member in widget._organization.regularMembers){
-          members+= "UCID: "+member.ucid +" Role: "+ member.role + "\n";
+        for (OrganizationMember member in widget._organization.regularMembers) {
+          members += "UCID: " + member.ucid + " Role: " + member.role + "\n";
         }
         showDialog(
             context: context,
             builder: (BuildContext context) {
               return SuccessDialog(
-                  'Your organization\'s members have been updated! Changed members: [\n'+members+'\n]'
-                      );
+                  'Your organization\'s members have been updated! Changed members: [\n' +
+                      members +
+                      '\n]');
             });
       } else if (state is OrganizationError) {
         showDialog(

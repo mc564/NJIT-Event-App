@@ -92,8 +92,4 @@ class UserProvider {
   Future<List<User>> fetchBannedUsers() async {
     return DatabaseEventAPI.fetchBannedUsers();
   }
-
-  Future<bool> setEboardUserType(String ucid) async {
-    return DatabaseEventAPI.assignEboardMemberType(ucid);
-  }
 }

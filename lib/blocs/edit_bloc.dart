@@ -6,17 +6,33 @@ import '../providers/edit_event_provider.dart';
 
 import '../models/event.dart';
 
+import '../blocs/search_bloc.dart';
+import '../blocs/favorite_bloc.dart';
+
 //helps implement edit event form logic
 class EditEventBloc {
+  final StreamController<EditEvent> _requestsController;
   final StreamController<EditFormState> _formController;
   final EditEventProvider _editEventProvider;
   EditFormState _prevState;
 
-  EditEventBloc({@required initialEventToEdit})
-      : _editEventProvider = EditEventProvider(initialEventToEdit: initialEventToEdit),
-        _formController = StreamController.broadcast() {
+  final StreamSink<SearchEvent> _searchSink;
+  final StreamSink<FavoriteEvent> _favoriteSink;
+
+  EditEventBloc(
+      {@required StreamSink<SearchEvent> searchSink,
+      @required StreamSink<FavoriteEvent> favoriteSink})
+      : _editEventProvider =
+            EditEventProvider(),
+        _formController = StreamController.broadcast(),
+        _requestsController = StreamController.broadcast(),
+        _searchSink = searchSink,
+        _favoriteSink = favoriteSink {
     _formController.stream.listen((EditFormState state) {
       _prevState = state;
+    });
+    _requestsController.stream.forEach((EditEvent event) {
+      event.execute(this);
     });
   }
 
@@ -30,6 +46,7 @@ class EditEventBloc {
       _editEventProvider.allSelectableCategories;
 
   Stream get formSubmissions => _formController.stream;
+  StreamSink<EditEvent> get sink => _requestsController.sink;
 
   void setEventToEdit(Event eventToEdit) {
     _editEventProvider.setEventToEdit(eventToEdit);
@@ -120,9 +137,87 @@ class EditEventBloc {
 
   void dispose() {
     _formController.close();
+    _requestsController.close();
   }
 }
 
+/*EDIT BLOC input EVENTS */
+abstract class EditEvent extends Equatable {
+  EditEvent([List args = const []]) : super(args);
+  void execute(EditEventBloc editBloc);
+}
+
+class SetEventToEdit extends EditEvent {
+  Event eventToEdit;
+  SetEventToEdit(this.eventToEdit) : super([eventToEdit]);
+  void execute(EditEventBloc editBloc) {
+    editBloc.setEventToEdit(eventToEdit);
+  }
+}
+
+class SetLocation extends EditEvent {
+  String location;
+  SetLocation(this.location) : super([location]);
+  void execute(EditEventBloc editBloc) {
+    editBloc.setLocation(location);
+  }
+}
+
+class SetTitle extends EditEvent {
+  String title;
+  SetTitle(this.title) : super([title]);
+  void execute(EditEventBloc editBloc) {
+    editBloc.setTitle(title);
+  }
+}
+
+class SetStartTime extends EditEvent {
+  DateTime startTime;
+  SetStartTime(this.startTime) : super([startTime]);
+  void execute(EditEventBloc editBloc) {
+    editBloc.setStartTime(startTime);
+  }
+}
+
+class SetEndTime extends EditEvent {
+  DateTime endTime;
+  SetEndTime(this.endTime) : super([endTime]);
+  void execute(EditEventBloc editBloc) {
+    editBloc.setEndTime(endTime);
+  }
+}
+
+class SetOrganization extends EditEvent {
+  String organization;
+  SetOrganization(this.organization) : super([organization]);
+  void execute(EditEventBloc editBloc) {
+    editBloc.setOrganization(organization);
+  }
+}
+
+class SetDescription extends EditEvent {
+  String description;
+  SetDescription(this.description) : super([description]);
+  void execute(EditEventBloc editBloc) {
+    editBloc.setDescription(description);
+  }
+}
+
+class SetCategory extends EditEvent {
+  String category;
+  SetCategory(this.category) : super([category]);
+  void execute(EditEventBloc editBloc) {
+    editBloc.setCategory(category);
+  }
+}
+
+class SubmitForm extends EditEvent {
+  void execute(EditEventBloc editBloc) {
+    editBloc.submitForm();
+  }
+}
+
+/* EDIT BLOC output STATES */
 abstract class EditFormState extends Equatable {
   EditFormState([List args = const []]) : super(args);
 }

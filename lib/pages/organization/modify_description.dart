@@ -61,7 +61,7 @@ class _ModifyDescriptionPageState extends State<ModifyDescriptionPage> {
                   maxLines: null,
                   validator: widget._organizationBloc.descriptionValidator,
                   onSaved: (String value) {
-                    widget._organizationBloc.setDescription(value);
+                    widget._organizationBloc.sink.add(SetDescription(description: value));
                   },
                 ),
                 StreamBuilder<OrganizationState>(
@@ -83,7 +83,7 @@ class _ModifyDescriptionPageState extends State<ModifyDescriptionPage> {
                           return;
                         }
                         _formKey.currentState.save();
-                        widget._organizationBloc.submitOrganizationUpdates();
+                        widget._organizationBloc.sink.add(SubmitOrganizationUpdates());
                         _formKey.currentState.reset();
                       },
                     );
@@ -103,15 +103,14 @@ class _ModifyDescriptionPageState extends State<ModifyDescriptionPage> {
     _formKey = GlobalKey<FormState>();
     _textEditingController =
         TextEditingController(text: widget._organization.description);
-    widget._organizationBloc.clearStorage();
+    widget._organizationBloc.sink.add(ClearStorage());
     WidgetsBinding.instance.addPostFrameCallback(
-        (_) => widget._organizationBloc.setOrgToEdit(widget._organization));
+        (_) => widget._organizationBloc.sink.add(SetOrganizationToEdit(organization: widget._organization)));
     _navigationListener = widget._organizationBloc.organizationUpdateRequests
         .listen((dynamic state) {
       if (state is OrganizationUpdated) {
-        widget._organization
-            .setDescription(state.updatedOrganization.description);
-        widget._organizationBloc.setOrgToEdit(state.updatedOrganization);
+        widget._organization.setDescription(state.updatedOrganization.description);
+        widget._organizationBloc.sink.add(SetOrganizationToEdit(organization: state.updatedOrganization));
         _textEditingController.text = state.updatedOrganization.description;
         showDialog(
           context: context,

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import '../../blocs/edit_bloc.dart';
 import '../../models/event.dart';
 import '../../pages/edit/edit.dart';
 
 //similar event suggestions dialog
 class SuggestionDialog extends StatelessWidget {
+  final EditEventBloc _editBloc;
   final List<Event> _similarEvents;
   final String _continuePrompt;
   final Function _onSuggestionIgnored;
@@ -11,10 +13,12 @@ class SuggestionDialog extends StatelessWidget {
   SuggestionDialog(
       {@required List<Event> similarEvents,
       @required String continuePrompt,
-      @required Function onSuggestionIgnored})
+      @required Function onSuggestionIgnored,
+      @required EditEventBloc editBloc})
       : _similarEvents = similarEvents,
         _continuePrompt = continuePrompt,
-        _onSuggestionIgnored = onSuggestionIgnored;
+        _onSuggestionIgnored = onSuggestionIgnored,
+        _editBloc = editBloc;
 //^initializer list
 
   void _showEditInsteadOfAddDialog(BuildContext context, Event similarEvent) {
@@ -34,10 +38,14 @@ class SuggestionDialog extends StatelessWidget {
                 onPressed: () {
                   Navigator.of(context).pop();
                   Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (BuildContext context) =>
-                              EditPage(similarEvent)));
+                    context,
+                    MaterialPageRoute(
+                      builder: (BuildContext context) => EditPage(
+                            event: similarEvent,
+                            editBloc: _editBloc,
+                          ),
+                    ),
+                  );
                 },
               ),
             ],

@@ -7,6 +7,7 @@ import '../models/authentication_results.dart';
 
 //manages user and authentication
 class UserBloc {
+  final StreamController<UserEvent> _requestsController;
   final StreamController<UserState> _userAuthController;
   final StreamController<UserState> _bannedUsersController;
   final UserProvider _userProvider;
@@ -15,6 +16,7 @@ class UserBloc {
 
   UserBloc()
       : _userProvider = UserProvider(),
+        _requestsController = StreamController<UserEvent>.broadcast(),
         _userAuthController = StreamController<UserState>.broadcast(),
         _bannedUsersController = StreamController<UserState>.broadcast(),
         _prevAuthState = UserAuthInitial(
@@ -27,6 +29,9 @@ class UserBloc {
     });
     _bannedUsersController.stream.listen((UserState state) {
       _prevBannedState = state;
+    });
+    _requestsController.stream.forEach((UserEvent event) {
+      event.execute(this);
     });
   }
 
@@ -42,6 +47,7 @@ class UserBloc {
 
   Stream get userAuthRequests => _userAuthController.stream;
   Stream get bannedUsers => _bannedUsersController.stream;
+  StreamSink<UserEvent> get sink => _requestsController.sink;
 
   void setUCID(String ucid) {
     _userProvider.setAuthUCID(ucid);
@@ -143,9 +149,81 @@ class UserBloc {
   void dispose() {
     _userAuthController.close();
     _bannedUsersController.close();
+    _requestsController.close();
   }
 }
 
+/*USER BLOC input EVENTS */
+abstract class UserEvent extends Equatable {
+  UserEvent([List args = const []]) : super(args);
+  void execute(UserBloc userBloc);
+}
+
+class SetUCID extends UserEvent {
+  final String ucid;
+  SetUCID({@required String ucid})
+      : ucid = ucid,
+        super([ucid]);
+  void execute(UserBloc userBloc) {
+    userBloc.setUCID(ucid);
+  }
+}
+
+class SetPassword extends UserEvent {
+  final String password;
+  SetPassword({@required String password})
+      : password = password,
+        super([password]);
+  void execute(UserBloc userBloc) {
+    userBloc.setPassword(password);
+  }
+}
+
+class AutoAuthenticate extends UserEvent {
+  void execute(UserBloc userBloc) {
+    userBloc.autoAuthenticate();
+  }
+}
+
+class Authenticate extends UserEvent {
+  void execute(UserBloc userBloc) {
+    userBloc.authenticate();
+  }
+}
+
+class Logout extends UserEvent {
+  void execute(UserBloc userBloc) {
+    userBloc.logout();
+  }
+}
+
+class BanUser extends UserEvent {
+  final String ucid;
+  BanUser({@required String ucid})
+      : ucid = ucid,
+        super([ucid]);
+  void execute(UserBloc userBloc) {
+    userBloc.banUser(ucid);
+  }
+}
+
+class UnbanUser extends UserEvent {
+  final String ucid;
+  UnbanUser({@required String ucid})
+      : ucid = ucid,
+        super([ucid]);
+  void execute(UserBloc userBloc) {
+    userBloc.unbanUser(ucid);
+  }
+}
+
+class LoadBannedUsers extends UserEvent {
+  void execute(UserBloc userBloc) {
+    userBloc.loadBannedUsers();
+  }
+}
+
+/* USER BLOC output STATES */
 abstract class UserState extends Equatable {
   UserState([List args = const []]) : super(args);
 }

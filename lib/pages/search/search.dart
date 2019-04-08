@@ -3,18 +3,25 @@ import '../../common/event_list_tile.dart';
 import '../../blocs/search_bloc.dart';
 import '../../blocs/favorite_bloc.dart';
 import '../../blocs/event_bloc.dart';
+import '../../blocs/edit_bloc.dart';
 
 class SearchPage extends StatefulWidget {
+  final EditEventBloc _editBloc;
   final SearchBloc _searchBloc;
   final FavoriteBloc _favoriteBloc;
   final EventBloc _eventBloc;
   final Function _canEdit;
 
   SearchPage(
-      {@required SearchBloc searchBloc, @required FavoriteBloc favoriteBloc, @required EventBloc eventBloc, @required Function canEdit})
+      {@required SearchBloc searchBloc,
+      @required FavoriteBloc favoriteBloc,
+      @required EventBloc eventBloc,
+      @required EditEventBloc editBloc,
+      @required Function canEdit})
       : _searchBloc = searchBloc,
         _favoriteBloc = favoriteBloc,
         _eventBloc = eventBloc,
+        _editBloc = editBloc,
         _canEdit = canEdit;
 
   @override
@@ -59,7 +66,7 @@ class _SearchPageState extends State<SearchPage> {
                   ),
                   child: TextField(
                     onChanged: (value) {
-                      widget._searchBloc.searchEvents(value);
+                      widget._searchBloc.sink.add(SearchEvents(token: value));
                     },
                     decoration: InputDecoration(
                       hintText: 'Search Events',
@@ -84,8 +91,13 @@ class _SearchPageState extends State<SearchPage> {
                           shrinkWrap: true,
                           itemCount: searchResult.results.length,
                           itemBuilder: (context, index) {
-                            return EventListTile(searchResult.results[index],
-                                0xffFFFFFF, widget._favoriteBloc, widget._eventBloc, widget._canEdit);
+                            return EventListTile(
+                                event: searchResult.results[index],
+                                color: 0xffFFFFFF,
+                                favoriteBloc: widget._favoriteBloc,
+                                eventBloc: widget._eventBloc,
+                                editBloc: widget._editBloc,
+                                canEdit: widget._canEdit);
                           }),
                 ),
               ],

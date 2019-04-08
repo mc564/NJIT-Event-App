@@ -33,10 +33,10 @@ class _ChangeOfEboardMembersPageState extends State<ChangeOfEboardMembersPage> {
   void initState() {
     super.initState();
     _formKey = GlobalKey<FormState>();
-    widget._organizationBloc.clearStorage();
+    widget._organizationBloc.sink.add(ClearStorage());
     //this executes on build complete basically
     WidgetsBinding.instance.addPostFrameCallback(
-        (_) => widget._organizationBloc.setOrgToEdit(widget._organization));
+        (_) => widget._organizationBloc.sink.add(SetOrganizationToEdit(organization: widget._organization)));
     _navigationListener = widget._organizationBloc.organizationUpdateRequests
         .listen((dynamic state) {
       if (state is OrganizationUpdated) {
@@ -101,8 +101,8 @@ class _ChangeOfEboardMembersPageState extends State<ChangeOfEboardMembersPage> {
             eBoardMember.ucid + ' - ' + eBoardMember.role,
           ),
           onDeleted: () {
-            widget._organizationBloc
-                .removeEboardMember(eBoardMember.ucid, eBoardMember.role);
+            widget._organizationBloc.sink.add(RemoveEboardMember(
+                ucid: eBoardMember.ucid, role: eBoardMember.role));
           },
         ),
       );
@@ -133,7 +133,8 @@ class _ChangeOfEboardMembersPageState extends State<ChangeOfEboardMembersPage> {
         Text('(Must have at least 3 for consideration!)'),
         UCIDAndRoleFormField(
           onSubmitted: (String ucid, String role) {
-            widget._organizationBloc.addEboardMember(ucid, role);
+            widget._organizationBloc.sink
+                .add(AddEboardMember(ucid: ucid, role: role));
           },
           validator: widget._organizationBloc.eBoardMemberValidator,
         ),
@@ -164,7 +165,7 @@ class _ChangeOfEboardMembersPageState extends State<ChangeOfEboardMembersPage> {
             return;
           }
           _formKey.currentState.save();
-          widget._organizationBloc.requestEboardChanges();
+          widget._organizationBloc.sink.add(RequestEboardChanges());
           _formKey.currentState.reset();
         },
       ),
@@ -204,7 +205,7 @@ class _ChangeOfEboardMembersPageState extends State<ChangeOfEboardMembersPage> {
                       ),
                       validator: widget._organizationBloc.reasonValidator,
                       onSaved: (String value) {
-                        widget._organizationBloc.setReasonForUpdate(value);
+                        widget._organizationBloc.sink.add(SetReasonForUpdate(reason: value));
                       },
                     ),
                     _buildEBoardSection(state),

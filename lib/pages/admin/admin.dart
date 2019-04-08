@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../blocs/organization_bloc.dart';
 import '../../blocs/user_bloc.dart';
+import '../../blocs/edit_bloc.dart';
 
 import '../../providers/event_list_provider.dart';
 
@@ -10,15 +11,18 @@ import './org_actions_pending.dart';
 import '../add/add.dart';
 
 class AdminPage extends StatefulWidget {
+  final EditEventBloc _editBloc;
   final OrganizationBloc _organizationBloc;
   final UserBloc _userBloc;
   final EventListProvider _eventListProvider;
 
   AdminPage(
-      {@required OrganizationBloc organizationBloc,
+      {@required EditEventBloc editBloc,
+      @required OrganizationBloc organizationBloc,
       @required UserBloc userBloc,
       @required EventListProvider eventListProvider})
-      : _organizationBloc = organizationBloc,
+      : _editBloc = editBloc,
+        _organizationBloc = organizationBloc,
         _userBloc = userBloc,
         _eventListProvider = eventListProvider;
 
@@ -104,6 +108,7 @@ class _AdminPageState extends State<AdminPage> {
       context,
       MaterialPageRoute(
         builder: (BuildContext context) => AddPage(
+            editBloc: widget._editBloc,
             isAdmin: true,
             ucid: widget._userBloc.ucid,
             orgProvider: widget._organizationBloc.organizationProvider,

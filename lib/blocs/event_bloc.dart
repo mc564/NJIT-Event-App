@@ -12,9 +12,12 @@ import '../models/organization.dart';
 
 //bloc for fetching event lists, also keeps track of event view counts and possibly other metrics
 class EventBloc {
+  final StreamController<EventListEvent> _requestsController;
+
   final StreamController<EventListState> _dailyController;
   final StreamController<EventListState> _weeklyController;
   final StreamController<EventListState> _recentEventsController;
+  final StreamController<EventListState> _cachedEventsController;
 
   final EventListProvider _eventListProvider;
   final FavoriteProvider _favoriteProvider;
@@ -27,15 +30,27 @@ class EventBloc {
         _metricsProvider = MetricsProvider(),
         _dailyController = StreamController.broadcast(),
         _weeklyController = StreamController.broadcast(),
-        _recentEventsController = StreamController.broadcast();
+        _recentEventsController = StreamController.broadcast(),
+        _cachedEventsController = StreamController.broadcast(),
+        _requestsController = StreamController.broadcast() {
+    _requestsController.stream.forEach((EventListEvent event) {
+      event.execute(this);
+    });
+  }
 
   EventListLoading get dailyEventsInitialState => EventListLoading();
   EventListLoading get weeklyEventsInitialState => EventListLoading();
   EventListLoading get recentEventsInitialState => EventListLoading();
+  EventListLoading get cachedEventsInitialState => EventListLoading();
 
   Stream get dailyEvents => _dailyController.stream;
   Stream get weeklyEvents => _weeklyController.stream;
   Stream get recentEvents => _recentEventsController.stream;
+  Stream get cachedEvents => _cachedEventsController.stream;
+
+  //so in UI always use this and go eventBloc.sink.add(FetchDailyEvents(DateTime.now()))
+  //or something like that
+  StreamSink<EventListEvent> get sink => _requestsController.sink;
 
   EventListProvider get eventListProvider => _eventListProvider;
 
@@ -116,8 +131,19 @@ class EventBloc {
     }
   }
 
-  void addView(Event event) {
-    _metricsProvider.incrementViewCount(event);
+  void fetchRecentEvents(Organization org) async {
+    try {
+      _recentEventsController.sink.add(EventListLoading());
+      RecentEvents recentEvents = await _eventListProvider.getRecentEvents(org);
+      _markFavoritedEvents(recentEvents.pastEvents);
+      _markFavoritedEvents(recentEvents.upcomingEvents);
+      _recentEventsController.sink
+          .add(RecentEventsLoaded(recentEvents: recentEvents));
+    } catch (error) {
+      _recentEventsController.sink.add(EventListError(
+          error:
+              "Error in fetchRecentEvents of eventBloc: " + error.toString()));
+    }
   }
 
   void refetchRecentEvents(Organization org) async {
@@ -136,28 +162,123 @@ class EventBloc {
     }
   }
 
-  void fetchRecentEvents(Organization org) async {
+  void fetchCachedEvents() {
     try {
-      _recentEventsController.sink.add(EventListLoading());
-      RecentEvents recentEvents = await _eventListProvider.getRecentEvents(org);
-      _markFavoritedEvents(recentEvents.pastEvents);
-      _markFavoritedEvents(recentEvents.upcomingEvents);
-      _recentEventsController.sink
-          .add(RecentEventsLoaded(recentEvents: recentEvents));
+      _cachedEventsController.sink.add(CachedEventsLoading());
+      Map<DateTime, List<Event>> cachedEvents =
+          _eventListProvider.filteredCacheEvents;
+      _cachedEventsController.sink
+          .add(CachedEventsLoaded(cachedEvents: cachedEvents));
     } catch (error) {
-      _recentEventsController.sink.add(EventListError(
+      _cachedEventsController.sink.add(EventListError(
           error:
-              "Error in fetchRecentEvents of eventBloc: " + error.toString()));
+              "Error in fetchCachedEvents of eventBloc: " + error.toString()));
     }
+  }
+
+  void addView(Event event) {
+    _metricsProvider.incrementViewCount(event);
   }
 
   void dispose() {
     _dailyController.close();
     _weeklyController.close();
     _recentEventsController.close();
+    _cachedEventsController.close();
+    _requestsController.close();
   }
 }
 
+/* ALL EVENT LIST INPUT EVENTS */
+abstract class EventListEvent extends Equatable {
+  EventListEvent([List args = const []]) : super(args);
+  void execute(EventBloc eventBloc);
+}
+
+class FetchDailyEvents extends EventListEvent {
+  final DateTime day;
+  FetchDailyEvents({@required DateTime day})
+      : day = day,
+        super([day]);
+  void execute(EventBloc eventBloc) {
+    eventBloc.fetchDailyEvents(day);
+  }
+}
+
+class RefreshDailyEvents extends EventListEvent {
+  final DateTime day;
+  RefreshDailyEvents({@required DateTime day})
+      : day = day,
+        super([day]);
+  void execute(EventBloc eventBloc) {
+    eventBloc.refetchDailyEvents(day);
+  }
+}
+
+class FetchWeeklyEvents extends EventListEvent {
+  final DateTime dayStart;
+  final DateTime dayEnd;
+  FetchWeeklyEvents({@required DateTime dayStart, @required DateTime dayEnd})
+      : dayStart = dayStart,
+        dayEnd = dayEnd,
+        super([dayStart, dayEnd]);
+
+  void execute(EventBloc eventBloc) {
+    eventBloc.fetchWeeklyEvents(dayStart, dayEnd);
+  }
+}
+
+class RefreshWeeklyEvents extends EventListEvent {
+  final DateTime dayStart;
+  final DateTime dayEnd;
+  RefreshWeeklyEvents({@required DateTime dayStart, @required DateTime dayEnd})
+      : dayStart = dayStart,
+        dayEnd = dayEnd,
+        super([dayStart, dayEnd]);
+
+  void execute(EventBloc eventBloc) {
+    eventBloc.refetchWeeklyEvents(dayStart, dayEnd);
+  }
+}
+
+class FetchRecentEvents extends EventListEvent {
+  final Organization organization;
+  FetchRecentEvents({@required Organization organization})
+      : organization = organization,
+        super([organization]);
+
+  void execute(EventBloc eventBloc) {
+    eventBloc.fetchRecentEvents(organization);
+  }
+}
+
+class RefreshRecentEvents extends EventListEvent {
+  final Organization organization;
+  RefreshRecentEvents({@required Organization organization})
+      : organization = organization,
+        super([organization]);
+  void execute(EventBloc eventBloc) {
+    eventBloc.refetchRecentEvents(organization);
+  }
+}
+
+class FetchCachedEvents extends EventListEvent {
+  void execute(EventBloc eventBloc) {
+    eventBloc.fetchCachedEvents();
+  }
+}
+
+class AddViewToEvent extends EventListEvent {
+  final Event event;
+  AddViewToEvent({@required Event event})
+      : event = event,
+        super([event]);
+  void execute(EventBloc eventBloc) {
+    eventBloc.addView(event);
+  }
+}
+
+/*ALL EVENT LIST OUTPUT STATES */
 abstract class EventListState extends Equatable {
   EventListState([List args = const []]) : super(args);
 }
@@ -192,4 +313,13 @@ class RecentEventsLoaded extends EventListState {
   RecentEventsLoaded({@required recentEvents})
       : recentEvents = recentEvents,
         super([recentEvents]);
+}
+
+class CachedEventsLoading extends EventListState {}
+
+class CachedEventsLoaded extends EventListState {
+  final Map<DateTime, List<Event>> cachedEvents;
+  CachedEventsLoaded({@required cachedEvents})
+      : cachedEvents = cachedEvents,
+        super([cachedEvents]);
 }

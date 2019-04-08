@@ -11,6 +11,7 @@ import '../models/organization.dart';
 
 //helps implement add event form logic
 class AddEventBloc {
+  final StreamController<AddEvent> _requestsController;
   final StreamController<AddFormState> _formController;
   final EventListProvider _eventListProvider;
   final OrganizationProvider _orgProvider;
@@ -31,7 +32,8 @@ class AddEventBloc {
         _isAdmin = isAdmin,
         _ucid = ucid,
         _addEventProvider = AddEventProvider(),
-        _formController = StreamController.broadcast() {
+        _formController = StreamController.broadcast(),
+        _requestsController = StreamController.broadcast() {
     _initialState = FormReady(
       description: _addEventProvider.description,
       title: _addEventProvider.title,
@@ -46,6 +48,10 @@ class AddEventBloc {
       _editableOrganizations = editableOrgs;
       onInitialized();
     });
+
+    _requestsController.stream.forEach((AddEvent event) {
+      event.execute(this);
+    });
   }
 
   FormReady get initialState => _initialState;
@@ -59,12 +65,14 @@ class AddEventBloc {
   List<String> get allSelectableOrganizations => _editableOrganizations;
 
   Stream get formSubmissions => _formController.stream;
+  StreamSink<AddEvent> get sink => _requestsController.sink;
 
   //for events they can actually EDIT: only the ones that have orgs. that are signed up & active on the app
   //and also (if not admin) only the ones with orgs. they are on the eboard for
   Future<List<String>> getEditableOrganizations() async {
     List<String> editableOrgs = List<String>();
-    List<Organization> viewableOrgs = await _orgProvider.allViewableOrganizations();
+    List<Organization> viewableOrgs =
+        await _orgProvider.allViewableOrganizations();
     if (_isAdmin) {
       for (Organization org in viewableOrgs) {
         editableOrgs.add(org.name);
@@ -213,9 +221,87 @@ class AddEventBloc {
 
   void dispose() {
     _formController.close();
+    _requestsController.close();
   }
 }
 
+/* ADD BLOC input EVENTS */
+abstract class AddEvent extends Equatable {
+  AddEvent([List args = const []]) : super(args);
+  void execute(AddEventBloc addBloc);
+}
+
+class SetLocation extends AddEvent {
+  String location;
+  SetLocation(this.location) : super([location]);
+  void execute(AddEventBloc addBloc) {
+    addBloc.setLocation(location);
+  }
+}
+
+class SetTitle extends AddEvent {
+  String title;
+  SetTitle(this.title) : super([title]);
+  void execute(AddEventBloc addBloc) {
+    addBloc.setTitle(title);
+  }
+}
+
+class SetStartTime extends AddEvent {
+  DateTime startTime;
+  SetStartTime(this.startTime) : super([startTime]);
+  void execute(AddEventBloc addBloc) {
+    addBloc.setStartTime(startTime);
+  }
+}
+
+class SetEndTime extends AddEvent {
+  DateTime endTime;
+  SetEndTime(this.endTime) : super([endTime]);
+  void execute(AddEventBloc addBloc) {
+    addBloc.setEndTime(endTime);
+  }
+}
+
+class SetOrganization extends AddEvent {
+  String organization;
+  SetOrganization(this.organization) : super([organization]);
+  void execute(AddEventBloc addBloc) {
+    addBloc.setOrganization(organization);
+  }
+}
+
+class SetDescription extends AddEvent {
+  String description;
+  SetDescription(this.description) : super([description]);
+  void execute(AddEventBloc addBloc) {
+    addBloc.setDescription(description);
+  }
+}
+
+class SetCategory extends AddEvent {
+  String category;
+  SetCategory(this.category) : super([category]);
+  void execute(AddEventBloc addBloc) {
+    addBloc.setCategory(category);
+  }
+}
+
+class SubmitDespiteSuggestions extends AddEvent {
+  Event eventToAdd;
+  SubmitDespiteSuggestions(this.eventToAdd) : super([eventToAdd]);
+  void execute(AddEventBloc addBloc) {
+    addBloc.submitDespiteSuggestions(eventToAdd);
+  }
+}
+
+class SubmitForm extends AddEvent {
+  void execute(AddEventBloc addBloc) {
+    addBloc.submitForm();
+  }
+}
+
+/* ADD BLOC output STATES */
 abstract class AddFormState extends Equatable {
   AddFormState([List args = const []]) : super(args);
 }

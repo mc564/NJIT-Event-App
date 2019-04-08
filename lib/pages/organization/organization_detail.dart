@@ -169,9 +169,10 @@ class _OrganizationDetailPageState extends State<OrganizationDetailPage> {
                                   subtitle:
                                       'Please provide a reason for this organization\'s inactivation.',
                                   onSubmit: (String reason) {
-                                    widget._organizationBloc
-                                        .requestOrganizationInactivation(
-                                            widget._organization, reason);
+                                    widget._organizationBloc.sink.add(
+                                        RequestOrganizationInactivation(
+                                            organization: widget._organization,
+                                            reason: reason));
                                   });
                             }),
                           );
@@ -240,7 +241,8 @@ class _OrganizationDetailPageState extends State<OrganizationDetailPage> {
   }
 
   Future<void> _refresh() async {
-    widget._eventBloc.refetchRecentEvents(widget._organization);
+    widget._eventBloc.sink
+        .add(RefreshRecentEvents(organization: widget._organization));
   }
 
   String _eventTimeText(Event event) {
@@ -286,7 +288,7 @@ class _OrganizationDetailPageState extends State<OrganizationDetailPage> {
           title:
               Text('There\'s been a REAL 😕 error, please restart your app!')));
     }
-    //TODO used to be a container with height 300
+
     return Container(
       height: 300,
       child: ListView.builder(
@@ -308,8 +310,8 @@ class _OrganizationDetailPageState extends State<OrganizationDetailPage> {
     } else if (state is RecentEventsLoaded) {
       List<Event> pastEvents = state.recentEvents.pastEvents;
       if (pastEvents == null || pastEvents.length == 0) {
-        tiles.add(ListTile(
-            title: Text('No past events within the last week. 😌')));
+        tiles.add(
+            ListTile(title: Text('No past events within the last week. 😌')));
       } else {
         for (Event event in pastEvents) {
           tiles.add(
@@ -363,15 +365,17 @@ class _OrganizationDetailPageState extends State<OrganizationDetailPage> {
     List<OrganizationMember> regularMembers =
         widget._organization.regularMembers;
     List<TextSpan> children = List<TextSpan>();
-    children.add(TextSpan(text: 'Members ', style: TextStyle(color: Colors.blue)));
+    children
+        .add(TextSpan(text: 'Members ', style: TextStyle(color: Colors.blue)));
     for (OrganizationMember eBoardMember in eBoardMembers) {
       children.add(TextSpan(
-          text: '👑 ' + eBoardMember.ucid+' ',
+          text: '👑 ' + eBoardMember.ucid + ' ',
           style: TextStyle(color: Color(0xff800000))));
     }
     for (OrganizationMember regularMember in regularMembers) {
       children.add(TextSpan(
-          text: '⚬ ' + regularMember.ucid+' ', style: TextStyle(color: Colors.blue)));
+          text: '⚬ ' + regularMember.ucid + ' ',
+          style: TextStyle(color: Colors.blue)));
     }
     return RichText(text: TextSpan(children: children));
   }
@@ -449,7 +453,7 @@ class _OrganizationDetailPageState extends State<OrganizationDetailPage> {
   @override
   void initState() {
     super.initState();
-    widget._eventBloc.fetchRecentEvents(widget._organization);
+    widget._eventBloc.sink.add(FetchRecentEvents(organization: widget._organization));
   }
 
   @override

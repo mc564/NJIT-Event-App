@@ -9,6 +9,7 @@ import 'package:flutter/foundation.dart';
 
 //manages all search functions in app
 class SearchBloc {
+  StreamController<SearchEvent> _requestsController;
   StreamController<SearchState> _searchController;
   SearchProvider _searchProvider;
   EventListProvider _eventListProvider;
@@ -16,19 +17,24 @@ class SearchBloc {
   SearchState _initialStringSearchState;
 
   SearchBloc({@required EventListProvider eventListProvider}) {
+    _requestsController = StreamController<SearchEvent>.broadcast();
     _searchController = StreamController<SearchState>.broadcast();
     _eventListProvider = eventListProvider;
     _searchProvider = SearchProvider();
-    _initializeForSearchingEvents();
-    _initializeForSearchingStrings();
+    initializeForSearchingEvents();
+    initializeForSearchingStrings();
+    _requestsController.stream.forEach((SearchEvent event) {
+      event.execute(this);
+    });
   }
 
   SearchState get initialEventSearchState => _initialEventSearchState;
   SearchState get initialStringSearchState => _initialStringSearchState;
 
   Stream get searchQueries => _searchController.stream;
+  StreamSink<SearchEvent> get sink => _requestsController.sink;
 
-  void _initializeForSearchingStrings() {
+  void initializeForSearchingStrings() {
     String emptyStr = '';
     Tuple2<List<String>, String> results =
         _searchProvider.tokenStringSearch(emptyStr);
@@ -38,7 +44,7 @@ class SearchBloc {
         noResultsMessage: results.item2);
   }
 
-  void _initializeForSearchingEvents() async {
+  void initializeForSearchingEvents() async {
     String emptyStr = '';
     Tuple2<List<Event>, String> results =
         _searchProvider.tokenEventSearch(emptyStr);
@@ -86,9 +92,54 @@ class SearchBloc {
 
   void dispose() {
     _searchController.close();
+    _requestsController.close();
   }
 }
 
+/*SEARCH BLOC input EVENTS */
+abstract class SearchEvent extends Equatable {
+  SearchEvent([List args = const []]) : super(args);
+  void execute(SearchBloc searchBloc);
+}
+
+class SetSearchableStrings extends SearchEvent {
+  final List<String> searchStrings;
+  SetSearchableStrings({@required List<String> searchStrings})
+      : searchStrings = searchStrings,
+        super([searchStrings]);
+  void execute(SearchBloc searchBloc) {
+    searchBloc.setSearchableStrings(searchStrings);
+  }
+}
+
+class SearchStrings extends SearchEvent {
+  final String token;
+  SearchStrings({@required String token})
+      : token = token,
+        super([token]);
+  void execute(SearchBloc searchBloc) {
+    searchBloc.searchStrings(token);
+  }
+}
+
+class SearchEvents extends SearchEvent {
+  final String token;
+  SearchEvents({@required String token})
+      : token = token,
+        super([token]);
+  void execute(SearchBloc searchBloc) {
+    searchBloc.searchEvents(token);
+  }
+}
+
+//when an event is edited in the edit bloc, can use this
+class ReinitializeForSearchingEvents extends SearchEvent{
+  void execute(SearchBloc searchBloc){
+    searchBloc.initializeForSearchingEvents();
+  }
+}
+
+/*SEARCH BLOC output STATES */
 abstract class SearchState extends Equatable {
   SearchState([List args = const []]) : super(args);
 }
