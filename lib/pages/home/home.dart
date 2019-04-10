@@ -252,8 +252,18 @@ class _HomePageState extends State<HomePage> {
         key: PageStorageKey<String>(DateTime.now().toString()));
   }
 
-  Container _buildWeeklyView(DateLoaded state) {
-    return Container(child: Text('weekly'));
+  WeeklyEventList _buildWeeklyView(DateLoaded state) {
+    //for some reason, giving a page storage key means whenever I go into this function,
+    //the page rebuilds from scratch, but is actually useful here, so ok
+    return WeeklyEventList(
+      canEdit: _organizationBloc.canEdit,
+      editBloc: _editBloc,
+      favoriteBloc: _favoriteBloc,
+      eventBloc: _eventBloc,
+      dayStart: state.weekStart,
+      dayEnd: state.weekEnd,
+      key: PageStorageKey<String>(DateTime.now().toString()),
+    );
   }
 
   CalendarPage _buildMonthlyView(DateLoaded state) {

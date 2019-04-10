@@ -22,8 +22,7 @@ class EditEventBloc {
   EditEventBloc(
       {@required StreamSink<SearchEvent> searchSink,
       @required StreamSink<FavoriteEvent> favoriteSink})
-      : _editEventProvider =
-            EditEventProvider(),
+      : _editEventProvider = EditEventProvider(),
         _formController = StreamController.broadcast(),
         _requestsController = StreamController.broadcast(),
         _searchSink = searchSink,
@@ -129,6 +128,9 @@ class EditEventBloc {
         _alertFormSubmitError();
       } else {
         _alertFormSubmitted(editedEvent);
+        //TODO not sure if below reinitialization is necessary...test later
+        _searchSink.add(ReinitializeForSearchingEvents());
+        _favoriteSink.add(FetchFavorites());
       }
     } catch (error) {
       _alertFormSubmitErrorCustom(error);

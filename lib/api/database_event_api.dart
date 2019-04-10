@@ -24,11 +24,6 @@ class DatabaseEventAPI {
     return parsedString;
   }
 
-//TODO change this so it encodes all important chars
-  static String _encode(String strToEncode) {
-    return strToEncode;
-  }
-
   static Event _getEvent(dynamic json) {
     return Event(
       eventId: json['id'],
@@ -48,15 +43,15 @@ class DatabaseEventAPI {
   static Map<String, dynamic> _getEventMap(Event event) {
     return {
       'id': event.eventId,
-      'title': _encode(event.title),
-      'location': _encode(event.location),
+      'title': event.title,
+      'location': event.location,
       'locationCode': LocationHelper.getAbbreviation(
           LocationHelper.getLocationCode(event.location)),
       'startDateTime': formatter.format(event.startTime),
       'endDateTime': formatter.format(event.endTime),
       'category': CategoryHelper.getString(event.category),
-      'organization': _encode(event.organization),
-      'description': _encode(event.description)
+      'organization': event.organization,
+      'description': event.description
     };
   }
 
@@ -68,26 +63,22 @@ class DatabaseEventAPI {
       @required bool hasMembers}) {
     //_encode everything
     Map<String, dynamic> map = Map<String, dynamic>();
-    if (hasName) map['name'] = _encode(org.name);
+    if (hasName) map['name'] = org.name;
     if (hasStatus)
-      map['status'] = _encode(OrganizationStatusHelper.getString(org.status));
-    if (hasDescription) map['description'] = _encode(org.description);
+      map['status'] = OrganizationStatusHelper.getString(org.status);
+    if (hasDescription) map['description'] = org.description;
     if (hasMembers) {
       List<List<String>> memberRoles = List<List<String>>();
       List<OrganizationMember> eBoardMembers = org.eBoardMembers;
       List<OrganizationMember> regularMembers = org.regularMembers;
       if (eBoardMembers != null && eBoardMembers.length > 0) {
         for (OrganizationMember eBoardMember in eBoardMembers) {
-          memberRoles.add(
-              <String>[_encode(eBoardMember.ucid), _encode(eBoardMember.role)]);
+          memberRoles.add(<String>[eBoardMember.ucid, eBoardMember.role]);
         }
       }
       if (regularMembers != null && regularMembers.length > 0) {
         for (OrganizationMember regularMember in regularMembers) {
-          memberRoles.add(<String>[
-            _encode(regularMember.ucid),
-            _encode(regularMember.role)
-          ]);
+          memberRoles.add(<String>[regularMember.ucid, regularMember.role]);
         }
       }
       map['members'] = memberRoles;
@@ -319,9 +310,11 @@ class DatabaseEventAPI {
             'https://web.njit.edu/~mc564/eventapi/event/readRecords.php',
             body: json.encode(argMap));
         final Map jsonResponse = json.decode(response.body);
-        jsonResponse['records'].forEach((eventData) {
-          fetchedEventList.add(_getEvent(eventData));
-        });
+        if (jsonResponse.containsKey('records')) {
+          jsonResponse['records'].forEach((eventData) {
+            fetchedEventList.add(_getEvent(eventData));
+          });
+        }
       }
       return fetchedEventList;
     } catch (error) {
@@ -502,7 +495,6 @@ class DatabaseEventAPI {
         hasDescription: true,
         hasMembers: true,
         hasStatus: true);
-    print('org map: ' + json.encode(map).toString());
     return http
         .post('https://web.njit.edu/~mc564/eventapi/organization/add.php',
             body: json.encode(map))
@@ -524,7 +516,6 @@ class DatabaseEventAPI {
   }
 
   static Future<bool> requestReactivation(Organization org) {
-    print('org requesting reactivation: ' + org.toString());
 
     Map<String, dynamic> map = _getOrganizationMap(
         org: org,
@@ -587,15 +578,11 @@ class DatabaseEventAPI {
     List<OrganizationMember> eBoardMembers = org.eBoardMembers;
     if (eBoardMembers != null && eBoardMembers.length > 0) {
       for (OrganizationMember eBoardMember in eBoardMembers) {
-        memberRoles.add(
-            <String>[_encode(eBoardMember.ucid), _encode(eBoardMember.role)]);
+        memberRoles.add(<String>[eBoardMember.ucid, eBoardMember.role]);
       }
     }
 
-    Map<String, dynamic> map = {
-      'name': _encode(org.name),
-      'eboardMembers': memberRoles
-    };
+    Map<String, dynamic> map = {'name': org.name, 'eboardMembers': memberRoles};
 
     return http
         .post(
@@ -990,15 +977,14 @@ class DatabaseEventAPI {
 
   static Future<bool> setOrganizationStatus(
       OrganizationStatus status, Organization org) {
-    Organization organizationWithUpdatedStatus = Organization(
-        name: org.name, status: status);
+    Organization organizationWithUpdatedStatus =
+        Organization(name: org.name, status: status);
     Map<String, dynamic> map = _getOrganizationMap(
         org: organizationWithUpdatedStatus,
         hasName: true,
         hasDescription: false,
         hasMembers: false,
         hasStatus: true);
-    print('status map: ' + map.toString());
     return http
         .post('https://web.njit.edu/~mc564/eventapi/organization/setStatus.php',
             body: json.encode(map))
@@ -1057,12 +1043,11 @@ class DatabaseEventAPI {
     Map<String, dynamic> map = {
       'senderUCID': senderUCID,
       'recipientUCIDs': recipientUCIDS,
-      'title': _encode(title),
-      'body': _encode(body),
+      'title': title,
+      'body': body,
       'timeCreated': formatter.format(DateTime.now()),
       'expirationDate': formatter.format(expirationDate)
     };
-    print('send message map is: ' + map.toString());
 
     return http
         .post('https://web.njit.edu/~mc564/eventapi/message/send.php',
@@ -1088,8 +1073,8 @@ class DatabaseEventAPI {
       String senderUCID, String title, String body, DateTime expirationDate) {
     Map<String, dynamic> map = {
       'senderUCID': senderUCID,
-      'title': _encode(title),
-      'body': _encode(body),
+      'title': title,
+      'body': body,
       'timeCreated': formatter.format(DateTime.now()),
       'expirationDate': formatter.format(expirationDate)
     };

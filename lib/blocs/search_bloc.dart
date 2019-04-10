@@ -53,8 +53,11 @@ class SearchBloc {
         results: results.item1,
         noResultsMessage: results.item2);
     DateTime now = DateTime.now();
-    List<Event> searchableEvents = await _eventListProvider.getEventsBetween(
-        now.subtract(Duration(days: 7)), now.add(Duration(days: 14)), false);
+    List<Event> searchableEvents =
+        await _eventListProvider.refetchEventsBetween(
+            now.subtract(Duration(days: 7)),
+            now.add(Duration(days: 14)),
+            false);
     _searchProvider.setAllSearchableEvents(searchableEvents);
   }
 
@@ -133,8 +136,8 @@ class SearchEvents extends SearchEvent {
 }
 
 //when an event is edited in the edit bloc, can use this
-class ReinitializeForSearchingEvents extends SearchEvent{
-  void execute(SearchBloc searchBloc){
+class ReinitializeForSearchingEvents extends SearchEvent {
+  void execute(SearchBloc searchBloc) {
     searchBloc.initializeForSearchingEvents();
   }
 }

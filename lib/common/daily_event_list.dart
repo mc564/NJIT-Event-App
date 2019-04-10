@@ -69,7 +69,7 @@ class _DailyEventListState extends State<DailyEventList> {
   @override
   void initState() {
     super.initState();
-    widget._eventBloc.fetchDailyEvents(widget._day);
+    widget._eventBloc.sink.add(FetchDailyEvents(day: widget._day));
     _favoriteErrorSubscription =
         widget._favoriteBloc.favoriteSettingErrors.listen((dynamic state) {
       //recieve any favorite setting errors? rollback favorite status by setting state
@@ -78,7 +78,7 @@ class _DailyEventListState extends State<DailyEventList> {
   }
 
   Future<void> _refresh() async {
-    widget._eventBloc.refetchDailyEvents(widget._day);
+    widget._eventBloc.sink.add(RefreshDailyEvents(day: widget._day));
   }
 
   @override

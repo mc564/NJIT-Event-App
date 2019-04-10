@@ -108,9 +108,11 @@ class _EventListTileState extends State<EventListTile> {
                 ),
                 onPressed: () {
                   if (widget._event.favorited)
-                    widget._favoriteBloc.removeFavorite(widget._event);
+                    widget._favoriteBloc.sink
+                        .add(RemoveFavorite(eventToUnfavorite: widget._event));
                   else
-                    widget._favoriteBloc.addFavorite(widget._event);
+                    widget._favoriteBloc.sink
+                        .add(AddFavorite(eventToFavorite: widget._event));
                   setState(() {});
                 },
               ),
@@ -120,7 +122,8 @@ class _EventListTileState extends State<EventListTile> {
                     color: Colors.lightBlue[200],
                   ),
                   onPressed: () {
-                    widget._eventBloc.addView(widget._event);
+                    widget._eventBloc.sink
+                        .add(AddViewToEvent(event: widget._event));
                     Navigator.push(
                       context,
                       MaterialPageRoute(

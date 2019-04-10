@@ -39,20 +39,25 @@ class FavoriteBloc {
 
   FavoriteProvider get favoriteProvider => _favoriteProvider;
 
-  void _alertFavoriteError(
-      Event errorEvent, List<Event> rollbackFavorites, bool favorited) {
+  void _alertFavoriteError(Event errorEvent, List<Event> rollbackFavorites,
+      bool favorited, String errorMsg) {
     FavoriteError errorState = FavoriteError(
         eventId: errorEvent.eventId,
         ucid: _ucid,
         favorited: favorited,
-        rollbackFavorites: rollbackFavorites);
+        rollbackFavorites: rollbackFavorites,
+        errorMsg: errorMsg);
     _favoriteErrorsController.sink.add(errorState);
     _favoriteController.sink.add(errorState);
   }
 
-  void _alertFavoriteErrorWithoutRollback(Event errorEvent, bool favorited) {
+  void _alertFavoriteErrorWithoutRollback(
+      Event errorEvent, bool favorited, String errorMsg) {
     FavoriteError errorState = FavoriteError(
-        eventId: errorEvent.eventId, ucid: _ucid, favorited: favorited);
+        eventId: errorEvent.eventId,
+        ucid: _ucid,
+        favorited: favorited,
+        errorMsg: errorMsg);
     _favoriteErrorsController.sink.add(errorState);
     _favoriteController.sink.add(errorState);
   }
@@ -84,13 +89,16 @@ class FavoriteBloc {
     try {
       bool successfullyAdded = await _favoriteProvider.addFavorite(event);
       List<Event> favorites = _favoriteProvider.allFavorites;
+      print('favorites length is: '+favorites.length.toString());
       if (successfullyAdded) {
         _favoriteController.sink.add(FavoritesUpdated(favorites: favorites));
       } else {
-        _alertFavoriteError(event, favorites, true);
+        _alertFavoriteError(
+            event, favorites, true, 'Failed to addFavorite in favoriteBloc');
       }
     } catch (error) {
-      _alertFavoriteErrorWithoutRollback(event, true);
+      _alertFavoriteErrorWithoutRollback(event, true,
+          'Failed to addFavorite in favoriteBloc error: ' + error.toString());
     }
   }
 
@@ -101,10 +109,15 @@ class FavoriteBloc {
       if (successfullyRemoved) {
         _favoriteController.sink.add(FavoritesUpdated(favorites: favorites));
       } else {
-        _alertFavoriteError(event, favorites, false);
+        _alertFavoriteError(event, favorites, false,
+            'Failed to removeFavorite in favoriteBloc');
       }
     } catch (error) {
-      _alertFavoriteErrorWithoutRollback(event, false);
+      _alertFavoriteErrorWithoutRollback(
+          event,
+          false,
+          'Failed to removeFavorite in favoriteBloc error: ' +
+              error.toString());
     }
   }
 
@@ -160,6 +173,7 @@ class FavoritesFetchError extends FavoriteState {
 }
 
 class FavoriteError extends FavoriteState {
+  String errorMsg;
   String eventId;
   String ucid;
   bool favorited;
@@ -168,8 +182,9 @@ class FavoriteError extends FavoriteState {
       {@required this.eventId,
       @required this.ucid,
       @required this.favorited,
+      @required this.errorMsg,
       this.rollbackFavorites})
-      : super([eventId, ucid, favorited, rollbackFavorites]);
+      : super([eventId, ucid, favorited, rollbackFavorites, errorMsg]);
 }
 
 class FavoritesUpdated extends FavoriteState {
