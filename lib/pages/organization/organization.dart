@@ -1,21 +1,32 @@
 import 'package:flutter/material.dart';
+
 import './organization_widgets.dart';
 import './register_org.dart';
 import './inactive_organizations.dart';
+
 import '../../blocs/organization_bloc.dart';
 import '../../blocs/event_bloc.dart';
+import '../../blocs/favorite_bloc.dart';
+import '../../blocs/edit_bloc.dart';
+
 import '../../models/organization.dart';
 
 class OrganizationPage extends StatefulWidget {
   final OrganizationBloc _organizationBloc;
+  final FavoriteBloc _favoriteBloc;
+  final EditEventBloc _editBloc;
   final EventBloc _eventBloc;
   final String _ucid;
 
   OrganizationPage(
-      {@required OrganizationBloc organizationBloc,
+      {@required FavoriteBloc favoriteBloc,
+      @required OrganizationBloc organizationBloc,
+      @required EditEventBloc editBloc,
       @required EventBloc eventBloc,
       @required String ucid})
       : _organizationBloc = organizationBloc,
+        _favoriteBloc = favoriteBloc,
+        _editBloc = editBloc,
         _eventBloc = eventBloc,
         _ucid = ucid;
 
@@ -44,6 +55,8 @@ class _OrganizationPageState extends State<OrganizationPage> {
           for (Organization org in orgs) {
             cards.add(
               OrganizationCard(
+                editBloc: widget._editBloc,
+                favoriteBloc: widget._favoriteBloc,
                 eventBloc: widget._eventBloc,
                 organizationBloc: widget._organizationBloc,
                 organization: org,

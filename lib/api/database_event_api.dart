@@ -282,6 +282,62 @@ class DatabaseEventAPI {
     });
   }
 
+  static Future<bool> removeAllFavoritesForUser(String ucid) {
+    print('REMOVING ALL FAVORITES');
+    Map<String, dynamic> favoriteMap = {
+      'ucid': ucid,
+    };
+    return http
+        .post('https://web.njit.edu/~mc564/eventapi/favorite/removeAll.php',
+            body: json.encode(favoriteMap))
+        .then((http.Response response) {
+      if (response.statusCode != 200 &&
+          response.statusCode != 201 &&
+          response.statusCode != 202) {
+        throw Exception(
+            "Error in Database class removeAllFavoritesForUser method: Database response code is: " +
+                response.statusCode.toString() +
+                "\n response body: " +
+                response.body);
+      }
+      return true;
+    }).catchError((error) {
+      throw Exception(
+          "Error in Database class removeAllFavoritesForUser method: " +
+              error.toString());
+    });
+  }
+
+  static Future<bool> removeSelectedFavorites(
+      String ucid, List<String> favoriteIds) {
+    print('REMOVING SELECTED FAVORITES');
+    Map<String, dynamic> favoriteMap = {
+      'ucid': ucid,
+      'eventIds': favoriteIds,
+    };
+    print('favoriteMap: '+favoriteMap.toString());
+    return http
+        .post(
+            'https://web.njit.edu/~mc564/eventapi/favorite/removeSelected.php',
+            body: json.encode(favoriteMap))
+        .then((http.Response response) {
+      if (response.statusCode != 200 &&
+          response.statusCode != 201 &&
+          response.statusCode != 202) {
+        throw Exception(
+            "Error in Database class removeSelectedFavorites method: Database response code is: " +
+                response.statusCode.toString() +
+                "\n response body: " +
+                response.body);
+      }
+      return true;
+    }).catchError((error) {
+      throw Exception(
+          "Error in Database class removeSelectedFavorites method: " +
+              error.toString());
+    });
+  }
+
   static Future<Event> getEventWithId(String eventId) {
     return http
         .get(
@@ -516,7 +572,6 @@ class DatabaseEventAPI {
   }
 
   static Future<bool> requestReactivation(Organization org) {
-
     Map<String, dynamic> map = _getOrganizationMap(
         org: org,
         hasName: true,

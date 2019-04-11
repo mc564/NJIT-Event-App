@@ -140,8 +140,10 @@ class _AdminPageState extends State<AdminPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Admin Task Panel'),
+        backgroundColor: Colors.lightBlue[50],
+        title: Text('Admin Task Panel', style: TextStyle(color: Colors.black)),
         centerTitle: true,
+        iconTheme: IconThemeData(color: Colors.black),
       ),
       body: Container(
         margin: EdgeInsets.all(10),
@@ -150,6 +152,7 @@ class _AdminPageState extends State<AdminPage> {
           children: <Widget>[
             Expanded(
               child: Card(
+                color: Colors.lightBlue[50],
                 child: Column(
                   children: <Widget>[
                     _buildSection(
@@ -157,21 +160,21 @@ class _AdminPageState extends State<AdminPage> {
                         {
                           'Review User Permissions': _goToUserPermissionsPage,
                         },
-                        Color(0xffffff00)),
+                        Color(0xffffdde2)),
                     _buildSection(
                         'Events',
                         {
                           'Add Events': _goToAdminAddPage,
                           'Edit Events': _showEditInstructionsDialog,
                         },
-                        Color(0xffffa500)),
+                        Color(0xffFFFFCC)),
                     _buildSection(
                         'Organizations',
                         {
                           'Actions Pending Approval/Rejection':
                               _goToOrganizationActionsPendingPage,
                         },
-                        Color(0xff02d100)),
+                        Color(0xffdcf9ec)),
                   ],
                 ),
               ),

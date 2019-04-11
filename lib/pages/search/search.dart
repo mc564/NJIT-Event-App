@@ -31,6 +31,14 @@ class SearchPage extends StatefulWidget {
 }
 
 class _SearchPageState extends State<SearchPage> {
+  List<int> colors = [
+      0xffffdde2,
+      0xffFFFFCC,
+      0xffdcf9ec,
+      0xffFFFFFF,
+      0xffF0F0F0,
+    ];
+
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<SearchState>(
@@ -48,7 +56,7 @@ class _SearchPageState extends State<SearchPage> {
             iconTheme: IconThemeData(
               color: Colors.black,
             ),
-            backgroundColor: Color(0xffffff00),
+            backgroundColor: Colors.lightBlue[200],
             title: Row(
               children: <Widget>[
                 Container(
@@ -93,7 +101,7 @@ class _SearchPageState extends State<SearchPage> {
                           itemBuilder: (context, index) {
                             return EventListTile(
                                 event: searchResult.results[index],
-                                color: 0xffFFFFFF,
+                                color: colors[index % colors.length],
                                 favoriteBloc: widget._favoriteBloc,
                                 eventBloc: widget._eventBloc,
                                 editBloc: widget._editBloc,

@@ -1,31 +1,41 @@
+import 'dart:async';
 import 'dart:math' show pi;
 import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
 
 import '../../blocs/organization_bloc.dart';
 import '../../blocs/event_bloc.dart';
+import '../../blocs/favorite_bloc.dart';
+import '../../blocs/edit_bloc.dart';
 
 import '../../models/organization.dart';
 import '../../models/event.dart';
 
-import '../../common/single_input_field.dart';
-
 import './change_eboard_members.dart';
 import './add_or_remove_members.dart';
 import './modify_description.dart';
+import './inactivate_organization_reason.dart';
+
+import '../detail/event_detail.dart';
 
 class OrganizationDetailPage extends StatefulWidget {
   final OrganizationBloc _organizationBloc;
+  final FavoriteBloc _favoriteBloc;
   final EventBloc _eventBloc;
+  final EditEventBloc _editBloc;
   final Organization _organization;
   final bool _isEboardMember;
 
   OrganizationDetailPage(
       {@required OrganizationBloc organizationBloc,
+      @required FavoriteBloc favoriteBloc,
       @required EventBloc eventBloc,
+      @required EditEventBloc editBloc,
       @required Organization organization,
       @required bool isEboardMember})
       : _organizationBloc = organizationBloc,
+        _favoriteBloc = favoriteBloc,
+        _editBloc = editBloc,
         _eventBloc = eventBloc,
         _organization = organization,
         _isEboardMember = isEboardMember;
@@ -37,6 +47,7 @@ class OrganizationDetailPage extends StatefulWidget {
 }
 
 class _OrganizationDetailPageState extends State<OrganizationDetailPage> {
+  StreamSubscription<FavoriteState> _favoriteErrorSubscription;
   void _showRequestsInProgressDialog() {
     showDialog(
         context: context,
@@ -161,19 +172,10 @@ class _OrganizationDetailPageState extends State<OrganizationDetailPage> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(builder: (BuildContext context) {
-//TODO change to actual page - I need to know if this actually succeeded or not
-//so I can change the organization status and prevent sending a request again once
-//an inactivation request has been sent
-                              return SingleInputFieldPage(
-                                  title: 'Send An Inactivation Request',
-                                  subtitle:
-                                      'Please provide a reason for this organization\'s inactivation.',
-                                  onSubmit: (String reason) {
-                                    widget._organizationBloc.sink.add(
-                                        RequestOrganizationInactivation(
-                                            organization: widget._organization,
-                                            reason: reason));
-                                  });
+                              return InactivateOrganizationReasonPage(
+                                organizationBloc: widget._organizationBloc,
+                                organizationToInactivate: widget._organization,
+                              );
                             }),
                           );
                         } else {
@@ -259,13 +261,70 @@ class _OrganizationDetailPageState extends State<OrganizationDetailPage> {
     return dateFormatter.format(time);
   }
 
-  Widget _buildUpcomingEventsSection(EventListState state) {
+  ListTile _buildEventTile(Event event) {
+    return ListTile(
+      title: Text(
+        _cutShort(event.title, 35),
+      ),
+      subtitle: Text(_eventTimeText(event)),
+      trailing: Container(
+        width: 100,
+        child: Row(
+          children: <Widget>[
+            IconButton(
+              icon: Icon(
+                event.favorited ? Icons.favorite : Icons.favorite_border,
+                color: Colors.red,
+              ),
+              onPressed: () {
+                if (event.favorited) {
+                  widget._favoriteBloc.sink
+                      .add(RemoveFavorite(eventToUnfavorite: event));
+                } else {
+                  widget._favoriteBloc.sink
+                      .add(AddFavorite(eventToFavorite: event));
+                }
+                setState(() {});
+              },
+            ),
+            IconButton(
+              icon: Icon(
+                Icons.info,
+                color: Colors.blue,
+              ),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (BuildContext context) => EventDetailPage(
+                        event: event,
+                        canEdit: widget._organizationBloc.canEdit,
+                        editBloc: widget._editBloc),
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  List<Widget> _buildUpcomingEventsSection(EventListState state) {
     List<Widget> tiles = List<Widget>();
+    tiles.add(
+      ListTile(
+        title: Text(
+          'Upcoming Events',
+          style: TextStyle(fontSize: 20, color: Colors.blue),
+        ),
+      ),
+    );
     if (state is EventListError) {
       tiles.add(
           ListTile(title: Text('There\'s been an error, please try again!')));
     } else if (state is EventListLoading) {
-      return Center(child: CircularProgressIndicator());
+      tiles.add(Center(child: CircularProgressIndicator()));
     } else if (state is RecentEventsLoaded) {
       List<Event> upcomingEvents = state.recentEvents.upcomingEvents;
       if (upcomingEvents == null || upcomingEvents.length == 0) {
@@ -273,13 +332,7 @@ class _OrganizationDetailPageState extends State<OrganizationDetailPage> {
             title: Text('No upcoming events within the next 2 weeks. 😌')));
       } else {
         for (Event event in upcomingEvents) {
-          tiles.add(
-            ListTile(
-              title: Text(event.title),
-              subtitle: Text(_eventTimeText(event)),
-              // trailing: Row(),
-            ),
-          );
+          tiles.add(_buildEventTile(event));
         }
       }
     } else {
@@ -289,24 +342,24 @@ class _OrganizationDetailPageState extends State<OrganizationDetailPage> {
               Text('There\'s been a REAL 😕 error, please restart your app!')));
     }
 
-    return Container(
-      height: 300,
-      child: ListView.builder(
-        itemCount: tiles.length,
-        itemBuilder: (BuildContext context, int index) {
-          return tiles[index];
-        },
-      ),
-    );
+    return tiles;
   }
 
-  Widget _buildPastEventsSection(EventListState state) {
+  List<Widget> _buildPastEventsSection(EventListState state) {
     List<Widget> tiles = List<Widget>();
+    tiles.add(
+      ListTile(
+        title: Text(
+          'Past Events',
+          style: TextStyle(fontSize: 18, color: Colors.blue),
+        ),
+      ),
+    );
     if (state is EventListError) {
       tiles.add(
           ListTile(title: Text('There\'s been an error, please try again!')));
     } else if (state is EventListLoading) {
-      return Center(child: CircularProgressIndicator());
+      tiles.add(Center(child: CircularProgressIndicator()));
     } else if (state is RecentEventsLoaded) {
       List<Event> pastEvents = state.recentEvents.pastEvents;
       if (pastEvents == null || pastEvents.length == 0) {
@@ -314,13 +367,7 @@ class _OrganizationDetailPageState extends State<OrganizationDetailPage> {
             ListTile(title: Text('No past events within the last week. 😌')));
       } else {
         for (Event event in pastEvents) {
-          tiles.add(
-            ListTile(
-              title: Text(event.title),
-              subtitle: Text(_eventTimeText(event)),
-              // trailing: Row(),
-            ),
-          );
+          tiles.add(_buildEventTile(event));
         }
       }
     } else {
@@ -329,35 +376,14 @@ class _OrganizationDetailPageState extends State<OrganizationDetailPage> {
           title:
               Text('There\'s been a REAL 😕 error, please restart your app!')));
     }
-    return Container(
-      height: 300,
-      child: ListView.builder(
-        itemCount: tiles.length,
-        itemBuilder: (BuildContext context, int index) {
-          return tiles[index];
-        },
-      ),
-    );
+    return tiles;
   }
 
-  StreamBuilder _buildRecentEventsSection() {
-    return StreamBuilder<EventListState>(
-      initialData: widget._eventBloc.recentEventsInitialState,
-      stream: widget._eventBloc.recentEvents,
-      builder: (BuildContext context, AsyncSnapshot<EventListState> snapshot) {
-        EventListState state = snapshot.data;
-        print(state.runtimeType.toString());
-        return Column(
-          children: <Widget>[
-            Text('Upcoming Events', style: TextStyle(fontSize: 20)),
-            _buildUpcomingEventsSection(state),
-            Text('Past Events',
-                style: TextStyle(fontSize: 18, color: Colors.blueGrey)),
-            _buildPastEventsSection(state),
-          ],
-        );
-      },
-    );
+  List<Widget> _buildRecentEventsSection(EventListState state) {
+    List<Widget> widgets = List<Widget>();
+    widgets.addAll(_buildUpcomingEventsSection(state));
+    widgets.addAll(_buildPastEventsSection(state));
+    return widgets;
   }
 
   RichText _buildMembersSection() {
@@ -369,7 +395,7 @@ class _OrganizationDetailPageState extends State<OrganizationDetailPage> {
         .add(TextSpan(text: 'Members ', style: TextStyle(color: Colors.blue)));
     for (OrganizationMember eBoardMember in eBoardMembers) {
       children.add(TextSpan(
-          text: '👑 ' + eBoardMember.ucid + ' ',
+          text: '👑 ' + eBoardMember.ucid + ' - ' + eBoardMember.role + ' ',
           style: TextStyle(color: Color(0xff800000))));
     }
     for (OrganizationMember regularMember in regularMembers) {
@@ -380,66 +406,47 @@ class _OrganizationDetailPageState extends State<OrganizationDetailPage> {
     return RichText(text: TextSpan(children: children));
   }
 
-  Widget _buildBody() {
-    return SingleChildScrollView(
-      child: Container(
-        alignment: Alignment.center,
-        margin: EdgeInsets.all(10),
-        child: Column(
-          children: <Widget>[
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: <Widget>[
-                Text(
-                  widget._organization.name,
-                  style: TextStyle(fontSize: 20),
-                ),
-                IconButton(
-                  color: Colors.lightBlue,
-                  icon: Icon(Icons.refresh),
-                  onPressed: _refresh,
-                ),
-              ],
-            ),
-            _buildMembersSection(),
-            /*
-            SizedBox(height: 10),
-            Text('E-Board Members:'),
-            Container(
-                height: 100,
-                child: ListView.builder(
-                  shrinkWrap: false,
-                  itemCount: widget._organization.eBoardMembers.length,
-                  itemBuilder: (BuildContext content, int index) {
-                    return Text(
-                      widget._organization.eBoardMembers[index].ucid,
-                      textAlign: TextAlign.center,
-                    );
-                    //);
-                  },
-                )),
-            SizedBox(height: 10),
-            Text('Regular Members:'),
-            Container(
-                height: 100,
-                child: ListView.builder(
-                  shrinkWrap: false,
-                  itemCount: widget._organization.regularMembers.length,
-                  itemBuilder: (BuildContext content, int index) {
-                    return Text(
-                      widget._organization.regularMembers[index].ucid,
-                      textAlign: TextAlign.center,
-                    );
-                  },
-                )),
-                */
-            SizedBox(height: 10),
-            Text(widget._organization.description),
-            SizedBox(height: 10),
-            _buildRecentEventsSection(),
-          ],
-        ),
+  List<Widget> _buildChildren(EventListState state) {
+    List<Widget> children = List<Widget>();
+    children.addAll([
+      Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: <Widget>[
+          Text(
+            widget._organization.name,
+            style: TextStyle(fontSize: 20),
+          ),
+          IconButton(
+            color: Colors.lightBlue,
+            icon: Icon(Icons.refresh),
+            onPressed: _refresh,
+          ),
+        ],
       ),
+      _buildMembersSection(),
+      SizedBox(height: 10),
+      Text(widget._organization.description),
+      SizedBox(height: 10),
+    ]);
+    children.addAll(_buildRecentEventsSection(state));
+    return children;
+  }
+
+  Widget _buildBody() {
+    return StreamBuilder<EventListState>(
+      initialData: widget._eventBloc.recentEventsInitialState,
+      stream: widget._eventBloc.recentEvents,
+      builder: (BuildContext context, AsyncSnapshot<EventListState> snapshot) {
+        return SingleChildScrollView(
+          child: Container(
+            alignment: Alignment.center,
+            margin: EdgeInsets.all(10),
+            child: Column(
+              children: _buildChildren(snapshot.data),
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -453,7 +460,13 @@ class _OrganizationDetailPageState extends State<OrganizationDetailPage> {
   @override
   void initState() {
     super.initState();
-    widget._eventBloc.sink.add(FetchRecentEvents(organization: widget._organization));
+    widget._eventBloc.sink
+        .add(FetchRecentEvents(organization: widget._organization));
+    _favoriteErrorSubscription =
+        widget._favoriteBloc.favoriteSettingErrors.listen((dynamic state) {
+      //recieve any favorite setting errors? rollback favorite status by setting state
+      setState(() {});
+    });
   }
 
   @override
@@ -468,5 +481,11 @@ class _OrganizationDetailPageState extends State<OrganizationDetailPage> {
       ),
       body: _buildBody(),
     );
+  }
+
+  @override
+  void dispose() {
+    _favoriteErrorSubscription.cancel();
+    super.dispose();
   }
 }

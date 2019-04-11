@@ -6,7 +6,7 @@ import '../../blocs/favorite_bloc.dart';
 import '../../blocs/edit_bloc.dart';
 import '../../models/event.dart';
 import '../detail/event_detail.dart';
-import '../../common/error_dialog.dart';
+import '../../common/daily_event_list_page.dart';
 
 class ViewDropDown extends StatelessWidget {
   final DateFormat dayFormatter = DateFormat('EEE, MMM d, y');
@@ -257,8 +257,10 @@ class WeeklyEventList extends StatefulWidget {
 class _WeeklyEventListState extends State<WeeklyEventList> {
   StreamSubscription _favoriteErrorSubscription;
   DateFormat dayFormatter = DateFormat.MMMd("en_US");
-  int colorIdx;
-  List<int> colors;
+  int tileColorIdx;
+  List<Color> tileColors;
+  int accentColorIdx;
+  List<Color> accentColors;
 
   @override
   void initState() {
@@ -271,19 +273,26 @@ class _WeeklyEventListState extends State<WeeklyEventList> {
     });
     widget._eventBloc.sink.add(
         FetchWeeklyEvents(dayStart: widget._dayStart, dayEnd: widget._dayEnd));
-    colorIdx = 0;
-    colors = [
-      0xffffdde2,
-      0xffFFFFCC,
-      0xffdcf9ec,
-      0xffFFFFFF,
-      0xffF0F0F0,
+    tileColorIdx = 0;
+    tileColors = [
+      Color(0xffffdde2),
+      Color(0xffFFFFCC),
+      Color(0xffdcf9ec),
+      Color(0xffFFFFFF),
+      Color(0xffF0F0F0),
+    ];
+    accentColorIdx = 0;
+    accentColors = [
+      Colors.cyan,
+      Color(0xffff5349),
+      Color(0xff02d100),
+      Color(0xffffa500),
     ];
   }
 
   Widget _buildEventListTile(Event event) {
-    colorIdx++;
-    Color color = Color(colors[colorIdx % colors.length]);
+    tileColorIdx++;
+    Color color = tileColors[tileColorIdx % tileColors.length];
     return WeeklyEventListTile(
         favoriteBloc: widget._favoriteBloc,
         eventBloc: widget._eventBloc,
@@ -307,9 +316,11 @@ class _WeeklyEventListState extends State<WeeklyEventList> {
         } else if (state is WeeklyEventListLoaded) {
           weeklyEvents = state.events;
         } else if (state is EventListError) {
-          return Center(child: Text('There\'s been an error! OH NO! ): Please try again!'));
+          return Center(
+              child:
+                  Text('There\'s been an error! OH NO! ): Please try again!'));
         }
-        //use an array to map DateTime to the day of the week?
+        //use an array to map DateTime to the day of the week
         Map<String, DateTime> day = Map<String, DateTime>();
         List<String> weekDays = [
           'Sunday',
@@ -320,40 +331,84 @@ class _WeeklyEventListState extends State<WeeklyEventList> {
           'Friday',
           'Saturday'
         ];
-        for (DateTime key in weeklyEvents.keys) {
-          String weekDay = weekDays[key.weekday % 7];
-          day[weekDay] = key;
+        for (int weekDay = 0; weekDay < 7; weekDay++) {
+          int hoursToAdd = (weekDay * 24) + 2;
+          DateTime dayData = widget._dayStart.add(Duration(hours: hoursToAdd));
+          dayData = DateTime(dayData.year, dayData.month, dayData.day);
+          day[weekDays[weekDay]] = dayData;
         }
+
         for (String weekDay in weekDays) {
-          if (!day.containsKey(weekDay)) {
-            //not sure how I would proceed here...?
-            //this would mean something is wrong in the date bloc..
-            continue;
-          }
           DateTime dateForWeekDay = day[weekDay];
+          int eventCount = weeklyEvents.containsKey(dateForWeekDay)
+              ? weeklyEvents[dateForWeekDay].length
+              : 0;
           children.add(
-            Padding(
-              padding: EdgeInsets.all(10),
-              child: Text(
-                weekDay + ', ' + dayFormatter.format(dateForWeekDay),
-                style: TextStyle(fontSize: 20),
-                textAlign: TextAlign.left,
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: <Widget>[
+                Row(
+                  children: <Widget>[
+                    Padding(
+                      padding: EdgeInsets.all(10),
+                      child: Text(
+                        weekDay + ', ' + dayFormatter.format(dateForWeekDay),
+                        style: TextStyle(fontSize: 20),
+                        textAlign: TextAlign.left,
+                      ),
+                    ),
+                    Container(
+                      alignment: Alignment.center,
+                      height: 30,
+                      width: 30,
+                      padding: EdgeInsets.all(5),
+                      margin: EdgeInsets.only(right: 10),
+                      child: Text(eventCount.toString()),
+                      decoration: BoxDecoration(
+                        color: Colors.yellow,
+                        borderRadius: BorderRadius.all(Radius.circular(25)),
+                      ),
+                    ),
+                    Text(eventCount == 1 ? 'Event' : 'Events'),
+                  ],
+                ),
+                IconButton(
+                  icon: Icon(
+                    Icons.more_horiz,
+                    color: accentColors[accentColorIdx % accentColors.length],
+                  ),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (BuildContext context) => DailyEventListPage(
+                              editBloc: widget._editBloc,
+                              favoriteBloc: widget._favoriteBloc,
+                              eventBloc: widget._eventBloc,
+                              day: dateForWeekDay,
+                              canEdit: widget._canEdit,
+                            ),
+                      ),
+                    );
+                  },
+                ),
+              ],
             ),
           );
+          List<Event> eventsOnDay = List<Event>();
+          Event one;
+          Event two;
+          Event three;
           if (weeklyEvents.containsKey(dateForWeekDay)) {
-            List<Event> eventsOnDay = weeklyEvents[dateForWeekDay];
-            Event one = eventsOnDay.length >= 1 ? eventsOnDay[0] : null;
-            Event two = eventsOnDay.length >= 2 ? eventsOnDay[1] : null;
-            Event three = eventsOnDay.length >= 3 ? eventsOnDay[2] : null;
-            children.add(_buildEventListTile(one));
-            children.add(_buildEventListTile(two));
-            children.add(_buildEventListTile(three));
-          } else {
-            children.add(
-              Text('No events on ' + weekDay + '.', textAlign: TextAlign.left),
-            );
+            eventsOnDay = weeklyEvents[dateForWeekDay];
+            one = eventsOnDay.length >= 1 ? eventsOnDay[0] : null;
+            two = eventsOnDay.length >= 2 ? eventsOnDay[1] : null;
+            three = eventsOnDay.length >= 3 ? eventsOnDay[2] : null;
           }
+          children.add(_buildEventListTile(one));
+          children.add(_buildEventListTile(two));
+          children.add(_buildEventListTile(three));
+          accentColorIdx++;
         }
         return SingleChildScrollView(
           child: Container(

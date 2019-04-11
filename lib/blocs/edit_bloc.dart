@@ -128,7 +128,6 @@ class EditEventBloc {
         _alertFormSubmitError();
       } else {
         _alertFormSubmitted(editedEvent);
-        //TODO not sure if below reinitialization is necessary...test later
         _searchSink.add(ReinitializeForSearchingEvents());
         _favoriteSink.add(FetchFavorites());
       }

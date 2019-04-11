@@ -92,71 +92,70 @@ class FavoriteGridTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       color: Color(_color),
-      child: Stack(children: <Widget>[
-        _happeningToday()
-            ? Positioned(
-                left: 0,
-                child: IconButton(
-                  icon: Icon(Icons.check_circle, color: Colors.white),
-                  onPressed: () {},
-                ),
-              )
-            : Container(),
-        Positioned(
-          right: 0,
-          child: IconButton(
-            icon: Icon(Icons.favorite, color: Color(0xffFFC0CB)),
-            onPressed: () => _showAreYouSureDialog(context, _event),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: <Widget>[
+          Container(
+            child: Image.network(
+              'https://vignette.wikia.nocookie.net/line/images/b/bb/2015-brown.png/revision/latest?cb=20150808131630',
+              width: 50,
+            ),
           ),
-        ),
-        Positioned(
-          bottom: 0,
-          left: 0,
-          child: Container(
-            color: Colors.white,
-            child: Row(
+          Container(
+            child: Column(
               children: <Widget>[
                 Container(
-                  padding: EdgeInsets.only(left: 3),
-                  width: 100,
                   child: Column(
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
-                      Text(
-                        _cutShort(_event.title, 15),
-                        maxLines: 1,
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
+                      Text(_cutShort(_event.title, 35),
+                          textAlign: TextAlign.left,
+                          style: TextStyle(
+                              fontSize: 15.0, fontWeight: FontWeight.bold)),
                       Text(
                         _formatEventDuration(_event.startTime, _event.endTime),
-                        maxLines: 1,
+                        style: TextStyle(fontSize: 15.0),
                       ),
                     ],
                   ),
                 ),
-                IconButton(
-                    padding: EdgeInsets.all(0),
-                    alignment: Alignment.centerLeft,
-                    icon: Icon(Icons.info),
-                    onPressed: () {
-                      _eventBloc.sink.add(AddViewToEvent(event: _event));
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (BuildContext context) => EventDetailPage(
-                                event: _event,
-                                canEdit: _canEditEvent,
-                                editBloc: _editBloc,
-                              ),
-                        ),
-                      );
-                    }),
               ],
             ),
           ),
-        )
-      ]),
+          Container(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: <Widget>[
+                IconButton(
+                  icon: Icon(
+                    Icons.favorite,
+                    color: Colors.pink,
+                  ),
+                  onPressed: () => _showAreYouSureDialog(context, _event),
+                ),
+                IconButton(
+                  icon: Icon(
+                    Icons.info,
+                    color: Colors.lightBlue[200],
+                  ),
+                  onPressed: () {
+                    _eventBloc.sink.add(AddViewToEvent(event: _event));
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (BuildContext context) => EventDetailPage(
+                              event: _event,
+                              canEdit: _canEditEvent,
+                              editBloc: _editBloc,
+                            ),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+          )
+        ],
+      ),
     );
   }
 }

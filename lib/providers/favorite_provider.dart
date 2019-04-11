@@ -62,7 +62,8 @@ class FavoriteProvider {
       }
     } catch (error) {
       event.favorited = false;
-      return false;
+      throw Exception(
+          'Error in FavoriteProvider addFavorite method: ' + error.toString());
     }
   }
 
@@ -81,7 +82,58 @@ class FavoriteProvider {
       }
     } catch (error) {
       event.favorited = true;
-      return false;
+      throw Exception('Error in FavoriteProvider removeFavorite method: ' +
+          error.toString());
+    }
+  }
+
+  Future<bool> removeAllFavorites() async {
+    try {
+      bool success = await DatabaseEventAPI.removeAllFavoritesForUser(_ucid);
+      if (success) {
+        return true;
+      } else {
+        return false;
+      }
+    } catch (error) {
+      throw Exception('Error in FavoriteProvider removeAllFavorites method: ' +
+          error.toString());
+    }
+  }
+
+  Future<bool> removeSelectedFavorites(List<String> favoriteIds) async {
+    try {
+      if (favoriteIds == null || favoriteIds.length == 0) return true;
+      bool success =
+          await DatabaseEventAPI.removeSelectedFavorites(_ucid, favoriteIds);
+      if (success) {
+        return true;
+      } else {
+        return false;
+      }
+    } catch (error) {
+      throw Exception(
+          'Error in FavoriteProvider removeSelectedFavorites method: ' +
+              error.toString());
+    }
+  }
+
+  Future<bool> removePastFavorites() async {
+    try {
+      List<Event> pastEventsFavorited = _allFavoritedEvents
+          .where((Event e) => e.endTime.isBefore(DateTime.now()))
+          .toList();
+      List<String> pastEventIds =
+          pastEventsFavorited.map((Event e) => e.eventId).toList();
+      bool removedPastFavorites = await removeSelectedFavorites(pastEventIds);
+      if (removedPastFavorites) {
+        return true;
+      } else {
+        return false;
+      }
+    } catch (error) {
+      throw Exception('Error in FavoriteProvider removePastFavorites method: ' +
+          error.toString());
     }
   }
 

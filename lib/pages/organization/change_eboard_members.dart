@@ -35,15 +35,15 @@ class _ChangeOfEboardMembersPageState extends State<ChangeOfEboardMembersPage> {
     _formKey = GlobalKey<FormState>();
     widget._organizationBloc.sink.add(ClearStorage());
     //this executes on build complete basically
-    WidgetsBinding.instance.addPostFrameCallback(
-        (_) => widget._organizationBloc.sink.add(SetOrganizationToEdit(organization: widget._organization)));
+    WidgetsBinding.instance.addPostFrameCallback((_) => widget
+        ._organizationBloc.sink
+        .add(SetOrganizationToEdit(organization: widget._organization)));
     _navigationListener = widget._organizationBloc.organizationUpdateRequests
         .listen((dynamic state) {
       if (state is OrganizationUpdated) {
         if (mounted) {
           setState(() {
-            widget._organization
-                .setStatus(OrganizationStatus.AWAITING_EBOARD_CHANGE);
+            widget._organization.setStatus(state.updatedOrganization.status);
           });
         }
         String eBoardMembers = '';
@@ -205,7 +205,8 @@ class _ChangeOfEboardMembersPageState extends State<ChangeOfEboardMembersPage> {
                       ),
                       validator: widget._organizationBloc.reasonValidator,
                       onSaved: (String value) {
-                        widget._organizationBloc.sink.add(SetReasonForUpdate(reason: value));
+                        widget._organizationBloc.sink
+                            .add(SetReasonForUpdate(reason: value));
                       },
                     ),
                     _buildEBoardSection(state),

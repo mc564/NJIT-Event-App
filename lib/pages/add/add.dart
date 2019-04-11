@@ -57,7 +57,7 @@ class _AddPageState extends State<AddPage> {
         labelText: 'Event Title',
         labelStyle: TextStyle(color: Colors.black, fontWeight: FontWeight.w600),
         filled: true,
-        fillColor: Color(0xffffff00),
+        fillColor: Color(0xffffdde2),
         border: InputBorder.none,
       ),
       validator: _addEventBloc.titleValidator,
@@ -72,13 +72,13 @@ class _AddPageState extends State<AddPage> {
   Theme _buildOrganizationField() {
     return Theme(
       data: ThemeData(
-        canvasColor: Color(0xff0200ff),
+        canvasColor: Color(0xffffffcc),
       ),
       child: DropDownButtonFormField(
         hint: 'Event Organization',
         items: _organizationDropdownItems,
-        color: Color(0xff0200ff),
-        textColor: Colors.white,
+        color: Color(0xffffffcc),
+        textColor: Colors.black,
         onChanged: (String value) {},
         onSaved: (String value) {
           _addEventBloc.sink.add(AddBloc.SetOrganization(value));
@@ -96,7 +96,7 @@ class _AddPageState extends State<AddPage> {
         labelText: 'Event Location',
         labelStyle: TextStyle(color: Colors.black, fontWeight: FontWeight.w600),
         filled: true,
-        fillColor: Color(0xff02d100),
+        fillColor: Color(0xffffffff),
         border: InputBorder.none,
       ),
       initialValue: initVal,
@@ -135,7 +135,7 @@ class _AddPageState extends State<AddPage> {
         labelText: 'Event Description',
         labelStyle: TextStyle(color: Colors.black, fontWeight: FontWeight.w600),
         filled: true,
-        fillColor: Color(0xffffa500),
+        fillColor: Color(0xfff0f0f0),
         border: InputBorder.none,
       ),
       initialValue: initVal,
@@ -186,13 +186,13 @@ class _AddPageState extends State<AddPage> {
   Theme _buildCategoryField() {
     return Theme(
       data: ThemeData(
-        canvasColor: Color(0xff800000),
+        canvasColor: Color(0xffdcf9ec),
       ),
       child: DropDownButtonFormField(
         hint: 'Event Category',
         items: _categoryDropdownItems,
-        color: Color(0xffff0700),
-        textColor: Colors.white,
+        color: Color(0xffdcf9ec),
+        textColor: Colors.black,
         onChanged: (String value) {},
         onSaved: (String value) {
           _addEventBloc.sink.add(AddBloc.SetCategory(value));
@@ -223,6 +223,8 @@ class _AddPageState extends State<AddPage> {
           return Center(child: CircularProgressIndicator());
         } else
           return RaisedButton(
+              color: Color(0xffffdde2),
+              splashColor: Color(0xffffdde2),
               child: Text('Add Event'),
               onPressed: () {
                 _addEvent();
@@ -294,7 +296,7 @@ class _AddPageState extends State<AddPage> {
                       child: Text(
                         _cutShort(organization, 80),
                         style: TextStyle(
-                            color: Colors.white, fontWeight: FontWeight.w600),
+                            color: Colors.black, fontWeight: FontWeight.w600),
                       ),
                     ),
                   ),
@@ -315,7 +317,7 @@ class _AddPageState extends State<AddPage> {
             child: Text(
               category,
               style:
-                  TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                  TextStyle(color: Colors.black, fontWeight: FontWeight.w600),
             ),
           ),
         ),
@@ -344,7 +346,7 @@ class _AddPageState extends State<AddPage> {
         iconTheme: IconThemeData(
           color: Colors.black,
         ),
-        backgroundColor: Colors.white,
+        backgroundColor: Colors.lightBlue[50],
         title: Text(
           'Add An Event',
           style: TextStyle(color: Colors.black),

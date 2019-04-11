@@ -341,7 +341,6 @@ class EventListProvider {
     return RecentEvents(pastEvents: pastEvents, upcomingEvents: upcomingEvents);
   }
 
-  //TODO change this for use with admins and eboard members when adding
   Future<List<Event>> getSimilarEvents(Event event) async {
     print("[MODEL] getting similar events");
 

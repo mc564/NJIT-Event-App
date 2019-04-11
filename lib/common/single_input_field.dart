@@ -39,41 +39,46 @@ class _SingleInputFieldPageState extends State<SingleInputFieldPage> {
         centerTitle: true,
         title: Text(widget._title),
       ),
-      body: Container(
-        margin: EdgeInsets.all(10),
-        child: Column(
-          children: <Widget>[
-            Text(widget._subtitle),
-            TextField(
-              controller: textController,
-              maxLines: widget._maxLines,
-            ),
-            Row(
-              children: <Widget>[
-                FlatButton(
-                  child: Text('Return'),
-                  onPressed: () => Navigator.of(context).pop(),
-                ),
-                FlatButton(
-                  child: Text('Continue'),
-                  onPressed: () {
-                    String paragraph = textController.text;
-                    if (paragraph == null || paragraph.length == 0) {
-                      showDialog(
-                        context: context,
-                        builder: (BuildContext context) =>
-                            ErrorDialog(errorMsg: 'A response is required.'),
-                      );
-                      return;
-                    }
+      body: GestureDetector(
+        onTap: () {
+          FocusScope.of(context).requestFocus(FocusNode());
+        },
+        child: Container(
+          margin: EdgeInsets.all(10),
+          child: Column(
+            children: <Widget>[
+              Text(widget._subtitle),
+              TextField(
+                controller: textController,
+                maxLines: widget._maxLines,
+              ),
+              Row(
+                children: <Widget>[
+                  FlatButton(
+                    child: Text('Return'),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                  FlatButton(
+                    child: Text('Continue'),
+                    onPressed: () {
+                      String paragraph = textController.text;
+                      if (paragraph == null || paragraph.length == 0) {
+                        showDialog(
+                          context: context,
+                          builder: (BuildContext context) =>
+                              ErrorDialog(errorMsg: 'A response is required.'),
+                        );
+                        return;
+                      }
 
-                    widget._onSubmit(paragraph);
-                    Navigator.of(context).pop();
-                  },
-                ),
-              ],
-            ),
-          ],
+                      widget._onSubmit(paragraph);
+                      Navigator.of(context).pop();
+                    },
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );

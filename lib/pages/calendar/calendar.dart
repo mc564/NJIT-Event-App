@@ -6,6 +6,8 @@ import 'package:flutter_calendar_carousel/classes/event_list.dart';
 
 import './calendar_widgets.dart';
 
+import '../../common/daily_event_list_page.dart';
+
 import '../../blocs/event_bloc.dart';
 import '../../blocs/favorite_bloc.dart';
 import '../../blocs/date_bloc.dart';

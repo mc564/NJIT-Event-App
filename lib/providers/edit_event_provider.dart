@@ -3,8 +3,6 @@ import '../models/event.dart';
 import '../models/location.dart';
 import '../models/category.dart';
 
-import 'package:flutter/material.dart';
-
 class EditEventProvider {
   //form variables
   Event _eventToEdit;

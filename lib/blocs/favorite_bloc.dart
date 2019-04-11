@@ -39,9 +39,9 @@ class FavoriteBloc {
 
   FavoriteProvider get favoriteProvider => _favoriteProvider;
 
-  void _alertFavoriteError(Event errorEvent, List<Event> rollbackFavorites,
-      bool favorited, String errorMsg) {
-    FavoriteError errorState = FavoriteError(
+  void _alertFavoriteSettingError(Event errorEvent,
+      List<Event> rollbackFavorites, bool favorited, String errorMsg) {
+    FavoriteSettingError errorState = FavoriteSettingError(
         eventId: errorEvent.eventId,
         ucid: _ucid,
         favorited: favorited,
@@ -51,9 +51,9 @@ class FavoriteBloc {
     _favoriteController.sink.add(errorState);
   }
 
-  void _alertFavoriteErrorWithoutRollback(
+  void _alertFavoriteSettingErrorWithoutRollback(
       Event errorEvent, bool favorited, String errorMsg) {
-    FavoriteError errorState = FavoriteError(
+    FavoriteSettingError errorState = FavoriteSettingError(
         eventId: errorEvent.eventId,
         ucid: _ucid,
         favorited: favorited,
@@ -62,8 +62,8 @@ class FavoriteBloc {
     _favoriteController.sink.add(errorState);
   }
 
-  void _alertFavoritesFetchError(String errorMsg) {
-    FavoritesFetchError errorState = FavoritesFetchError(errorMsg: errorMsg);
+  void _alertFavoriteError(String errorMsg) {
+    FavoriteError errorState = FavoriteError(errorMsg: errorMsg);
     _favoriteController.sink.add(errorState);
     _favoriteErrorsController.sink.add(errorState);
   }
@@ -75,13 +75,11 @@ class FavoriteBloc {
         _favoriteController.sink
             .add(FavoritesUpdated(favorites: _favoriteProvider.allFavorites));
       } else {
-        _alertFavoritesFetchError(
-            'Error in fetchFavorites method of favorite BLOC.');
+        _alertFavoriteError('Error in fetchFavorites method of favorite BLOC.');
       }
     } catch (error) {
-      _alertFavoritesFetchError(
-          'Error in fetchFavorites method of favorite BLOC: ' +
-              error.toString());
+      _alertFavoriteError('Error in fetchFavorites method of favorite BLOC: ' +
+          error.toString());
     }
   }
 
@@ -89,15 +87,15 @@ class FavoriteBloc {
     try {
       bool successfullyAdded = await _favoriteProvider.addFavorite(event);
       List<Event> favorites = _favoriteProvider.allFavorites;
-      print('favorites length is: '+favorites.length.toString());
+      print('favorites length is: ' + favorites.length.toString());
       if (successfullyAdded) {
         _favoriteController.sink.add(FavoritesUpdated(favorites: favorites));
       } else {
-        _alertFavoriteError(
+        _alertFavoriteSettingError(
             event, favorites, true, 'Failed to addFavorite in favoriteBloc');
       }
     } catch (error) {
-      _alertFavoriteErrorWithoutRollback(event, true,
+      _alertFavoriteSettingErrorWithoutRollback(event, true,
           'Failed to addFavorite in favoriteBloc error: ' + error.toString());
     }
   }
@@ -109,14 +107,64 @@ class FavoriteBloc {
       if (successfullyRemoved) {
         _favoriteController.sink.add(FavoritesUpdated(favorites: favorites));
       } else {
-        _alertFavoriteError(event, favorites, false,
+        _alertFavoriteSettingError(event, favorites, false,
             'Failed to removeFavorite in favoriteBloc');
       }
     } catch (error) {
-      _alertFavoriteErrorWithoutRollback(
+      _alertFavoriteSettingErrorWithoutRollback(
           event,
           false,
           'Failed to removeFavorite in favoriteBloc error: ' +
+              error.toString());
+    }
+  }
+
+  void removeAllFavorites() async {
+    try {
+      bool successfullyRemovedAllFavorites =
+          await _favoriteProvider.removeAllFavorites();
+      bool fetchedFavorites = await _favoriteProvider.fetchFavorites();
+      List<Event> favorites = List<Event>();
+      if (fetchedFavorites) {
+        favorites = _favoriteProvider.allFavorites;
+      } else {
+        _alertFavoriteError(
+            'Failed to fetch favorites in removeAllFavorites method of favoriteBloc');
+        return;
+      }
+      if (successfullyRemovedAllFavorites) {
+        _favoriteController.sink.add(FavoritesUpdated(favorites: favorites));
+      } else {
+        _alertFavoriteError('Failed to removeAllFavorites in favoriteBloc');
+        return;
+      }
+    } catch (error) {
+      _alertFavoriteError(
+          'Failed to removeAllFavorites in favoriteBloc Error: ' +
+              error.toString());
+    }
+  }
+
+  void removePastFavorites() async {
+    try {
+      bool successfullyRemoved = await _favoriteProvider.removePastFavorites();
+      bool fetchedFavorites = await _favoriteProvider.fetchFavorites();
+      List<Event> favorites = List<Event>();
+      if (fetchedFavorites) {
+        favorites = _favoriteProvider.allFavorites;
+      } else {
+        _alertFavoriteError(
+            'Failed to fetch favorites in removePastFavorites method of favoriteBloc');
+        return;
+      }
+      if (successfullyRemoved) {
+        _favoriteController.sink.add(FavoritesUpdated(favorites: favorites));
+      } else {
+        _alertFavoriteError('Failed to removePastFavorites in favoriteBloc');
+      }
+    } catch (error) {
+      _alertFavoriteError(
+          'Failed to removePastFavorites in favoriteBloc error: ' +
               error.toString());
     }
   }
@@ -158,6 +206,18 @@ class RemoveFavorite extends FavoriteEvent {
   }
 }
 
+class RemoveAllFavorites extends FavoriteEvent {
+  void execute(FavoriteBloc favoriteBloc) {
+    favoriteBloc.removeAllFavorites();
+  }
+}
+
+class RemovePastFavorites extends FavoriteEvent {
+  void execute(FavoriteBloc favoriteBloc) {
+    favoriteBloc.removePastFavorites();
+  }
+}
+
 /*FAVORITE BLOC output STATES */
 //favorite only has 2 states: initial and error
 //because the ui only needs to know if there was an error setting a favorite
@@ -167,18 +227,19 @@ abstract class FavoriteState extends Equatable {
 
 class FavoriteInitial extends FavoriteState {}
 
-class FavoritesFetchError extends FavoriteState {
+//a general favoriteError
+class FavoriteError extends FavoriteState {
   String errorMsg;
-  FavoritesFetchError({@required String errorMsg}) : errorMsg = errorMsg;
+  FavoriteError({@required String errorMsg}) : errorMsg = errorMsg;
 }
 
-class FavoriteError extends FavoriteState {
+class FavoriteSettingError extends FavoriteState {
   String errorMsg;
   String eventId;
   String ucid;
   bool favorited;
   List<Event> rollbackFavorites;
-  FavoriteError(
+  FavoriteSettingError(
       {@required this.eventId,
       @required this.ucid,
       @required this.favorited,

@@ -526,6 +526,7 @@ class OrganizationBloc {
             .sendMessageToAdminsAboutEboardChangeRequest(
                 orgWithUpdates, reason);
         if (successfullyMessaged) {
+          orgWithUpdates.setStatus(OrganizationStatus.AWAITING_EBOARD_CHANGE);
           _orgUpdatingController.sink
               .add(OrganizationUpdated(updatedOrganization: orgWithUpdates));
           _updateOrgProvider.clear();
@@ -602,7 +603,7 @@ class OrganizationBloc {
   /* INACTIVATION FUNCTIONS */
   void requestOrganizationInactivation(
       Organization organization, String reason) async {
-        print('requesting org inactivation');
+    print('requesting org inactivation');
     try {
       _orgUpdatingController.sink
           .add(OrganizationUpdating(organization: organization));
@@ -614,8 +615,6 @@ class OrganizationBloc {
         bool successfullyMessaged = await _organizationMessageProvider
             .sendMessageToAdminsAboutInactivationRequest(organization, reason);
         if (successfullyMessaged) {
-          //TODO change this later but I cheat for now -> changing of status
-          //should be done in UI
           organization.setStatus(OrganizationStatus.AWAITING_INACTIVATION);
           _orgUpdatingController.sink
               .add(OrganizationUpdated(updatedOrganization: organization));

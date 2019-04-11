@@ -23,7 +23,6 @@ import '../admin/admin.dart';
 import '../message/message.dart';
 
 import '../../models/user.dart';
-import '../../models/event.dart';
 
 enum View { daily, weekly, monthly }
 
@@ -121,6 +120,8 @@ class _HomePageState extends State<HomePage> {
             context,
             MaterialPageRoute(
               builder: (BuildContext context) => OrganizationPage(
+                    editBloc: _editBloc,
+                    favoriteBloc: _favoriteBloc,
                     eventBloc: _eventBloc,
                     organizationBloc: _organizationBloc,
                     ucid: widget._userBloc.ucid,
