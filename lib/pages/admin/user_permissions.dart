@@ -26,7 +26,7 @@ class _UserPermissionPageState extends State<UserPermissionsPage> {
               subtitle:
                   'Please enter the ucid of the user you would like to ban.',
               onSubmit: (String ucid) {
-                widget._userBloc.banUser(ucid);
+                widget._userBloc.sink.add(BanUser(ucid: ucid));
               },
               maxLines: 1,
             ),
@@ -51,7 +51,7 @@ class _UserPermissionPageState extends State<UserPermissionsPage> {
               FlatButton(
                 child: Text('YES'),
                 onPressed: () {
-                  widget._userBloc.unbanUser(bannedUserUCID);
+                  widget._userBloc.sink.add(UnbanUser(ucid: bannedUserUCID));
                   Navigator.of(context).pop();
                 },
               ),

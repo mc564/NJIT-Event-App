@@ -6,35 +6,51 @@ import '../providers/edit_event_provider.dart';
 
 import '../models/event.dart';
 
+import '../blocs/search_bloc.dart';
+import '../blocs/favorite_bloc.dart';
+
 //helps implement edit event form logic
 class EditEventBloc {
+  final StreamController<EditEvent> _requestsController;
   final StreamController<EditFormState> _formController;
   final EditEventProvider _editEventProvider;
-  FormReady _initialState;
+  EditFormState _prevState;
 
-  EditEventBloc({@required Event eventToEdit})
-      : _editEventProvider = EditEventProvider(eventToEdit: eventToEdit),
-        _formController = StreamController.broadcast() {
-    print('in editbloc constructor!!');
-    _initialState = FormReady(
-      description: _editEventProvider.description,
-      title: _editEventProvider.title,
-      organization: _editEventProvider.organization,
-      category: _editEventProvider.category,
-      endDateTime: _editEventProvider.endTime,
-      startDateTime: _editEventProvider.startTime,
-      location: _editEventProvider.location,
-    );
+  final StreamSink<SearchEvent> _searchSink;
+  final StreamSink<FavoriteEvent> _favoriteSink;
+
+  EditEventBloc(
+      {@required StreamSink<SearchEvent> searchSink,
+      @required StreamSink<FavoriteEvent> favoriteSink})
+      : _editEventProvider = EditEventProvider(),
+        _formController = StreamController.broadcast(),
+        _requestsController = StreamController.broadcast(),
+        _searchSink = searchSink,
+        _favoriteSink = favoriteSink {
+    _formController.stream.listen((EditFormState state) {
+      _prevState = state;
+    });
+    _requestsController.stream.forEach((EditEvent event) {
+      event.execute(this);
+    });
   }
 
-  FormReady get initialState => _initialState;
+  EditFormState get initialState => _prevState;
   Function get titleValidator => _editEventProvider.titleValidator;
+  Function get descriptionValidator => _editEventProvider.descriptionValidator;
   Function get locationValidator => _editEventProvider.locationValidator;
   Function get organizationValidator => _editEventProvider.orgValidator;
   Function get categoryValidator => _editEventProvider.categoryValidator;
-  List<String> get allSelectableCategories => _editEventProvider.allSelectableCategories;
+  List<String> get allSelectableCategories =>
+      _editEventProvider.allSelectableCategories;
 
   Stream get formSubmissions => _formController.stream;
+  StreamSink<EditEvent> get sink => _requestsController.sink;
+
+  void setEventToEdit(Event eventToEdit) {
+    _editEventProvider.setEventToEdit(eventToEdit);
+    _alertFormReadyForNextSubmission();
+  }
 
   void setLocation(String location) {
     _editEventProvider.setLocation(location);
@@ -92,19 +108,14 @@ class EditEventBloc {
   }
 
   void _alertFormReadyForNextSubmission() {
-    //delay a little to give the ui time to react to the formsubmitted on the stream
-    //then push the formready state to the stream to let the ui know the form is ready
-    //for another submission
-    Future.delayed(Duration(milliseconds: 100)).then((_) {
-      _formController.sink.add(FormReady(
-          description: _editEventProvider.description,
-          title: _editEventProvider.title,
-          organization: _editEventProvider.organization,
-          category: _editEventProvider.category,
-          endDateTime: _editEventProvider.endTime,
-          startDateTime: _editEventProvider.startTime,
-          location: _editEventProvider.location));
-    });
+    _formController.sink.add(FormReady(
+        description: _editEventProvider.description,
+        title: _editEventProvider.title,
+        organization: _editEventProvider.organization,
+        category: _editEventProvider.category,
+        endDateTime: _editEventProvider.endTime,
+        startDateTime: _editEventProvider.startTime,
+        location: _editEventProvider.location));
   }
 
   void submitForm() async {
@@ -117,7 +128,8 @@ class EditEventBloc {
         _alertFormSubmitError();
       } else {
         _alertFormSubmitted(editedEvent);
-        _alertFormReadyForNextSubmission();
+        _searchSink.add(ReinitializeForSearchingEvents());
+        _favoriteSink.add(FetchFavorites());
       }
     } catch (error) {
       _alertFormSubmitErrorCustom(error);
@@ -126,9 +138,87 @@ class EditEventBloc {
 
   void dispose() {
     _formController.close();
+    _requestsController.close();
   }
 }
 
+/*EDIT BLOC input EVENTS */
+abstract class EditEvent extends Equatable {
+  EditEvent([List args = const []]) : super(args);
+  void execute(EditEventBloc editBloc);
+}
+
+class SetEventToEdit extends EditEvent {
+  Event eventToEdit;
+  SetEventToEdit(this.eventToEdit) : super([eventToEdit]);
+  void execute(EditEventBloc editBloc) {
+    editBloc.setEventToEdit(eventToEdit);
+  }
+}
+
+class SetLocation extends EditEvent {
+  String location;
+  SetLocation(this.location) : super([location]);
+  void execute(EditEventBloc editBloc) {
+    editBloc.setLocation(location);
+  }
+}
+
+class SetTitle extends EditEvent {
+  String title;
+  SetTitle(this.title) : super([title]);
+  void execute(EditEventBloc editBloc) {
+    editBloc.setTitle(title);
+  }
+}
+
+class SetStartTime extends EditEvent {
+  DateTime startTime;
+  SetStartTime(this.startTime) : super([startTime]);
+  void execute(EditEventBloc editBloc) {
+    editBloc.setStartTime(startTime);
+  }
+}
+
+class SetEndTime extends EditEvent {
+  DateTime endTime;
+  SetEndTime(this.endTime) : super([endTime]);
+  void execute(EditEventBloc editBloc) {
+    editBloc.setEndTime(endTime);
+  }
+}
+
+class SetOrganization extends EditEvent {
+  String organization;
+  SetOrganization(this.organization) : super([organization]);
+  void execute(EditEventBloc editBloc) {
+    editBloc.setOrganization(organization);
+  }
+}
+
+class SetDescription extends EditEvent {
+  String description;
+  SetDescription(this.description) : super([description]);
+  void execute(EditEventBloc editBloc) {
+    editBloc.setDescription(description);
+  }
+}
+
+class SetCategory extends EditEvent {
+  String category;
+  SetCategory(this.category) : super([category]);
+  void execute(EditEventBloc editBloc) {
+    editBloc.setCategory(category);
+  }
+}
+
+class SubmitForm extends EditEvent {
+  void execute(EditEventBloc editBloc) {
+    editBloc.submitForm();
+  }
+}
+
+/* EDIT BLOC output STATES */
 abstract class EditFormState extends Equatable {
   EditFormState([List args = const []]) : super(args);
 }

@@ -6,11 +6,20 @@ import '../../models/organization.dart';
 import '../../common/success_dialog.dart';
 import '../../common/error_dialog.dart';
 
+//register or reactivate an organization
 class RegisterOrganizationPage extends StatefulWidget {
   final OrganizationBloc _organizationBloc;
+  final bool _reactivate;
+  final Organization _orgToReactivate;
 
-  RegisterOrganizationPage({@required organizationBloc})
-      : _organizationBloc = organizationBloc;
+  RegisterOrganizationPage(
+      {@required organizationBloc,
+      bool reactivate = false,
+      Organization orgToReactivate})
+      : _organizationBloc = organizationBloc,
+        _reactivate = reactivate,
+        _orgToReactivate = orgToReactivate;
+
   @override
   State<StatefulWidget> createState() {
     return _RegisterOrganizationPageState();
@@ -19,21 +28,55 @@ class RegisterOrganizationPage extends StatefulWidget {
 
 class _RegisterOrganizationPageState extends State<RegisterOrganizationPage> {
   GlobalKey<FormState> _formKey;
+  TextEditingController _nameController;
+  TextEditingController _descriptionController;
   StreamSubscription<OrganizationState> _navigationListener;
+  bool _initializedName;
+  bool _initializedDescription;
+  bool _built;
+  bool _reactivate;
 
   @override
   void initState() {
     super.initState();
-    widget._organizationBloc.clearStorage();
+    _initializedName = false;
+    _initializedDescription = false;
+    _built = false;
+    _reactivate = widget._reactivate;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _built = true;
+      if (_reactivate) {
+        widget._organizationBloc.sink
+            .add(SetOrganizationToEdit(organization: widget._orgToReactivate));
+      } else {
+        widget._organizationBloc.sink.add(ClearStorage());
+      }
+    });
+
     _formKey = GlobalKey<FormState>();
+    _nameController = TextEditingController();
+    _descriptionController = TextEditingController();
     _navigationListener = widget._organizationBloc.organizationUpdateRequests
         .listen((dynamic state) {
-      if (state is OrganizationRegistered) {
+      if (state is OrganizationUpdated) {
+        setState(() {
+          _initializedName = false;
+          _initializedDescription = false;
+          _reactivate = false;
+          widget._organizationBloc.sink.add(ClearStorage());
+        });
         showDialog(
             context: context,
             builder: (BuildContext context) {
-              return SuccessDialog(
-                  'Your organization registration has been submitted! Keep an eye out for an incoming message regarding the registration status!');
+              String successMsg;
+              if (_reactivate) {
+                successMsg =
+                    'Your organization reactivation request has been submitted! Keep an eye out for an incoming message regarding the reactivation status!';
+              } else {
+                successMsg =
+                    'Your organization registration has been submitted! Keep an eye out for an incoming message regarding the registration status!';
+              }
+              return SuccessDialog(successMsg);
             });
       } else if (state is OrganizationError) {
         showDialog(
@@ -54,7 +97,8 @@ class _RegisterOrganizationPageState extends State<RegisterOrganizationPage> {
             regularMember.ucid + ' - Member',
           ),
           onDeleted: () {
-            widget._organizationBloc.removeRegularMember(regularMember.ucid);
+            widget._organizationBloc.sink
+                .add(RemoveRegularMember(ucid: regularMember.ucid));
           },
         ),
       );
@@ -68,7 +112,7 @@ class _RegisterOrganizationPageState extends State<RegisterOrganizationPage> {
 
   Column _buildRegularMemberSection(OrganizationState state) {
     List<OrganizationMember> regularMembers = List<OrganizationMember>();
-    if (state is OrganizationRegistering) {
+    if (state is OrganizationUpdating) {
       regularMembers = state.organization.regularMembers;
     } else if (state is OrganizationBeforeUpdates) {
       regularMembers = state.organization.regularMembers;
@@ -87,7 +131,7 @@ class _RegisterOrganizationPageState extends State<RegisterOrganizationPage> {
         UCIDAndRoleFormField(
           includeRole: false,
           onSubmitted: (String ucid) {
-            widget._organizationBloc.addRegularMember(ucid);
+            widget._organizationBloc.sink.add(AddRegularMember(ucid: ucid));
           },
           validator: widget._organizationBloc.regularMemberValidator,
         ),
@@ -105,8 +149,8 @@ class _RegisterOrganizationPageState extends State<RegisterOrganizationPage> {
             eBoardMember.ucid + ' - ' + eBoardMember.role,
           ),
           onDeleted: () {
-            widget._organizationBloc
-                .removeEboardMember(eBoardMember.ucid, eBoardMember.role);
+            widget._organizationBloc.sink.add(RemoveEboardMember(
+                ucid: eBoardMember.ucid, role: eBoardMember.role));
           },
         ),
       );
@@ -120,7 +164,7 @@ class _RegisterOrganizationPageState extends State<RegisterOrganizationPage> {
 
   Column _buildEBoardSection(OrganizationState state) {
     List<OrganizationMember> eBoardMembers = List<OrganizationMember>();
-    if (state is OrganizationRegistering) {
+    if (state is OrganizationUpdating) {
       eBoardMembers = state.organization.eBoardMembers;
     } else if (state is OrganizationBeforeUpdates) {
       eBoardMembers = state.organization.eBoardMembers;
@@ -138,7 +182,7 @@ class _RegisterOrganizationPageState extends State<RegisterOrganizationPage> {
         UCIDAndRoleFormField(
           onSubmitted: (String ucid, String role) {
             print('submitted: ' + ucid + " " + role);
-            widget._organizationBloc.addEboardMember(ucid, role);
+            widget._organizationBloc.sink.add(AddEboardMember(ucid: ucid, role: role));
           },
           validator: widget._organizationBloc.eBoardMemberValidator,
         ),
@@ -148,11 +192,16 @@ class _RegisterOrganizationPageState extends State<RegisterOrganizationPage> {
   }
 
   Column _buildDescriptionField(OrganizationState state) {
-    String initVal = '';
-    if (state is OrganizationRegistering) {
-      initVal = state.organization.description;
-    } else if (state is OrganizationBeforeUpdates) {
-      initVal = state.organization.description;
+    if (_built &&
+        !_initializedDescription &&
+        state is OrganizationBeforeUpdates) {
+      String desc = state.organization.description;
+      _descriptionController.text = desc;
+      if (desc != null)
+        _descriptionController.text = desc;
+      else
+        _descriptionController.text = '';
+      _initializedDescription = true;
     }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -165,14 +214,14 @@ class _RegisterOrganizationPageState extends State<RegisterOrganizationPage> {
         ),
         SizedBox(height: 10),
         TextFormField(
-          initialValue: initVal,
+          controller: _descriptionController,
           maxLines: 4,
           decoration: InputDecoration(
             border: OutlineInputBorder(),
           ),
           validator: widget._organizationBloc.descriptionValidator,
           onSaved: (String value) {
-            widget._organizationBloc.setDescription(value);
+            widget._organizationBloc.sink.add(SetDescription(description: value));
           },
         ),
       ],
@@ -180,13 +229,14 @@ class _RegisterOrganizationPageState extends State<RegisterOrganizationPage> {
   }
 
   Column _buildNameField(OrganizationState state) {
-    String initVal = '';
-    if (state is OrganizationRegistering) {
-      initVal = state.organization.name;
-    } else if (state is OrganizationBeforeUpdates) {
-      initVal = state.organization.name;
+    if (_built && !_initializedName && state is OrganizationBeforeUpdates) {
+      String name = state.organization.name;
+      if (name != null)
+        _nameController.text = name;
+      else
+        _nameController.text = '';
+      _initializedName = true;
     }
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisAlignment: MainAxisAlignment.start,
@@ -198,13 +248,14 @@ class _RegisterOrganizationPageState extends State<RegisterOrganizationPage> {
         ),
         SizedBox(height: 10),
         TextFormField(
-          initialValue: initVal,
+          controller: _nameController,
+          enabled: _reactivate ? false : true,
           decoration: InputDecoration(
             border: OutlineInputBorder(),
           ),
           validator: widget._organizationBloc.nameValidator,
           onSaved: (String value) {
-            widget._organizationBloc.setName(value);
+            widget._organizationBloc.sink.add(SetName(name: value));
           },
         ),
       ],
@@ -230,14 +281,15 @@ class _RegisterOrganizationPageState extends State<RegisterOrganizationPage> {
   }
 
   Widget _buildSubmitButton(OrganizationState state) {
-    if (state is OrganizationRegistering) {
+    if (state is OrganizationUpdating) {
       return Center(child: CircularProgressIndicator());
     }
     return Center(
       child: FlatButton(
         color: Colors.blue,
         textColor: Colors.white,
-        child: Text('REGISTER ORGANIZATION'),
+        child: Text(
+            _reactivate ? 'REACTIVATE ORGANIZATION' : 'REGISTER ORGANIZATION'),
         onPressed: () {
           if (!_formKey.currentState.validate()) {
             _alertErrorsWithRegistration();
@@ -251,7 +303,12 @@ class _RegisterOrganizationPageState extends State<RegisterOrganizationPage> {
             return;
           }
           _formKey.currentState.save();
-          widget._organizationBloc.submitOrganizationRegistration();
+
+          if (_reactivate) {
+            widget._organizationBloc.sink.add(SubmitRequestForReactivation());
+          } else {
+            widget._organizationBloc.sink.add(SubmitOrganizationRegistration());
+          }
           _formKey.currentState.reset();
         },
       ),
@@ -265,6 +322,7 @@ class _RegisterOrganizationPageState extends State<RegisterOrganizationPage> {
       builder:
           (BuildContext context, AsyncSnapshot<OrganizationState> snapshot) {
         OrganizationState state = snapshot.data;
+
         return Form(
           key: _formKey,
           child: Column(
@@ -293,7 +351,9 @@ class _RegisterOrganizationPageState extends State<RegisterOrganizationPage> {
     return Scaffold(
       appBar: AppBar(
         centerTitle: true,
-        title: Text('Register An Organization'),
+        title: Text(_reactivate
+            ? 'Reactivate An Organization'
+            : 'Register An Organization'),
       ),
       body: SingleChildScrollView(
         child: GestureDetector(

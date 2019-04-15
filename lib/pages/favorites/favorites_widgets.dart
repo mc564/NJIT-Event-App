@@ -1,24 +1,30 @@
 import 'package:flutter/material.dart';
 import '../../blocs/favorite_bloc.dart';
+import '../../blocs/event_bloc.dart';
+import '../../blocs/edit_bloc.dart';
+import '../../blocs/favorite_rsvp_bloc.dart';
 import '../../models/event.dart';
 import '../detail/event_detail.dart';
 import 'package:intl/intl.dart';
 
 class FavoriteGridTile extends StatelessWidget {
-  final FavoriteBloc _favoriteBloc;
-  final Function _addViewToEvent;
+  final EditEventBloc _editBloc;
+  final FavoriteAndRSVPBloc _favoriteAndRSVPBloc;
+  final EventBloc _eventBloc;
   final Function _canEditEvent;
   final Event _event;
   final int _color;
 
   FavoriteGridTile(
-      {@required FavoriteBloc favoriteBloc,
-      @required Function addViewToEvent,
+      {@required EditEventBloc editBloc,
+      @required FavoriteAndRSVPBloc favoriteAndRSVPBloc,
+      @required EventBloc eventBloc,
       @required Function canEditEvent,
       @required Event event,
       @required int color})
-      : _favoriteBloc = favoriteBloc,
-        _addViewToEvent = addViewToEvent,
+      : _editBloc = editBloc,
+        _favoriteAndRSVPBloc = favoriteAndRSVPBloc,
+        _eventBloc = eventBloc,
         _canEditEvent = canEditEvent,
         _event = event,
         _color = color;
@@ -38,7 +44,8 @@ class FavoriteGridTile extends StatelessWidget {
                 FlatButton(
                     child: Text('Yes, continue'),
                     onPressed: () {
-                      _favoriteBloc.removeFavorite(toRemove);
+                      _favoriteAndRSVPBloc.favoriteBloc.sink
+                          .add(RemoveFavorite(eventToUnfavorite: toRemove));
                       Navigator.of(context).pop();
                     }),
               ]),
@@ -86,70 +93,90 @@ class FavoriteGridTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       color: Color(_color),
-      child: Stack(children: <Widget>[
-        _happeningToday()
-            ? Positioned(
-                left: 0,
-                child: IconButton(
-                  icon: Icon(Icons.check_circle, color: Colors.white),
-                  onPressed: () {},
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: <Widget>[
+          Stack(
+            alignment: Alignment.center,
+            children: <Widget>[
+              Container(
+                padding: EdgeInsets.only(top: 18),
+                child: Image.network(
+                  'https://vignette.wikia.nocookie.net/line/images/b/bb/2015-brown.png/revision/latest?cb=20150808131630',
+                  width: 50,
                 ),
-              )
-            : Container(),
-        Positioned(
-          right: 0,
-          child: IconButton(
-            icon: Icon(Icons.favorite, color: Color(0xffFFC0CB)),
-            onPressed: () => _showAreYouSureDialog(context, _event),
+              ),
+              Positioned(
+                top: -1,
+                child: Container(
+                  padding: EdgeInsets.all(3),
+                  color: _event.rsvpd ? Colors.red : Colors.blue,
+                  child: Text(
+                    _event.rsvpd ? 'RSVP\'d' : 'FAVE\'d',
+                    style: TextStyle(
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
-        ),
-        Positioned(
-          bottom: 0,
-          left: 0,
-          child: Container(
-            color: Colors.white,
-            child: Row(
+          Container(
+            child: Column(
               children: <Widget>[
                 Container(
-                  padding: EdgeInsets.only(left: 3),
-                  width: 110,
                   child: Column(
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
-                      Text(
-                        _cutShort(_event.title, 15),
-                        maxLines: 1,
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
+                      Text(_cutShort(_event.title, 35),
+                          textAlign: TextAlign.left,
+                          style: TextStyle(
+                              fontSize: 15.0, fontWeight: FontWeight.bold)),
                       Text(
                         _formatEventDuration(_event.startTime, _event.endTime),
-                        maxLines: 1,
+                        style: TextStyle(fontSize: 15.0),
                       ),
                     ],
                   ),
                 ),
-                IconButton(
-                    padding: EdgeInsets.all(0),
-                    alignment: Alignment.centerLeft,
-                    icon: Icon(Icons.info),
-                    onPressed: () {
-                      _addViewToEvent(_event);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (BuildContext context) => EventDetailPage(
-                                event: _event,
-                                canEdit: _canEditEvent,
-                              ),
-                        ),
-                      );
-                    }),
               ],
             ),
           ),
-        )
-      ]),
+          Container(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: <Widget>[
+                IconButton(
+                  icon: Icon(
+                    Icons.favorite,
+                    color: Colors.pink,
+                  ),
+                  onPressed: () => _showAreYouSureDialog(context, _event),
+                ),
+                IconButton(
+                  icon: Icon(
+                    Icons.info,
+                    color: Colors.lightBlue[200],
+                  ),
+                  onPressed: () {
+                    _eventBloc.sink.add(AddViewToEvent(event: _event));
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (BuildContext context) => EventDetailPage(
+                              event: _event,
+                              canEdit: _canEditEvent,
+                              editBloc: _editBloc,
+                              rsvpBloc: _favoriteAndRSVPBloc.rsvpBloc,
+                            ),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+          )
+        ],
+      ),
     );
   }
 }

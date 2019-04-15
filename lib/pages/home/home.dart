@@ -3,10 +3,11 @@ import 'package:flutter/material.dart';
 import '../../blocs/date_bloc.dart';
 import '../../blocs/event_bloc.dart';
 import '../../blocs/search_bloc.dart';
-import '../../blocs/favorite_bloc.dart';
 import '../../blocs/user_bloc.dart';
 import '../../blocs/message_bloc.dart';
 import '../../blocs/organization_bloc.dart';
+import '../../blocs/edit_bloc.dart';
+import '../../blocs/favorite_rsvp_bloc.dart';
 
 import './home_widgets.dart';
 
@@ -17,6 +18,7 @@ import '../calendar/calendar.dart';
 import '../filter/filter.dart';
 import '../search/search.dart';
 import '../favorites/favorites.dart';
+import '../rsvp/rsvp.dart';
 import '../organization/organization.dart';
 import '../admin/admin.dart';
 import '../message/message.dart';
@@ -38,9 +40,10 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   EventBloc _eventBloc;
+  EditEventBloc _editBloc;
   DateBloc _dateBloc;
   SearchBloc _searchBloc;
-  FavoriteBloc _favoriteBloc;
+  FavoriteAndRSVPBloc _favoriteAndRSVPBloc;
   MessageBloc _messageBloc;
   OrganizationBloc _organizationBloc;
   PageController _pageController;
@@ -66,6 +69,7 @@ class _HomePageState extends State<HomePage> {
         entries.add(PopupMenuItem(value: 'search', child: Text('Search')));
         entries
             .add(PopupMenuItem(value: 'favorites', child: Text('Favorites')));
+        entries.add(PopupMenuItem(value: 'rsvp', child: Text('RSVP')));
         entries.add(PopupMenuItem(value: 'messages', child: Text('Messages')));
         entries.add(PopupMenuItem(value: 'log out', child: Text('Log Out')));
         return entries;
@@ -76,6 +80,7 @@ class _HomePageState extends State<HomePage> {
             context,
             MaterialPageRoute(
               builder: (BuildContext context) => AddPage(
+                    editBloc: _editBloc,
                     eventListProvider: _eventBloc.eventListProvider,
                     orgProvider: _organizationBloc.organizationProvider,
                     isAdmin:
@@ -89,24 +94,38 @@ class _HomePageState extends State<HomePage> {
             context,
             MaterialPageRoute(
               builder: (BuildContext context) => SearchPage(
+                    favoriteAndRSVPBloc: _favoriteAndRSVPBloc,
+                    editBloc: _editBloc,
                     searchBloc: _searchBloc,
-                    favoriteBloc: _favoriteBloc,
                     eventBloc: _eventBloc,
                     canEdit: _organizationBloc.canEdit,
                   ),
             ),
           );
         } else if (value == 'log out') {
-          widget._userBloc.logout();
+          widget._userBloc.sink.add(Logout());
           Navigator.pushReplacementNamed(context, '/login');
         } else if (value == 'favorites') {
           Navigator.push(
             context,
             MaterialPageRoute(
               builder: (BuildContext context) => FavoritesPage(
-                    favoriteBloc: _favoriteBloc,
-                    addViewToEvent: _eventBloc.addView,
+                    editBloc: _editBloc,
+                    favoriteAndRSVPBloc: _favoriteAndRSVPBloc,
+                    eventBloc: _eventBloc,
                     canEditEvent: _organizationBloc.canEdit,
+                  ),
+            ),
+          );
+        } else if (value == 'rsvp') {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (BuildContext context) => RSVPPage(
+                    favoriteAndRSVPBloc: _favoriteAndRSVPBloc,
+                    editBloc: _editBloc,
+                    canEdit: _organizationBloc.canEdit,
+                    eventBloc: _eventBloc,
                   ),
             ),
           );
@@ -115,7 +134,9 @@ class _HomePageState extends State<HomePage> {
             context,
             MaterialPageRoute(
               builder: (BuildContext context) => OrganizationPage(
+                    favoriteAndRSVPBloc: _favoriteAndRSVPBloc,
                     eventBloc: _eventBloc,
+                    editBloc: _editBloc,
                     organizationBloc: _organizationBloc,
                     ucid: widget._userBloc.ucid,
                   ),
@@ -126,6 +147,7 @@ class _HomePageState extends State<HomePage> {
             context,
             MaterialPageRoute(
               builder: (BuildContext context) => AdminPage(
+                    editBloc: _editBloc,
                     organizationBloc: _organizationBloc,
                     userBloc: widget._userBloc,
                     eventListProvider: _eventBloc.eventListProvider,
@@ -207,7 +229,7 @@ class _HomePageState extends State<HomePage> {
                     MaterialPageRoute(builder: (BuildContext context) {
                       return FilterPage(
                           searchBloc: _searchBloc,
-                          eventListProvider: _eventBloc.eventListProvider,
+                          eventBloc: _eventBloc,
                           viewDay: dateState.day);
                     }),
                   );
@@ -237,31 +259,50 @@ class _HomePageState extends State<HomePage> {
 
   DailyEventList _buildDailyView(DateLoaded dateState) {
     return DailyEventList(
+        editBloc: _editBloc,
         eventBloc: _eventBloc,
-        favoriteBloc: _favoriteBloc,
+        favoriteAndRSVPBloc: _favoriteAndRSVPBloc,
         day: dateState.day,
         canEdit: _organizationBloc.canEdit,
         key: PageStorageKey<String>(DateTime.now().toString()));
   }
 
-  Container _buildWeeklyView(DateLoaded state) {
-    return Container(child: Text('weekly'));
+  WeeklyEventList _buildWeeklyView(DateLoaded state) {
+    //for some reason, giving a page storage key means whenever I go into this function,
+    //the page rebuilds from scratch, but is actually useful here, so ok
+    return WeeklyEventList(
+      canEdit: _organizationBloc.canEdit,
+      editBloc: _editBloc,
+      eventBloc: _eventBloc,
+      favoriteAndRSVPBloc: _favoriteAndRSVPBloc,
+      dayStart: state.weekStart,
+      dayEnd: state.weekEnd,
+      key: PageStorageKey<String>(DateTime.now().toString()),
+    );
   }
 
   CalendarPage _buildMonthlyView(DateLoaded state) {
     return CalendarPage(
+      editBloc: _editBloc,
       eventBloc: _eventBloc,
-      favoriteBloc: _favoriteBloc,
+      favoriteAndRSVPBloc: _favoriteAndRSVPBloc,
+      dateBloc: _dateBloc,
       selectedDay: state.day,
       canEdit: _organizationBloc.canEdit,
     );
   }
 
-  Center _buildStartupView() {
-    return Center(
+  Container _buildStartupView() {
+    return Container(
+      alignment: Alignment.center,
+      margin: EdgeInsets.all(20),
       child: Column(
         children: <Widget>[
-          Text('welcome to njit event planner!\n choose a view to begin'),
+          Text(
+            'Welcome to the NJIT Event Planner!\nChoose a view to begin.',
+            textAlign: TextAlign.center,
+          ),
+          SizedBox(height: 20),
           Image.asset('images/welcome.png'),
         ],
       ),
@@ -271,21 +312,21 @@ class _HomePageState extends State<HomePage> {
   void _setDate(int page) {
     if (_view == View.daily) {
       if (page > _prevPage) {
-        _dateBloc.toNextDay();
+        _dateBloc.sink.add(ToNextDay());
       } else if (page < _prevPage) {
-        _dateBloc.toPrevDay();
+        _dateBloc.sink.add(ToPrevDay());
       }
     } else if (_view == View.weekly) {
       if (page > _prevPage) {
-        _dateBloc.toNextWeek();
+        _dateBloc.sink.add(ToNextWeek());
       } else if (page < _prevPage) {
-        _dateBloc.toPrevWeek();
+        _dateBloc.sink.add(ToPrevWeek());
       }
     } else if (_view == View.monthly) {
       if (page > _prevPage) {
-        _dateBloc.toNextMonth();
+        _dateBloc.sink.add(ToNextMonth());
       } else if (page < _prevPage) {
-        _dateBloc.toPrevMonth();
+        _dateBloc.sink.add(ToPrevMonth());
       }
     }
     _prevPage = page;
@@ -297,16 +338,23 @@ class _HomePageState extends State<HomePage> {
 
     DateTime now = DateTime.now();
     print('in init state of home!');
-    _favoriteBloc = FavoriteBloc(ucid: widget._userBloc.ucid);
-    _eventBloc = EventBloc(favoriteProvider: _favoriteBloc.favoriteProvider);
+    _searchBloc = SearchBloc();
+    _favoriteAndRSVPBloc = FavoriteAndRSVPBloc(
+        ucid: widget._userBloc.ucid, searchSink: _searchBloc.sink);
+    _eventBloc = EventBloc(
+        favoriteProvider: _favoriteAndRSVPBloc.favoriteBloc.favoriteProvider,
+        favoriteAndRSVPProvider: _favoriteAndRSVPBloc.favoriteAndRSVPProvider);
+    _searchBloc.initialize(eventListProvider: _eventBloc.eventListProvider);
     _dateBloc = DateBloc(
       initialDay: DateTime(now.year, now.month, now.day),
     );
-    _searchBloc = SearchBloc(eventListProvider: _eventBloc.eventListProvider);
     _messageBloc = MessageBloc(ucid: widget._userBloc.ucid);
     _organizationBloc = OrganizationBloc(
         messageProvider: _messageBloc.messageProvider,
         userProvider: widget._userBloc.userProvider);
+    _editBloc = EditEventBloc(
+        searchSink: _searchBloc.sink,
+        favoriteSink: _favoriteAndRSVPBloc.favoriteBloc.sink);
     _view = null;
     //make it some ridiculously large number to allow scrolling both directions
     int initialPage = 20000;
@@ -357,9 +405,10 @@ class _HomePageState extends State<HomePage> {
     _dateBloc.dispose();
     _eventBloc.dispose();
     _searchBloc.dispose();
-    _favoriteBloc.dispose();
     _messageBloc.dispose();
     _organizationBloc.dispose();
+    _favoriteAndRSVPBloc.dispose();
+    _editBloc.dispose();
     super.dispose();
   }
 }

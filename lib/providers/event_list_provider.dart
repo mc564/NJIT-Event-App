@@ -17,8 +17,7 @@ import './cosine_similarity_provider.dart';
 import './metrics_provider.dart';
 import './favorite_provider.dart';
 
-//utility methods to deal with event lists, including sorting, filtering and adding events
-//TODO change everything to block fetching...
+//utility methods to deal with event lists, including sorting and filtering
 class EventListProvider {
   _EventCache _cache;
   MetricsProvider _metricsProvider;
@@ -30,10 +29,21 @@ class EventListProvider {
 
   List<Category> get selectedCategories =>
       List<Category>.from(_filterCategories);
+
   List<String> get selectedOrganizations =>
       List<String>.from(_filterOrganizations);
+
   List<Location> get selectedLocations => List<Location>.from(_filterLocations);
+
   Sort get sortType => _sort;
+
+  Map<DateTime, List<Event>> get filteredCacheEvents {
+    List<Event> cachedEvents = _cache.allEvents;
+    cachedEvents = _filterEvents(cachedEvents);
+    Map<DateTime, List<Event>> dateMappedEvents =
+        splitEventsByDay(cachedEvents);
+    return dateMappedEvents;
+  }
 
   EventListProvider({@required FavoriteProvider favoriteProvider}) {
     _cache = _EventCache();
@@ -72,7 +82,7 @@ class EventListProvider {
 
   Future<bool> _sortEvents(List<Event> list) async {
     if (_sort == Sort.Date) {
-      list.sort((a, b) => a.startTime.compareTo(b.startTime));
+      _sortByDate(list);
       return true;
     } else if (_sort == Sort.Relevance) {
       List<Event> faves = _favoriteProvider.allFavorites;
@@ -100,6 +110,11 @@ class EventListProvider {
     } else {
       return false;
     }
+  }
+
+  void _sortByDate(List<Event> events) {
+    if (events == null || events.length <= 1) return;
+    events.sort((a, b) => a.startTime.compareTo(b.startTime));
   }
 
   List<Event> _filterEvents(List<Event> list) {
@@ -282,39 +297,54 @@ class EventListProvider {
     toFilter.removeWhere((Event event) => event.organization != org.name);
   }
 
-  //basically gets events 2 weeks before today and also events 2 weeks after today
-  //done in 2 requests because can't get them all in 1 request at one time.
+  //basically gets events 1 weeks before today and also events 2 weeks after today
   //and then filters for events by organization org
   Future<RecentEvents> getRecentEvents(Organization org) async {
     DateTime now = DateTime.now();
-    DateTime earlierStart = now.subtract(Duration(days: 14));
+    DateTime earlierStart = now.subtract(Duration(days: 7));
     DateTime laterEnd = now.add(Duration(days: 14));
-    List<Event> pastEvents = await getEventsBetween(
-        earlierStart, now.subtract(Duration(days: 1)), false);
-    List<Event> upcomingEvents = await getEventsBetween(now, laterEnd, false);
+    List<Event> allEvents =
+        await getEventsBetween(earlierStart, laterEnd, false);
+    List<Event> pastEvents = List<Event>();
+    List<Event> upcomingEvents = List<Event>();
+    for (Event event in allEvents) {
+      if (event.startTime.isBefore(now))
+        pastEvents.add(event);
+      else
+        upcomingEvents.add(event);
+    }
     _filterForOrganization(pastEvents, org);
     _filterForOrganization(upcomingEvents, org);
+    _sortByDate(pastEvents);
+    _sortByDate(upcomingEvents);
     return RecentEvents(pastEvents: pastEvents, upcomingEvents: upcomingEvents);
   }
 
   Future<RecentEvents> refetchRecentEvents(Organization org) async {
     DateTime now = DateTime.now();
-    DateTime earlierStart = now.subtract(Duration(days: 14));
+    DateTime earlierStart = now.subtract(Duration(days: 7));
     DateTime laterEnd = now.add(Duration(days: 14));
-    List<Event> pastEvents = await refetchEventsBetween(
-        earlierStart, now.subtract(Duration(days: 1)), false);
-    List<Event> upcomingEvents =
-        await refetchEventsBetween(now, laterEnd, false);
+    List<Event> allEvents =
+        await refetchEventsBetween(earlierStart, laterEnd, false);
+    List<Event> pastEvents = List<Event>();
+    List<Event> upcomingEvents = List<Event>();
+    for (Event event in allEvents) {
+      if (event.startTime.isBefore(now))
+        pastEvents.add(event);
+      else
+        upcomingEvents.add(event);
+    }
     _filterForOrganization(pastEvents, org);
     _filterForOrganization(upcomingEvents, org);
+    _sortByDate(pastEvents);
+    _sortByDate(upcomingEvents);
     return RecentEvents(pastEvents: pastEvents, upcomingEvents: upcomingEvents);
   }
 
-  //TODO change this for use with admins and eboard members when adding
   Future<List<Event>> getSimilarEvents(Event event) async {
     print("[MODEL] getting similar events");
 
-    DateTime earlierStart = event.startTime.subtract(Duration(days: 14));
+    DateTime earlierStart = event.startTime.subtract(Duration(days: 7));
     DateTime laterEnd = event.endTime.add(Duration(days: 14));
 
     try {
@@ -332,19 +362,6 @@ class EventListProvider {
       throw Exception(
           "Failed to get similar events in EventsModel: " + error.toString());
     }
-  }
-
-  Future<bool> addEvent(Event event) {
-    print("[MODEL] adding event");
-    return DatabaseEventAPI.addEvent(event).then((bool success) {
-      if (success) {
-        return true;
-      } else {
-        throw Exception("Adding event failed.");
-      }
-    }).catchError((error) {
-      throw Exception("Adding event failed: " + error.toString());
-    });
   }
 
   void setSort(Sort sortType) {
@@ -381,6 +398,14 @@ class _EventCache {
     _startDayKeyFormatter = DateFormat('MMM d y');
   }
 
+  List<Event> get allEvents {
+    List<Event> allEvents = List<Event>();
+    for(List<Event> eventList in _cache.values){
+      allEvents.addAll(eventList);
+    }
+    return allEvents;
+  }
+
   //remove a list if one is found with the same key and add in a new list
   void addList(List<Event> events) {
     if (events == null || events.length == 0) return;
@@ -388,7 +413,6 @@ class _EventCache {
     _cache.remove(key);
     List<Event> val = _cache.putIfAbsent(key, () => <Event>[]);
     val.addAll(events);
-    print('cache length: ' + _cache.length.toString());
   }
 
   List<Event> getListFor(DateTime day) {

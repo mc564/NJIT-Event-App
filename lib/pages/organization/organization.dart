@@ -1,20 +1,31 @@
 import 'package:flutter/material.dart';
+
 import './organization_widgets.dart';
 import './register_org.dart';
+import './inactive_organizations.dart';
+
 import '../../blocs/organization_bloc.dart';
 import '../../blocs/event_bloc.dart';
+import '../../blocs/edit_bloc.dart';
+import '../../blocs/favorite_rsvp_bloc.dart';
 import '../../models/organization.dart';
 
 class OrganizationPage extends StatefulWidget {
   final OrganizationBloc _organizationBloc;
+  final FavoriteAndRSVPBloc _favoriteAndRSVPBloc;
+  final EditEventBloc _editBloc;
   final EventBloc _eventBloc;
   final String _ucid;
 
   OrganizationPage(
-      {@required OrganizationBloc organizationBloc,
+      {@required FavoriteAndRSVPBloc favoriteAndRSVPBloc,
+      @required OrganizationBloc organizationBloc,
+      @required EditEventBloc editBloc,
       @required EventBloc eventBloc,
       @required String ucid})
       : _organizationBloc = organizationBloc,
+        _editBloc = editBloc,
+        _favoriteAndRSVPBloc = favoriteAndRSVPBloc,
         _eventBloc = eventBloc,
         _ucid = ucid;
 
@@ -43,6 +54,8 @@ class _OrganizationPageState extends State<OrganizationPage> {
           for (Organization org in orgs) {
             cards.add(
               OrganizationCard(
+                favoriteAndRSVPBloc: widget._favoriteAndRSVPBloc,
+                editBloc: widget._editBloc,
                 eventBloc: widget._eventBloc,
                 organizationBloc: widget._organizationBloc,
                 organization: org,
@@ -91,13 +104,13 @@ class _OrganizationPageState extends State<OrganizationPage> {
         margin: EdgeInsets.all(10),
         child: Column(
           children: <Widget>[
+            Text('Don\'t see yours?'),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: <Widget>[
-                Text('Don\'t see yours?'),
                 FlatButton(
                   child: Text(
-                    'Register an organization',
+                    'Register',
                     style: TextStyle(color: Colors.blue),
                   ),
                   onPressed: () {
@@ -110,9 +123,26 @@ class _OrganizationPageState extends State<OrganizationPage> {
                             ),
                       ),
                     );
-                    print('clicked');
                   },
                 ),
+                Text('or'),
+                FlatButton(
+                  child: Text(
+                    'Reactivate',
+                    style: TextStyle(color: Colors.blue),
+                  ),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (BuildContext context) =>
+                            InactiveOrganizationsPage(
+                                organizationBloc: widget._organizationBloc),
+                      ),
+                    );
+                  },
+                ),
+                Text('an organization'),
               ],
             ),
             SizedBox(height: 10),

@@ -16,7 +16,6 @@ class OrganizationActionsPendingPage extends StatefulWidget {
 
 class _OrganizationActionsPendingPageState
     extends State<OrganizationActionsPendingPage> {
-
   List<Widget> _getWidgetListFromOrgMembers(List<OrganizationMember> members) {
     List<Widget> list = List<Widget>();
 
@@ -79,6 +78,65 @@ class _OrganizationActionsPendingPageState
     );
   }
 
+  void _showInactivationApprovalDialog(Organization orgRequestingInactivation) {
+    List<Widget> children = List<Widget>();
+    children.addAll(
+      [
+        Text('Organization Name',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        SizedBox(height: 10),
+        Text(orgRequestingInactivation.name),
+        SizedBox(height: 10),
+        Text('Organization Description',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        SizedBox(height: 10),
+        Text(orgRequestingInactivation.description),
+        SizedBox(height: 10),
+        Text('Current E-Board Members',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        SizedBox(height: 10),
+      ],
+    );
+    List<Widget> eboardMemberWidgets =
+        _getWidgetListFromOrgMembers(orgRequestingInactivation.eBoardMembers);
+    if (eboardMemberWidgets.length == 0)
+      children.add(Text('No current E-Board members in this organization.'));
+    else
+      children.addAll(eboardMemberWidgets);
+    children.addAll([
+      SizedBox(height: 10),
+      Text('Current Regular Members',
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+      SizedBox(height: 10),
+    ]);
+    List<Widget> regularMemberWidgets =
+        _getWidgetListFromOrgMembers(orgRequestingInactivation.regularMembers);
+    if (regularMemberWidgets.length == 0)
+      children.add(Text('No current regular members in this organization.'));
+    else
+      children.addAll(regularMemberWidgets);
+    showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return _buildApprovalDialog(
+            title:
+                'Organization Inactivation Details For Approval\n(Please check your messages for the reason this request was submitted.)',
+            children: children,
+            rejectionPageTitle: 'Reason for Inactivation Refusal',
+            rejectionPageSubtitle:
+                '(What is the reason for refusing this organization\'s inactivation? Please type in an answer below.)',
+            onRejection: (String reason) => widget._organizationBloc.sink.add(
+                RefuseOrganizationInactivation(
+                    organization: orgRequestingInactivation, reason: reason)),
+            onApproval: () {
+              widget._organizationBloc.sink.add(InactivateOrganization(
+                  organization: orgRequestingInactivation));
+              Navigator.of(context).pop();
+            },
+          );
+        });
+  }
+
   void _showEboardChangeApprovalDialog(
       OrganizationUpdateRequestData orgUpdateRequest) {
     Organization originalOrg = orgUpdateRequest.original;
@@ -129,14 +187,76 @@ class _OrganizationActionsPendingPageState
             rejectionPageTitle: 'Reason for Rejection',
             rejectionPageSubtitle:
                 '(What is the reason for this organization\'s E-Board change request rejection? Please type in an answer below.)',
-            onRejection: (String reason) {},
+            onRejection: (String reason) => widget._organizationBloc.sink.add(
+                RejectEboardChanges(
+                    requestData: orgUpdateRequest, reason: reason)),
             onApproval: () {
-              widget._organizationBloc.approveEboardChanges(updatedOrg);
-              print('approving now...');
+              widget._organizationBloc.sink
+                  .add(ApproveEboardChanges(requestData: orgUpdateRequest));
               Navigator.of(context).pop();
             },
           );
         });
+  }
+
+  void _showRevivalDialog(Organization org) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        List<Widget> children = List<Widget>();
+        children.addAll(
+          [
+            Text('Organization Name',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            SizedBox(height: 10),
+            Text(org.name),
+            SizedBox(height: 10),
+            Text('Organization Description',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            SizedBox(height: 10),
+            Text(org.description),
+            SizedBox(height: 10),
+            Text('Submitted E-Board Members',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            SizedBox(height: 10),
+          ],
+        );
+        List<Widget> eBoardMemberWidgets =
+            _getWidgetListFromOrgMembers(org.eBoardMembers);
+        if (eBoardMemberWidgets.length == 0)
+          children
+              .add(Text('No E-Board members submitted for this organization.'));
+        else
+          children.addAll(eBoardMemberWidgets);
+        children.addAll([
+          SizedBox(height: 10),
+          Text('Submitted Regular Members',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          SizedBox(height: 10),
+        ]);
+        List<Widget> regularMemberWidgets =
+            _getWidgetListFromOrgMembers(org.regularMembers);
+        if (regularMemberWidgets.length == 0)
+          children
+              .add(Text('No regular members submitted for this organization.'));
+        else
+          children.addAll(regularMemberWidgets);
+        return _buildApprovalDialog(
+          title: 'Organization Details For Revival:',
+          children: children,
+          rejectionPageTitle: 'Reason for Rejection',
+          rejectionPageSubtitle:
+              '(What is the reason for this organization revival rejection? Please type in an answer below.)',
+          onRejection: (String reason) => widget._organizationBloc.sink.add(
+              RejectOrganizationRevival(organization: org, reason: reason)),
+          onApproval: () {
+            widget._organizationBloc.sink
+                .add(ApproveOrganizationRevival(organization: org));
+            Navigator.of(context).pop();
+          },
+        );
+      },
+    );
   }
 
   void _showOrgApprovalDialog(Organization org) {
@@ -187,10 +307,12 @@ class _OrganizationActionsPendingPageState
           rejectionPageTitle: 'Reason for Rejection',
           rejectionPageSubtitle:
               '(What is the reason for this organization registration rejection? Please type in an answer below.)',
-          onRejection: (String reason) =>
-              widget._organizationBloc.rejectOrganization(reason, org),
+          onRejection: (String reason) => widget._organizationBloc.sink.add(
+              RejectOrganizationRegistration(
+                  reason: reason, organization: org)),
           onApproval: () {
-            widget._organizationBloc.approveOrganization(org);
+            widget._organizationBloc.sink
+                .add(ApproveOrganizationRegistration(organization: org));
             Navigator.of(context).pop();
           },
         );
@@ -211,7 +333,7 @@ class _OrganizationActionsPendingPageState
     );
   }
 
-  Widget _buildNewOrRevivedRequestsSection() {
+  Widget _buildRegistrationRequestsSection() {
     return StreamBuilder<OrganizationState>(
       initialData: widget._organizationBloc.orgsAwaitingApprovalInitialState,
       stream: widget._organizationBloc.organizationsAwaitingApproval,
@@ -219,8 +341,10 @@ class _OrganizationActionsPendingPageState
           (BuildContext context, AsyncSnapshot<OrganizationState> snapshot) {
         OrganizationState state = snapshot.data;
         if (state is OrganizationError) {
+          print('error:' + state.errorMsg);
           return Text('Oh my, there was an error! Please try again!');
-        } else if (state is OrganizationsLoading) {
+        } else if (state is OrganizationsLoading ||
+            state is OrganizationUpdating) {
           return CircularProgressIndicator();
         } else if (state is OrganizationsLoaded) {
           List<Organization> orgs = state.organizations;
@@ -265,7 +389,8 @@ class _OrganizationActionsPendingPageState
         if (state is OrganizationError) {
           print(state.errorMsg);
           return Text('Oh my, there was an error! Please try again!');
-        } else if (state is OrganizationsLoading) {
+        } else if (state is OrganizationsLoading ||
+            state is OrganizationUpdating) {
           return CircularProgressIndicator();
         } else if (state is OrganizationUpdateRequestsLoaded) {
           List<OrganizationUpdateRequestData> requests = state.requestData;
@@ -287,32 +412,152 @@ class _OrganizationActionsPendingPageState
     );
   }
 
+  ListTile _buildInactivationListTile(Organization orgRequestingInactivation) {
+    return ListTile(
+      title: Text(orgRequestingInactivation.name),
+      trailing: IconButton(
+        icon: Icon(Icons.more),
+        onPressed: () {
+          _showInactivationApprovalDialog(orgRequestingInactivation);
+        },
+      ),
+    );
+  }
+
+  Widget _buildInactivationRequestsSection() {
+    return StreamBuilder<OrganizationState>(
+      initialData:
+          widget._organizationBloc.orgsAwaitingInactivationInitialState,
+      stream: widget._organizationBloc.organizationsAwaitingInactivation,
+      builder:
+          (BuildContext context, AsyncSnapshot<OrganizationState> snapshot) {
+        OrganizationState state = snapshot.data;
+        if (state is OrganizationError) {
+          print(state.errorMsg);
+          return Text('Oh my, there was an error! Please try again!');
+        } else if (state is OrganizationsLoading ||
+            state is OrganizationUpdating) {
+          return CircularProgressIndicator();
+        } else if (state is OrganizationsLoaded) {
+          List<Organization> organizationsRequestedInactivation =
+              state.organizations;
+          if (organizationsRequestedInactivation == null ||
+              organizationsRequestedInactivation.length == 0)
+            return Text(
+                '✔️ No organizations requesting inactivation right now!');
+          return Container(
+            height: 200,
+            child: ListView.builder(
+              itemCount: organizationsRequestedInactivation.length,
+              itemBuilder: (BuildContext context, int index) {
+                Organization org = organizationsRequestedInactivation[index];
+                return _buildInactivationListTile(org);
+              },
+            ),
+          );
+        }
+      },
+    );
+  }
+
+  ListTile _buildRevivalListTile(Organization org) {
+    return ListTile(
+      title: Text(org.name),
+      trailing: IconButton(
+        icon: Icon(Icons.more),
+        onPressed: () {
+          //show a dialog that has org info and options to approve or reject
+          _showRevivalDialog(org);
+        },
+      ),
+    );
+  }
+
+  Widget _buildRevivalRequestsSection() {
+    return StreamBuilder<OrganizationState>(
+      initialData:
+          widget._organizationBloc.orgsAwaitingReactivationInitialState,
+      stream: widget._organizationBloc.organizationsAwaitingReactivation,
+      builder:
+          (BuildContext context, AsyncSnapshot<OrganizationState> snapshot) {
+        OrganizationState state = snapshot.data;
+        if (state is OrganizationError) {
+          print('error:' + state.errorMsg);
+          return Text('Oh my, there was an error! Please try again!');
+        } else if (state is OrganizationsLoading ||
+            state is OrganizationUpdating) {
+          return CircularProgressIndicator();
+        } else if (state is OrganizationsLoaded) {
+          List<Organization> orgs = state.organizations;
+          if (orgs == null || orgs.length == 0)
+            return Text(
+                '✔️ No organizations requiring reactivation right now!');
+          return Container(
+            height: 200,
+            child: ListView.builder(
+              itemCount: orgs.length,
+              itemBuilder: (BuildContext context, int index) {
+                Organization org = orgs[index];
+                return _buildRevivalListTile(org);
+              },
+            ),
+          );
+        }
+      },
+    );
+  }
+
   Widget _buildBody() {
-    return Container(
-      margin: EdgeInsets.all(10),
-      child: Column(
-        children: <Widget>[
-          Text(
-            'New/Revived Organization Requests',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-          Text(
-            '(For Approval/Rejection)',
-            style: TextStyle(color: Colors.blue),
-          ),
-          _buildNewOrRevivedRequestsSection(),
-          SizedBox(height: 10),
-          Text(
-            'Change of Eboard Requests',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-          Text(
-            '(For Approval/Rejection)',
-            style: TextStyle(color: Colors.blue),
-          ),
-          _buildChangeOfEboardRequestsSection(),
-          SizedBox(height: 10),
-        ],
+    return SingleChildScrollView(
+      child: Container(
+        margin: EdgeInsets.all(10),
+        child: Column(
+          children: <Widget>[
+            Text(
+              'New Organization Registration Requests',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            Text(
+              '(For Approval/Rejection)',
+              style: TextStyle(color: Colors.blue),
+            ),
+            _buildRegistrationRequestsSection(),
+            SizedBox(height: 10),
+            Text(
+              'Organization Revival Requests',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            Text(
+              '(Revived From Inactive Organizations)',
+              style: TextStyle(color: Colors.blue),
+            ),
+            Text(
+              '(For Approval/Rejection)',
+              style: TextStyle(color: Colors.blue),
+            ),
+            _buildRevivalRequestsSection(),
+            SizedBox(height: 10),
+            Text(
+              'Change of Eboard Requests',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            Text(
+              '(For Approval/Rejection)',
+              style: TextStyle(color: Colors.blue),
+            ),
+            _buildChangeOfEboardRequestsSection(),
+            SizedBox(height: 10),
+            Text(
+              'Organization Inactivation Requests',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            Text(
+              '(For Approval/Rejection)',
+              style: TextStyle(color: Colors.blue),
+            ),
+            _buildInactivationRequestsSection(),
+          ],
+        ),
       ),
     );
   }

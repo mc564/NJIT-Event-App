@@ -7,24 +7,29 @@ import 'package:equatable/equatable.dart';
 class DateBloc {
   //changed this to DateLoaded because I don't have any
   //async processing in the datebloc
+  final StreamController<DateEvent> _requestsController;
   final StreamController<DateLoaded> _dateController;
   final DateProvider _dateProvider;
   DateLoaded _initialDate;
-
   //TODO fix the daylight savings issue...
 
   DateBloc({@required DateTime initialDay})
       : assert(initialDay != null),
         _dateProvider = DateProvider(initialDay: initialDay),
-        _dateController = StreamController() {
+        _dateController = StreamController(),
+        _requestsController = StreamController.broadcast() {
     _initialDate = DateLoaded(
         day: _dateProvider.currentDay,
         weekStart: _dateProvider.currentWeekStart,
         weekEnd: _dateProvider.currentWeekEnd);
+    _requestsController.stream.forEach((DateEvent event) {
+      event.execute(this);
+    });
   }
 
   DateLoaded get initialState => _initialDate;
 
+  Sink get sink => _requestsController.sink;
   Stream get getDate => _dateController.stream;
 
   void _alertDateLoaded() {
@@ -57,17 +62,62 @@ class DateBloc {
   }
 
   void toNextMonth() {
+    print('tonext month');
     _dateProvider.addOneMonth();
     _alertDateLoaded();
   }
 
   void toPrevMonth() {
+    print('toprev month');
     _dateProvider.subtractOneMonth();
     _alertDateLoaded();
   }
 
   void dispose() {
     _dateController.close();
+    _requestsController.close();
+  }
+}
+
+/* ALL EVENT LIST INPUT EVENTS */
+abstract class DateEvent extends Equatable {
+  DateEvent([List args = const []]) : super(args);
+  void execute(DateBloc dateBloc);
+}
+
+class ToNextDay extends DateEvent {
+  void execute(DateBloc dateBloc) {
+    dateBloc.toNextDay();
+  }
+}
+
+class ToPrevDay extends DateEvent {
+  void execute(DateBloc dateBloc) {
+    dateBloc.toPrevDay();
+  }
+}
+
+class ToNextWeek extends DateEvent {
+  void execute(DateBloc dateBloc) {
+    dateBloc.toNextWeek();
+  }
+}
+
+class ToPrevWeek extends DateEvent {
+  void execute(DateBloc dateBloc) {
+    dateBloc.toPrevWeek();
+  }
+}
+
+class ToNextMonth extends DateEvent {
+  void execute(DateBloc dateBloc) {
+    dateBloc.toNextMonth();
+  }
+}
+
+class ToPrevMonth extends DateEvent {
+  void execute(DateBloc dateBloc) {
+    dateBloc.toPrevMonth();
   }
 }
 

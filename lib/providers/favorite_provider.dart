@@ -13,10 +13,10 @@ class FavoriteProvider {
   }
 
   //can be called by the favoriteBLOC to await initialization of the favoriteProvider events
-  Future<bool> initialize() async {
+  Future<bool> fetchFavorites() async {
     try {
-      List<String> initialFavoriteIds = await DatabaseEventAPI.getFavorites(_ucid);
-      List<Event> favorites = await _allFavorites(initialFavoriteIds);
+      List<String> favoriteIds = await DatabaseEventAPI.getFavorites(_ucid);
+      List<Event> favorites = await _allFavorites(favoriteIds);
       if (favorites != null) {
         favorites
             .sort((Event e1, Event e2) => e1.startTime.compareTo(e2.startTime));
@@ -24,13 +24,14 @@ class FavoriteProvider {
       }
       return true;
     } catch (error) {
-      throw Exception('huh, failed to initialize in FavoriteProvider, error: ' +
-          error.toString());
+      throw Exception(
+          'huh, failed to fetchFavorites in FavoriteProvider, error: ' +
+              error.toString());
     }
   }
 
   List<Event> get allFavorites {
-    if (_allFavoritedEvents == null || _allFavoritedEvents.length == 0) {
+    if (_allFavoritedEvents == null) {
       return null;
     } else {
       return List<Event>.from(_allFavoritedEvents);
@@ -61,14 +62,16 @@ class FavoriteProvider {
       }
     } catch (error) {
       event.favorited = false;
-      return false;
+      throw Exception(
+          'Error in FavoriteProvider addFavorite method: ' + error.toString());
     }
   }
 
   Future<bool> removeFavorite(Event event) async {
     try {
       event.favorited = false;
-      bool success = await DatabaseEventAPI.removeFavorite(event.eventId, _ucid);
+      bool success =
+          await DatabaseEventAPI.removeFavorite(event.eventId, _ucid);
       if (success) {
         _allFavoritedEvents.removeWhere(
             (Event faveEvent) => faveEvent.eventId == event.eventId);
@@ -79,7 +82,71 @@ class FavoriteProvider {
       }
     } catch (error) {
       event.favorited = true;
-      return false;
+      throw Exception('Error in FavoriteProvider removeFavorite method: ' +
+          error.toString());
+    }
+  }
+
+  Future<bool> removeAllFavorites() async {
+    try {
+      bool success = await DatabaseEventAPI.removeAllFavoritesForUser(_ucid);
+      if (success) {
+        return true;
+      } else {
+        return false;
+      }
+    } catch (error) {
+      throw Exception('Error in FavoriteProvider removeAllFavorites method: ' +
+          error.toString());
+    }
+  }
+
+  Future<bool> removeSelectedFavorites(List<String> favoriteIds) async {
+    try {
+      if (favoriteIds == null || favoriteIds.length == 0) return true;
+      bool success =
+          await DatabaseEventAPI.removeSelectedFavorites(_ucid, favoriteIds);
+      if (success) {
+        return true;
+      } else {
+        return false;
+      }
+    } catch (error) {
+      throw Exception(
+          'Error in FavoriteProvider removeSelectedFavorites method: ' +
+              error.toString());
+    }
+  }
+
+  List<Event> pastFavorites() {
+    List<Event> pastEventsFavorited = _allFavoritedEvents
+        .where((Event e) => e.endTime.isBefore(DateTime.now()))
+        .toList();
+    return pastEventsFavorited;
+  }
+
+  Future<bool> removePastFavorites(List<Event> pastEventsFavorited) async {
+    try {
+      List<String> pastEventIds =
+          pastEventsFavorited.map((Event e) => e.eventId).toList();
+      bool removedPastFavorites = await removeSelectedFavorites(pastEventIds);
+      if (removedPastFavorites) {
+        return true;
+      } else {
+        return false;
+      }
+    } catch (error) {
+      throw Exception('Error in FavoriteProvider removePastFavorites method: ' +
+          error.toString());
+    }
+  }
+
+  void _deleteDupEdited(List<Event> dbEvents, List<Event> apiEvents) {
+    for (Event event in dbEvents) {
+      if (event.eventId.length < 20) {
+        apiEvents
+            .removeWhere((Event event2) => event2.eventId == event.eventId);
+      }
     }
   }
 
@@ -91,16 +158,17 @@ class FavoriteProvider {
       List<String> njitFaveIds = List<String>();
       for (int i = 0; i < initialFavoriteIds.length; i++) {
         String eventId = initialFavoriteIds[i];
-        if (eventId.length > 20) {
-          dbFaveIds.add(eventId);
-        } else {
+        if (eventId.length < 20) {
           njitFaveIds.add(eventId);
         }
+        //just add them all to dbFaveIds in case an edited (duplicate) record is in my db
+        dbFaveIds.add(eventId);
       }
-      if (dbFaveIds.length > 0)
-        allFavorites.addAll(await DatabaseEventAPI.getEventsWithIds(dbFaveIds));
-      if (njitFaveIds.length > 0)
-        allFavorites.addAll(await NJITEventAPI.getEventsWithIds(njitFaveIds));
+      List<Event> dbEvents = await DatabaseEventAPI.getEventsWithIds(dbFaveIds);
+      List<Event> njitEvents = await NJITEventAPI.getEventsWithIds(njitFaveIds);
+      _deleteDupEdited(dbEvents, njitEvents);
+      if (dbEvents.length > 0) allFavorites.addAll(dbEvents);
+      if (njitEvents.length > 0) allFavorites.addAll(njitEvents);
       return allFavorites;
     } catch (error) {
       throw Exception(

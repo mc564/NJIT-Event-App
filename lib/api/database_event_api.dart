@@ -1,7 +1,9 @@
 import 'dart:convert';
 
+import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:http/http.dart' as http;
+import 'package:html/parser.dart';
 
 import '../models/event.dart';
 import '../models/category.dart';
@@ -14,26 +16,31 @@ import '../models/message.dart';
 //communicates with a web api that allows operations on a database
 class DatabaseEventAPI {
   static DateFormat formatter = new DateFormat('yyyy-MM-dd HH:mm:ss');
+  static HtmlEscape encoder = HtmlEscape();
+
+  static String _clean(String htmlString) {
+    var document = parse(htmlString);
+    String parsedString = parse(document.body.text).documentElement.text;
+    return parsedString;
+  }
 
   static Event _getEvent(dynamic json) {
     return Event(
       eventId: json['id'],
-      organization: json['organization'],
-      location: json['location'],
+      organization: _clean(json['organization']),
+      location: _clean(json['location']),
       locationCode:
           LocationHelper.abbrevStringToLocationCode(json['locationCode']),
-      title: json['title'],
+      title: _clean(json['title']),
       startTime: DateTime.parse(json['startDateTime']),
       endTime: DateTime.parse(json['endDateTime']),
-      description: json['description'],
+      description: _clean(json['description']),
       category: CategoryHelper.getCategory(json['category']),
-      favorited: false,
     );
   }
 
-  static Future<bool> addEvent(Event event) {
-    print('ADDING EVENT');
-    Map<String, dynamic> eventMap = {
+  static Map<String, dynamic> _getEventMap(Event event) {
+    return {
       'id': event.eventId,
       'title': event.title,
       'location': event.location,
@@ -45,6 +52,78 @@ class DatabaseEventAPI {
       'organization': event.organization,
       'description': event.description
     };
+  }
+
+  static Map<String, dynamic> _getOrganizationMap(
+      {@required Organization org,
+      @required bool hasName,
+      @required bool hasStatus,
+      @required bool hasDescription,
+      @required bool hasMembers}) {
+    //_encode everything
+    Map<String, dynamic> map = Map<String, dynamic>();
+    if (hasName) map['name'] = org.name;
+    if (hasStatus)
+      map['status'] = OrganizationStatusHelper.getString(org.status);
+    if (hasDescription) map['description'] = org.description;
+    if (hasMembers) {
+      List<List<String>> memberRoles = List<List<String>>();
+      List<OrganizationMember> eBoardMembers = org.eBoardMembers;
+      List<OrganizationMember> regularMembers = org.regularMembers;
+      if (eBoardMembers != null && eBoardMembers.length > 0) {
+        for (OrganizationMember eBoardMember in eBoardMembers) {
+          memberRoles.add(<String>[eBoardMember.ucid, eBoardMember.role]);
+        }
+      }
+      if (regularMembers != null && regularMembers.length > 0) {
+        for (OrganizationMember regularMember in regularMembers) {
+          memberRoles.add(<String>[regularMember.ucid, regularMember.role]);
+        }
+      }
+      map['members'] = memberRoles;
+    }
+
+    return map;
+  }
+
+  static Organization _getOrganization(dynamic json) {
+    Organization org = Organization();
+    if (json.containsKey('name')) {
+      org.setName(_clean(json['name']));
+    }
+    if (json.containsKey('description')) {
+      org.setDescription(_clean(json['description']));
+    }
+    if (json.containsKey('status')) {
+      org.setStatus(OrganizationStatusHelper.getStatus(_clean(json['status'])));
+    }
+
+    List<OrganizationMember> eBoardMembers = List<OrganizationMember>();
+    List<OrganizationMember> regularMembers = List<OrganizationMember>();
+    if (json.containsKey('eBoardMembers')) {
+      var eBoardMemberRecords = json['eBoardMembers'];
+      for (var eboardMember in eBoardMemberRecords) {
+        String ucid = _clean(eboardMember['ucid']);
+        String role = _clean(eboardMember['role']);
+        eBoardMembers.add(OrganizationMember(ucid: ucid, role: role));
+      }
+      org.setEboardMembers(eBoardMembers);
+    }
+    if (json.containsKey('regularMembers')) {
+      var regularMemberRecords = json['regularMembers'];
+      for (var regularMember in regularMemberRecords) {
+        String ucid = _clean(regularMember['ucid']);
+        String role = _clean(regularMember['role']);
+        regularMembers.add(OrganizationMember(ucid: ucid, role: role));
+      }
+      org.setMembers(regularMembers);
+    }
+    return org;
+  }
+
+  static Future<bool> addEvent(Event event) {
+    print('ADDING EVENT');
+    Map<String, dynamic> eventMap = _getEventMap(event);
     return http
         .post('https://web.njit.edu/~mc564/eventapi/event/add.php',
             body: json.encode(eventMap))
@@ -68,18 +147,7 @@ class DatabaseEventAPI {
   //update the database record
   static Future<bool> editEvent(Event event) {
     print('EDITING EVENT');
-    Map<String, dynamic> eventMap = {
-      'id': event.eventId,
-      'title': event.title,
-      'location': event.location,
-      'locationCode': LocationHelper.getAbbreviation(
-          LocationHelper.getLocationCode(event.location)),
-      'startDateTime': formatter.format(event.startTime),
-      'endDateTime': formatter.format(event.endTime),
-      'category': CategoryHelper.getString(event.category),
-      'organization': event.organization,
-      'description': event.description
-    };
+    Map<String, dynamic> eventMap = _getEventMap(event);
 
     return http
         .post('https://web.njit.edu/~mc564/eventapi/event/edit.php',
@@ -117,8 +185,10 @@ class DatabaseEventAPI {
   }
 
   static Future<List<Event>> eventsBetween(DateTime start, DateTime end) {
-    String formatStart = formatter.format(start);
-    String formatEnd = formatter.format(end);
+    DateTime realStart = DateTime(start.year, start.month, start.day);
+    DateTime realEnd = DateTime(end.year, end.month, end.day);
+    String formatStart = formatter.format(realStart);
+    String formatEnd = formatter.format(realEnd);
     return http
         .get("https://web.njit.edu/~mc564/eventapi/event/read.php?startdate='" +
             formatStart +
@@ -211,6 +281,152 @@ class DatabaseEventAPI {
     });
   }
 
+  static Future<bool> removeAllFavoritesForUser(String ucid) {
+    print('REMOVING ALL FAVORITES');
+    Map<String, dynamic> favoriteMap = {
+      'ucid': ucid,
+    };
+    return http
+        .post('https://web.njit.edu/~mc564/eventapi/favorite/removeAll.php',
+            body: json.encode(favoriteMap))
+        .then((http.Response response) {
+      if (response.statusCode != 200 &&
+          response.statusCode != 201 &&
+          response.statusCode != 202) {
+        throw Exception(
+            "Error in Database class removeAllFavoritesForUser method: Database response code is: " +
+                response.statusCode.toString() +
+                "\n response body: " +
+                response.body);
+      }
+      return true;
+    }).catchError((error) {
+      throw Exception(
+          "Error in Database class removeAllFavoritesForUser method: " +
+              error.toString());
+    });
+  }
+
+  static Future<bool> removeSelectedFavorites(
+      String ucid, List<String> favoriteIds) {
+    print('REMOVING SELECTED FAVORITES');
+    Map<String, dynamic> favoriteMap = {
+      'ucid': ucid,
+      'eventIds': favoriteIds,
+    };
+    print('favoriteMap: ' + favoriteMap.toString());
+    return http
+        .post(
+            'https://web.njit.edu/~mc564/eventapi/favorite/removeSelected.php',
+            body: json.encode(favoriteMap))
+        .then((http.Response response) {
+      if (response.statusCode != 200 &&
+          response.statusCode != 201 &&
+          response.statusCode != 202) {
+        throw Exception(
+            "Error in Database class removeSelectedFavorites method: Database response code is: " +
+                response.statusCode.toString() +
+                "\n response body: " +
+                response.body);
+      }
+      return true;
+    }).catchError((error) {
+      throw Exception(
+          "Error in Database class removeSelectedFavorites method: " +
+              error.toString());
+    });
+  }
+
+  static Future<List<String>> getRSVPEvents(String ucid) {
+    return http
+        .get("https://web.njit.edu/~mc564/eventapi/rsvp/read.php?ucid=" + ucid)
+        .then((http.Response response) {
+      final Map rsvpRecords = json.decode(response.body);
+      List<String> fetchedEventIdList = [];
+      if (!rsvpRecords.containsKey('records')) return fetchedEventIdList;
+
+      rsvpRecords['records'].forEach((rsvp) {
+        fetchedEventIdList.add(rsvp['eventId']);
+      });
+      return fetchedEventIdList;
+    }).catchError((error) {
+      throw Exception(
+          "Error in Database class getRSVPEvents method: " + error.toString());
+    });
+  }
+
+  static Future<List<String>> getRSVPUsers(Event event) {
+    return http
+        .get(
+            "https://web.njit.edu/~mc564/eventapi/rsvp/readEvent.php?eventId=" +
+                event.eventId)
+        .then((http.Response response) {
+      final Map rsvpRecords = json.decode(response.body);
+      List<String> fetchedUCIDList = [];
+      if (!rsvpRecords.containsKey('records')) return fetchedUCIDList;
+
+      rsvpRecords['records'].forEach((rsvp) {
+        fetchedUCIDList.add(rsvp['ucid']);
+      });
+      return fetchedUCIDList;
+    }).catchError((error) {
+      throw Exception(
+          "Error in Database class getRSVPUsers method: " + error.toString());
+    });
+  }
+
+  static Future<bool> addRSVP(String eventId, String ucid) {
+    print('ADDING RSVPs');
+    Map<String, dynamic> rsvpMap = {
+      'ucid': ucid,
+      'eventId': eventId,
+    };
+    return http
+        .post('https://web.njit.edu/~mc564/eventapi/rsvp/add.php',
+            body: json.encode(rsvpMap))
+        .then((http.Response response) {
+      if (response.statusCode != 200 &&
+          response.statusCode != 201 &&
+          response.statusCode != 202) {
+        throw Exception(
+            "Error in Database class addRSVP method: Database response code is: " +
+                response.statusCode.toString() +
+                "\n response body: " +
+                response.body);
+      }
+      return true;
+    }).catchError((error) {
+      throw Exception(
+          "Error in Database class addRSVP method: " + error.toString());
+    });
+  }
+
+  static Future<bool> removeRSVP(String eventId, String ucid) {
+    print('REMOVING RSVP');
+    Map<String, dynamic> rsvpMap = {
+      'ucid': ucid,
+      'eventId': eventId,
+    };
+    return http
+        .post('https://web.njit.edu/~mc564/eventapi/rsvp/remove.php',
+            body: json.encode(rsvpMap))
+        .then((http.Response response) {
+      if (response.statusCode != 200 &&
+          response.statusCode != 201 &&
+          response.statusCode != 202) {
+        throw Exception(
+            "Error in Database class removeRSVP method: Database response code is: " +
+                response.statusCode.toString() +
+                "\n response body: " +
+                response.body);
+      }
+      return true;
+    }).catchError((error) {
+      throw Exception(
+          "Error in Database class removeRSVP method: " + error.toString());
+    });
+  }
+
   static Future<Event> getEventWithId(String eventId) {
     return http
         .get(
@@ -239,9 +455,11 @@ class DatabaseEventAPI {
             'https://web.njit.edu/~mc564/eventapi/event/readRecords.php',
             body: json.encode(argMap));
         final Map jsonResponse = json.decode(response.body);
-        jsonResponse['records'].forEach((eventData) {
-          fetchedEventList.add(_getEvent(eventData));
-        });
+        if (jsonResponse.containsKey('records')) {
+          jsonResponse['records'].forEach((eventData) {
+            fetchedEventList.add(_getEvent(eventData));
+          });
+        }
       }
       return fetchedEventList;
     } catch (error) {
@@ -415,53 +633,13 @@ class DatabaseEventAPI {
     }
   }
 
-  static Future<bool> assignEboardMemberType(String ucid) {
-    Map<String, dynamic> map = {'ucid': ucid};
-
-    return http
-        .post(
-            'https://web.njit.edu/~mc564/eventapi/user/assignEboardMemberType.php',
-            body: json.encode(map))
-        .then((http.Response response) {
-      if (response.statusCode != 200 &&
-          response.statusCode != 201 &&
-          response.statusCode != 202) {
-        throw Exception(
-            "Error in Database class assignEboardMemberType method: Database response code is: " +
-                response.statusCode.toString() +
-                "\n response body: " +
-                response.body);
-      }
-      return true;
-    }).catchError((error) {
-      throw Exception(
-          "Error in Database class assignEboardMemberType method: " +
-              error.toString());
-    });
-  }
-
   static Future<bool> registerOrganization(Organization org) {
-    List<List<String>> memberRoles = List<List<String>>();
-    List<OrganizationMember> eBoardMembers = org.eBoardMembers;
-    List<OrganizationMember> regularMembers = org.regularMembers;
-    if (eBoardMembers != null && eBoardMembers.length > 0) {
-      for (OrganizationMember eBoardMember in eBoardMembers) {
-        memberRoles.add(<String>[eBoardMember.ucid, eBoardMember.role]);
-      }
-    }
-    if (regularMembers != null && regularMembers.length > 0) {
-      for (OrganizationMember regularMember in regularMembers) {
-        memberRoles.add(<String>[regularMember.ucid, regularMember.role]);
-      }
-    }
-
-    Map<String, dynamic> map = {
-      'status': OrganizationStatusHelper.getString(org.status),
-      'name': org.name,
-      'description': org.description,
-      'members': memberRoles
-    };
-
+    Map<String, dynamic> map = _getOrganizationMap(
+        org: org,
+        hasName: true,
+        hasDescription: true,
+        hasMembers: true,
+        hasStatus: true);
     return http
         .post('https://web.njit.edu/~mc564/eventapi/organization/add.php',
             body: json.encode(map))
@@ -482,27 +660,42 @@ class DatabaseEventAPI {
     });
   }
 
-  static Future<bool> updateOrganization(Organization org) {
-    List<List<String>> memberRoles = List<List<String>>();
-    List<OrganizationMember> eBoardMembers = org.eBoardMembers;
-    List<OrganizationMember> regularMembers = org.regularMembers;
-    if (eBoardMembers != null && eBoardMembers.length > 0) {
-      for (OrganizationMember eBoardMember in eBoardMembers) {
-        memberRoles.add(<String>[eBoardMember.ucid, eBoardMember.role]);
-      }
-    }
-    if (regularMembers != null && regularMembers.length > 0) {
-      for (OrganizationMember regularMember in regularMembers) {
-        memberRoles.add(<String>[regularMember.ucid, regularMember.role]);
-      }
-    }
+  static Future<bool> requestReactivation(Organization org) {
+    Map<String, dynamic> map = _getOrganizationMap(
+        org: org,
+        hasName: true,
+        hasDescription: true,
+        hasMembers: true,
+        hasStatus: false);
 
-    Map<String, dynamic> map = {
-      'status': OrganizationStatusHelper.getString(org.status),
-      'name': org.name,
-      'description': org.description,
-      'members': memberRoles
-    };
+    return http
+        .post(
+            'https://web.njit.edu/~mc564/eventapi/organization/addReactivationRequest.php',
+            body: json.encode(map))
+        .then((http.Response response) {
+      if (response.statusCode != 200 &&
+          response.statusCode != 201 &&
+          response.statusCode != 202) {
+        throw Exception(
+            "Error in Database class requestReactivation method: Database response code is: " +
+                response.statusCode.toString() +
+                "\n response body: " +
+                response.body);
+      }
+      return true;
+    }).catchError((error) {
+      throw Exception("Error in Database class requestReactivation method: " +
+          error.toString());
+    });
+  }
+
+  static Future<bool> updateOrganization(Organization org) {
+    Map<String, dynamic> map = _getOrganizationMap(
+        org: org,
+        hasName: true,
+        hasDescription: true,
+        hasMembers: true,
+        hasStatus: true);
 
     return http
         .post('https://web.njit.edu/~mc564/eventapi/organization/update.php',
@@ -557,7 +750,12 @@ class DatabaseEventAPI {
   }
 
   static Future<bool> approveEboardChange(Organization org) {
-    Map<String, dynamic> map = {'name': org.name};
+    Map<String, dynamic> map = _getOrganizationMap(
+        org: org,
+        hasName: true,
+        hasDescription: false,
+        hasMembers: false,
+        hasStatus: false);
     return http
         .post(
             'https://web.njit.edu/~mc564/eventapi/organization/approveEboardChange.php',
@@ -579,8 +777,97 @@ class DatabaseEventAPI {
     });
   }
 
+  static Future<bool> rejectEboardChanges(Organization org) {
+    Map<String, dynamic> map = _getOrganizationMap(
+        org: org,
+        hasName: true,
+        hasDescription: false,
+        hasMembers: false,
+        hasStatus: false);
+    return http
+        .post(
+            'https://web.njit.edu/~mc564/eventapi/organization/rejectEboardChanges.php',
+            body: json.encode(map))
+        .then((http.Response response) {
+      if (response.statusCode != 200 &&
+          response.statusCode != 201 &&
+          response.statusCode != 202) {
+        throw Exception(
+            "Error in Database class rejectEboardChanges method: Database response code is: " +
+                response.statusCode.toString() +
+                "\n response body: " +
+                response.body);
+      }
+      return true;
+    }).catchError((error) {
+      throw Exception("Error in Database class rejectEboardChanges method: " +
+          error.toString());
+    });
+  }
+
+  static Future<bool> rejectRevival(Organization org) {
+    Map<String, dynamic> map = _getOrganizationMap(
+        org: org,
+        hasName: true,
+        hasDescription: false,
+        hasMembers: false,
+        hasStatus: false);
+    return http
+        .post(
+            'https://web.njit.edu/~mc564/eventapi/organization/rejectRevival.php',
+            body: json.encode(map))
+        .then((http.Response response) {
+      if (response.statusCode != 200 &&
+          response.statusCode != 201 &&
+          response.statusCode != 202) {
+        throw Exception(
+            "Error in Database class rejectRevival method: Database response code is: " +
+                response.statusCode.toString() +
+                "\n response body: " +
+                response.body);
+      }
+      return true;
+    }).catchError((error) {
+      throw Exception(
+          "Error in Database class rejectRevival method: " + error.toString());
+    });
+  }
+
+  static Future<bool> approveRevival(Organization org) {
+    Map<String, dynamic> map = _getOrganizationMap(
+        org: org,
+        hasName: true,
+        hasDescription: false,
+        hasMembers: false,
+        hasStatus: false);
+    return http
+        .post(
+            'https://web.njit.edu/~mc564/eventapi/organization/approveRevival.php',
+            body: json.encode(map))
+        .then((http.Response response) {
+      if (response.statusCode != 200 &&
+          response.statusCode != 201 &&
+          response.statusCode != 202) {
+        throw Exception(
+            "Error in Database class approveRevival method: Database response code is: " +
+                response.statusCode.toString() +
+                "\n response body: " +
+                response.body);
+      }
+      return true;
+    }).catchError((error) {
+      throw Exception(
+          "Error in Database class approveRevival method: " + error.toString());
+    });
+  }
+
   static Future<bool> approveOrganization(Organization org) {
-    Map<String, dynamic> map = {'name': org.name};
+    Map<String, dynamic> map = _getOrganizationMap(
+        org: org,
+        hasName: true,
+        hasDescription: false,
+        hasMembers: false,
+        hasStatus: false);
 
     return http
         .post('https://web.njit.edu/~mc564/eventapi/organization/approve.php',
@@ -603,7 +890,12 @@ class DatabaseEventAPI {
   }
 
   static Future<bool> removeOrganization(Organization org) {
-    Map<String, dynamic> map = {'name': org.name};
+    Map<String, dynamic> map = _getOrganizationMap(
+        org: org,
+        hasName: true,
+        hasDescription: false,
+        hasMembers: false,
+        hasStatus: false);
 
     return http
         .post('https://web.njit.edu/~mc564/eventapi/organization/remove.php',
@@ -627,7 +919,6 @@ class DatabaseEventAPI {
 
   static Future<Organization> getOrganizationInfo(String name) async {
     try {
-      Organization org = Organization();
       http.Response response = await http.get(
           "https://web.njit.edu/~mc564/eventapi/organization/read.php?name=" +
               name);
@@ -641,31 +932,8 @@ class DatabaseEventAPI {
                 response.body);
       }
       final Map jsonResponse = json.decode(response.body);
-      org.setName(jsonResponse['name']);
-      if (jsonResponse.containsKey('status'))
-        org.setStatus(
-            OrganizationStatusHelper.getStatus(jsonResponse['status']));
-      if (jsonResponse.containsKey('eBoardMembers')) {
-        List<OrganizationMember> eBoardMembers = List<OrganizationMember>();
-        var eBoardMemberRecords = jsonResponse['eBoardMembers'];
-        for (var eboardMember in eBoardMemberRecords) {
-          String ucid = eboardMember['ucid'];
-          String role = eboardMember['role'];
-          eBoardMembers.add(OrganizationMember(ucid: ucid, role: role));
-        }
-        org.setEboardMembers(eBoardMembers);
-      }
-      if (jsonResponse.containsKey('regularMembers')) {
-        List<OrganizationMember> regularMembers = List<OrganizationMember>();
-        var regularMemberRecords = jsonResponse['regularMembers'];
-        for (var regularMember in regularMemberRecords) {
-          String ucid = regularMember['ucid'];
-          String role = regularMember['role'];
-          regularMembers.add(OrganizationMember(ucid: ucid, role: role));
-        }
-        org.setMembers(regularMembers);
-      }
-      return org;
+
+      return _getOrganization(jsonResponse);
     } catch (error) {
       throw Exception("Error in Database class getOrganizationInfo method: " +
           error.toString());
@@ -682,36 +950,72 @@ class DatabaseEventAPI {
       int numRecords = jsonResponse['numRecords'];
       if (numRecords <= 0) return rtn;
       jsonResponse['viewableOrganizations'].forEach((record) {
-        Organization org = Organization();
-        org.setName(record['name']);
-        org.setDescription(record['description']);
-        org.setStatus(OrganizationStatusHelper.getStatus(record['status']));
-        List<OrganizationMember> eBoardMembers = List<OrganizationMember>();
-        List<OrganizationMember> regularMembers = List<OrganizationMember>();
-        if (record.containsKey('eBoardMembers')) {
-          var eBoardMemberRecords = record['eBoardMembers'];
-          for (var eboardMember in eBoardMemberRecords) {
-            String ucid = eboardMember['ucid'];
-            String role = eboardMember['role'];
-            eBoardMembers.add(OrganizationMember(ucid: ucid, role: role));
-          }
-          org.setEboardMembers(eBoardMembers);
-        }
-        if (record.containsKey('regularMembers')) {
-          var regularMemberRecords = record['regularMembers'];
-          for (var regularMember in regularMemberRecords) {
-            String ucid = regularMember['ucid'];
-            String role = regularMember['role'];
-            regularMembers.add(OrganizationMember(ucid: ucid, role: role));
-          }
-          org.setMembers(regularMembers);
-        }
-        rtn.add(org);
+        rtn.add(_getOrganization(record));
       });
       return rtn;
     }).catchError((error) {
       throw Exception(
           "Error in Database class getViewableOrganizations method: " +
+              error.toString());
+    });
+  }
+
+  static Future<List<Organization>> getInactiveOrganizations() {
+    List<Organization> rtn = List<Organization>();
+    return http
+        .get(
+            "https://web.njit.edu/~mc564/eventapi/organization/readInactive.php")
+        .then((http.Response response) {
+      final Map jsonResponse = json.decode(response.body);
+      int numRecords = jsonResponse['numRecords'];
+      if (numRecords <= 0) return rtn;
+      jsonResponse['organizations'].forEach((record) {
+        rtn.add(_getOrganization(record));
+      });
+      return rtn;
+    }).catchError((error) {
+      throw Exception(
+          "Error in Database class getInactiveOrganizations method: " +
+              error.toString());
+    });
+  }
+
+  static Future<List<Organization>> getOrganizationsAwaitingInactivation() {
+    List<Organization> rtn = List<Organization>();
+    return http
+        .get(
+            "https://web.njit.edu/~mc564/eventapi/organization/readAwaitingInactivation.php")
+        .then((http.Response response) {
+      final Map jsonResponse = json.decode(response.body);
+      int numRecords = jsonResponse['numRecords'];
+      if (numRecords <= 0) return rtn;
+      jsonResponse['organizations'].forEach((record) {
+        rtn.add(_getOrganization(record));
+      });
+      return rtn;
+    }).catchError((error) {
+      throw Exception(
+          "Error in Database class getOrganizationsAwaitingInactivation method: " +
+              error.toString());
+    });
+  }
+
+  static Future<List<Organization>> getOrganizationsAwaitingReactivation() {
+    List<Organization> rtn = List<Organization>();
+    return http
+        .get(
+            "https://web.njit.edu/~mc564/eventapi/organization/readAwaitingReactivation.php")
+        .then((http.Response response) {
+      final Map jsonResponse = json.decode(response.body);
+      int numRecords = jsonResponse['numRecords'];
+      if (numRecords <= 0) return rtn;
+      jsonResponse['organizations'].forEach((record) {
+        rtn.add(_getOrganization(record));
+      });
+      return rtn;
+    }).catchError((error) {
+      throw Exception(
+          "Error in Database class getOrganizationsAwaitingReactivation method: " +
               error.toString());
     });
   }
@@ -731,14 +1035,16 @@ class DatabaseEventAPI {
       jsonResponse['organizations'].forEach((record) {
         Organization originalOrg = Organization();
         Organization updatedOrg = Organization();
-        originalOrg.setName(record['name']);
-        originalOrg.setDescription(record['description']);
-        originalOrg
-            .setStatus(OrganizationStatusHelper.getStatus(record['status']));
-        updatedOrg.setName(record['name']);
-        updatedOrg.setDescription(record['description']);
-        updatedOrg
-            .setStatus(OrganizationStatusHelper.getStatus(record['status']));
+        String name = _clean(record['name']);
+        String description = _clean(record['description']);
+        OrganizationStatus status =
+            OrganizationStatusHelper.getStatus(_clean(record['status']));
+        originalOrg.setName(name);
+        originalOrg.setDescription(description);
+        originalOrg.setStatus(status);
+        updatedOrg.setName(name);
+        updatedOrg.setDescription(description);
+        updatedOrg.setStatus(status);
 
         //assign requested eboard members
         if (record.containsKey('requestedEboardMembers')) {
@@ -747,8 +1053,8 @@ class DatabaseEventAPI {
               List<OrganizationMember>();
 
           for (var eboardMember in requestedEboardMemberRecords) {
-            String ucid = eboardMember['ucid'];
-            String role = eboardMember['role'];
+            String ucid = _clean(eboardMember['ucid']);
+            String role = _clean(eboardMember['role']);
             requestedEboardMembers
                 .add(OrganizationMember(ucid: ucid, role: role));
           }
@@ -762,8 +1068,8 @@ class DatabaseEventAPI {
               List<OrganizationMember>();
 
           for (var eboardMember in currentEboardMemberRecords) {
-            String ucid = eboardMember['ucid'];
-            String role = eboardMember['role'];
+            String ucid = _clean(eboardMember['ucid']);
+            String role = _clean(eboardMember['role']);
             currentEboardMembers
                 .add(OrganizationMember(ucid: ucid, role: role));
           }
@@ -775,8 +1081,8 @@ class DatabaseEventAPI {
           List<OrganizationMember> regularMembers = List<OrganizationMember>();
           var regularMemberRecords = record['regularMembers'];
           for (var regularMember in regularMemberRecords) {
-            String ucid = regularMember['ucid'];
-            String role = regularMember['role'];
+            String ucid = _clean(regularMember['ucid']);
+            String role = _clean(regularMember['role']);
             regularMembers.add(OrganizationMember(ucid: ucid, role: role));
           }
           originalOrg.setMembers(regularMembers);
@@ -803,27 +1109,7 @@ class DatabaseEventAPI {
       int numRecords = jsonResponse['numRecords'];
       if (numRecords <= 0) return rtn;
       jsonResponse['organizations'].forEach((record) {
-        Organization org = Organization();
-        org.setName(record['name']);
-        org.setDescription(record['description']);
-        org.setStatus(OrganizationStatusHelper.getStatus(record['status']));
-        List<OrganizationMember> eBoardMembers = List<OrganizationMember>();
-        List<OrganizationMember> regularMembers = List<OrganizationMember>();
-        var eBoardMemberRecords = record['eBoardMembers'];
-        for (var eboardMember in eBoardMemberRecords) {
-          String ucid = eboardMember['ucid'];
-          String role = eboardMember['role'];
-          eBoardMembers.add(OrganizationMember(ucid: ucid, role: role));
-        }
-        org.setEboardMembers(eBoardMembers);
-        var regularMemberRecords = record['regularMembers'];
-        for (var regularMember in regularMemberRecords) {
-          String ucid = regularMember['ucid'];
-          String role = regularMember['role'];
-          regularMembers.add(OrganizationMember(ucid: ucid, role: role));
-        }
-        org.setMembers(regularMembers);
-        rtn.add(org);
+        rtn.add(_getOrganization(record));
       });
       return rtn;
     }).catchError((error) {
@@ -835,10 +1121,14 @@ class DatabaseEventAPI {
 
   static Future<bool> setOrganizationStatus(
       OrganizationStatus status, Organization org) {
-    Map<String, dynamic> map = {
-      'status': OrganizationStatusHelper.getString(status),
-      'name': org.name,
-    };
+    Organization organizationWithUpdatedStatus =
+        Organization(name: org.name, status: status);
+    Map<String, dynamic> map = _getOrganizationMap(
+        org: organizationWithUpdatedStatus,
+        hasName: true,
+        hasDescription: false,
+        hasMembers: false,
+        hasStatus: true);
     return http
         .post('https://web.njit.edu/~mc564/eventapi/organization/setStatus.php',
             body: json.encode(map))
@@ -856,6 +1146,35 @@ class DatabaseEventAPI {
     }).catchError((error) {
       throw Exception("Error in Database class setOrganizationStatus method: " +
           error.toString());
+    });
+  }
+
+  static Future<bool> inactivateOrganization(Organization org) {
+    Map<String, dynamic> map = _getOrganizationMap(
+        org: org,
+        hasName: true,
+        hasDescription: false,
+        hasMembers: false,
+        hasStatus: false);
+    return http
+        .post(
+            'https://web.njit.edu/~mc564/eventapi/organization/inactivate.php',
+            body: json.encode(map))
+        .then((http.Response response) {
+      if (response.statusCode != 200 &&
+          response.statusCode != 201 &&
+          response.statusCode != 202) {
+        throw Exception(
+            "Error in Database class inactivateOrganization method: Database response code is: " +
+                response.statusCode.toString() +
+                "\n response body: " +
+                response.body);
+      }
+      return true;
+    }).catchError((error) {
+      throw Exception(
+          "Error in Database class inactivateOrganization method: " +
+              error.toString());
     });
   }
 
@@ -938,8 +1257,8 @@ class DatabaseEventAPI {
           id: int.parse(record['messageId']),
           recipientUCID: record['recipientUCID'],
           senderUCID: record['senderUCID'],
-          title: record['title'],
-          body: record['body'],
+          title: _clean(record['title']),
+          body: _clean(record['body']),
           messageRead: record['messageRead'],
           timeCreated: DateTime.parse(record['timeCreated']),
         ));

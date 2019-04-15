@@ -1,21 +1,27 @@
 import 'package:flutter/material.dart';
 import '../../blocs/favorite_bloc.dart';
+import '../../blocs/event_bloc.dart';
+import '../../blocs/edit_bloc.dart';
+import '../../blocs/favorite_rsvp_bloc.dart';
 import '../../models/event.dart';
 import '../../common/error_dialog.dart';
 import './favorites_widgets.dart';
 import 'dart:async';
 
 class FavoritesPage extends StatefulWidget {
-  final FavoriteBloc _favoriteBloc;
-  final Function _addViewToEvent;
+  final EditEventBloc _editBloc;
+  final FavoriteAndRSVPBloc _favoriteAndRSVPBloc;
+  final EventBloc _eventBloc;
   final Function _canEditEvent;
 
   FavoritesPage(
-      {@required FavoriteBloc favoriteBloc,
-      @required Function addViewToEvent,
+      {@required EditEventBloc editBloc,
+      @required FavoriteAndRSVPBloc favoriteAndRSVPBloc,
+      @required EventBloc eventBloc,
       @required Function canEditEvent})
-      : _favoriteBloc = favoriteBloc,
-        _addViewToEvent = addViewToEvent,
+      : _editBloc = editBloc,
+        _favoriteAndRSVPBloc = favoriteAndRSVPBloc,
+        _eventBloc = eventBloc,
         _canEditEvent = canEditEvent;
 
   @override
@@ -36,76 +42,37 @@ class _FavoritesPageState extends State<FavoritesPage> {
     );
   }
 
-  TextStyle _accentTileTextStyle(Color color) {
-    return TextStyle(
-      fontFamily: 'Montserrat',
-      fontSize: 60,
-      color: color,
-    );
-  }
-
-  Widget _buildAccentTile1() {
-    return Container(
-      alignment: Alignment.centerRight,
-      child: Text(
-        'FAV',
-        textAlign: TextAlign.right,
-        style: _accentTileTextStyle(Color(0xff0200ff)),
-      ),
-      color: Color(0xffffff00),
-    );
-  }
-
-  Widget _buildAccentTile2() {
-    return Container(
-      alignment: Alignment.center,
-      child: Text(
-        'ORI',
-        textAlign: TextAlign.center,
-        style: _accentTileTextStyle(Color(0xffff0700)),
-      ),
-      color: Color(0xff0200ff),
-    );
-  }
-
-  Widget _buildAccentTile3() {
-    return Container(
-      alignment: Alignment.centerLeft,
-      child: Text(
-        'TES',
-        textAlign: TextAlign.left,
-        style: _accentTileTextStyle(Color(0xffffff00)),
-      ),
-      color: Color(0xffff0700),
-    );
-  }
-
-  Widget _buildAccentTile4() {
-    return Container(
-      color: Color(0xff02d100),
-      alignment: Alignment.center,
-      padding: EdgeInsets.all(10),
-      child: Stack(children: <Widget>[
-        Icon(Icons.check_circle, color: Colors.white),
-        Text(
-          '  means \nit\'s happening TODAY!!',
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            fontFamily: 'Montserrat',
-            fontSize: 20,
-            color: Colors.white,
-          ),
-        ),
-      ]),
-    );
+  void _showAreYouSureDialog(String message, Function onConfirm) {
+    showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Text('Are you sure?'),
+            content: Text(message),
+            actions: <Widget>[
+              FlatButton(
+                child: Text('RETURN'),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+              FlatButton(
+                child: Text('CONTINUE'),
+                onPressed: () {
+                  onConfirm();
+                  Navigator.of(context).pop();
+                },
+              ),
+            ],
+          );
+        });
   }
 
   FavoriteGridTile _buildTile(Event event, int color) {
     return FavoriteGridTile(
-      favoriteBloc: widget._favoriteBloc,
+      editBloc: widget._editBloc,
+      favoriteAndRSVPBloc: widget._favoriteAndRSVPBloc,
+      eventBloc: widget._eventBloc,
       event: event,
       color: color,
-      addViewToEvent: widget._addViewToEvent,
       canEditEvent: widget._canEditEvent,
     );
   }
@@ -115,7 +82,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
       padding: EdgeInsets.all(10),
       alignment: Alignment.center,
       child: Text(
-        'No Favorites For Now! :)',
+        'No Favorites For Now! 🙂',
         style: TextStyle(
           color: Colors.grey,
           fontSize: 20,
@@ -125,33 +92,66 @@ class _FavoritesPageState extends State<FavoritesPage> {
     );
   }
 
+  List<Widget> _buildActionTiles() {
+    List<Widget> list = List<Widget>();
+    list.add(
+      ListTile(
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: <Widget>[
+            FlatButton(
+              child: Text('Delete All Favorites'),
+              color: Color(0xffffdde2),
+              onPressed: () => _showAreYouSureDialog(
+                    'Are you sure you want to delete ALL your favorites?',
+                    () => widget._favoriteAndRSVPBloc.favoriteBloc.sink.add(
+                          RemoveAllFavorites(),
+                        ),
+                  ),
+            ),
+            FlatButton(
+              child: Text('Delete Past Favorites'),
+              color: Color(0xffFFFFCC),
+              onPressed: () => _showAreYouSureDialog(
+                    'Are you sure you want to delete ALL favorites for PAST events?',
+                    () => widget._favoriteAndRSVPBloc.favoriteBloc.sink.add(
+                          RemovePastFavorites(),
+                        ),
+                  ),
+            ),
+          ],
+        ),
+      ),
+    );
+    return list;
+  }
+
   List<Widget> _buildDynamicPortion(List<Event> favorites) {
+    //this is for the favorites
     List<int> colors = [
-      0xffffa500,
-      0xffffff00,
-      0xff0200ff,
-      0xffff0700,
-      0xff02d100,
+      0xffffdde2,
+      0xffFFFFCC,
+      0xffdcf9ec,
+      0xffFFFFFF,
+      0xffF0F0F0,
     ];
-    List<Widget> tiles = List<Widget>();
+    List<Widget> lst = List<Widget>();
+
+    //empty list
     if (favorites == null || favorites.length == 0) {
-      tiles.add(_noFavoritesTile());
-      return tiles;
+      lst.add(_noFavoritesTile());
+      return lst;
     }
+    //build the list with favorites
     for (int i = 0; i < favorites.length; i++) {
-      tiles.add(_buildTile(favorites[i], colors[i % colors.length]));
+      lst.add(_buildTile(favorites[i], colors[i % colors.length]));
     }
-    return tiles;
+    return lst;
   }
 
   List<Widget> _buildChildren(List<Event> favorites) {
     List<Widget> list = List<Widget>();
-    list.addAll(<Widget>[
-      _buildAccentTile1(),
-      _buildAccentTile2(),
-      _buildAccentTile3(),
-      _buildAccentTile4(),
-    ]);
+    list.addAll(_buildActionTiles());
     list.addAll(_buildDynamicPortion(favorites));
     return list;
   }
@@ -159,7 +159,14 @@ class _FavoritesPageState extends State<FavoritesPage> {
   @override
   void initState() {
     super.initState();
-    _errorListener = widget._favoriteBloc.favoriteSettingErrors.listen((error) {
+    _errorListener = widget
+        ._favoriteAndRSVPBloc.favoriteBloc.favoriteSettingErrors
+        .listen((error) {
+      if (error is FavoriteError) {
+        print("generic error: " + error.errorMsg);
+      } else if (error is FavoriteSettingError) {
+        print("setting error: " + error.errorMsg);
+      }
       _showErrorDialog();
     });
   }
@@ -168,20 +175,35 @@ class _FavoritesPageState extends State<FavoritesPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        iconTheme: IconThemeData(color: Colors.black),
+        backgroundColor: Colors.lightBlue[50],
         centerTitle: true,
-        title: Text(
-          'Favorites',
-          style: TextStyle(
-              fontFamily: 'Libre-Baskerville', fontWeight: FontWeight.bold),
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            Text(
+              'Favorites',
+              style: TextStyle(
+                color: Colors.black,
+              ),
+            ),
+            IconButton(
+              icon: Icon(Icons.refresh),
+              onPressed: () =>
+                  widget._favoriteAndRSVPBloc.favoriteBloc.sink.add(
+                    FetchFavorites(),
+                  ),
+            ),
+          ],
         ),
       ),
       body: StreamBuilder<FavoriteState>(
-        stream: widget._favoriteBloc.favoriteRequests,
-        initialData: widget._favoriteBloc.initialState,
+        stream: widget._favoriteAndRSVPBloc.favoriteBloc.favoriteRequests,
+        initialData: widget._favoriteAndRSVPBloc.favoriteBloc.initialState,
         builder: (BuildContext context, AsyncSnapshot<FavoriteState> snapshot) {
           FavoriteState state = snapshot.data;
           List<Event> faves = List<Event>();
-          if (state is FavoriteError) {
+          if (state is FavoriteSettingError) {
             if (state.rollbackFavorites != null &&
                 state.rollbackFavorites.length > 0) {
               faves = state.rollbackFavorites;
@@ -191,10 +213,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
               faves = state.favorites;
             }
           }
-          return GridView.count(
-            crossAxisCount: 3,
-            children: _buildChildren(faves),
-          );
+          return ListView(children: _buildChildren(faves));
         },
       ),
     );

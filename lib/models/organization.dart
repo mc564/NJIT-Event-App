@@ -23,6 +23,7 @@ class OrganizationUpdateRequestData {
 
 enum OrganizationStatus {
   AWAITING_APPROVAL,
+  AWAITING_REACTIVATION,
   AWAITING_EBOARD_CHANGE,
   AWAITING_INACTIVATION,
   ACTIVE,
@@ -33,6 +34,7 @@ enum OrganizationStatus {
 class OrganizationStatusHelper {
   static Map<OrganizationStatus, String> statusToString = {
     OrganizationStatus.AWAITING_APPROVAL: 'Awaiting Approval',
+    OrganizationStatus.AWAITING_REACTIVATION: 'Awaiting Reactivation',
     OrganizationStatus.AWAITING_EBOARD_CHANGE: 'Awaiting E-Board Change',
     OrganizationStatus.AWAITING_INACTIVATION: 'Awaiting Inactivation',
     OrganizationStatus.ACTIVE: 'Active',
@@ -42,6 +44,7 @@ class OrganizationStatusHelper {
 
   static Map<String, OrganizationStatus> stringToStatus = {
     'Awaiting Approval': OrganizationStatus.AWAITING_APPROVAL,
+    'Awaiting Reactivation': OrganizationStatus.AWAITING_REACTIVATION,
     'Awaiting E-Board Change': OrganizationStatus.AWAITING_EBOARD_CHANGE,
     'Awaiting Inactivation': OrganizationStatus.AWAITING_INACTIVATION,
     'Active': OrganizationStatus.ACTIVE,

@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import '../../blocs/organization_bloc.dart';
 import '../../blocs/event_bloc.dart';
+import '../../blocs/edit_bloc.dart';
+import '../../blocs/favorite_rsvp_bloc.dart';
 import '../../models/organization.dart';
 import './organization_detail.dart';
 
 class OrganizationCard extends StatelessWidget {
+  final EditEventBloc _editBloc;
+  final FavoriteAndRSVPBloc _favoriteAndRSVPBloc;
   final OrganizationBloc _organizationBloc;
   final EventBloc _eventBloc;
   final Organization _organization;
@@ -12,17 +16,24 @@ class OrganizationCard extends StatelessWidget {
 
   OrganizationCard(
       {@required ucid,
+      @required FavoriteAndRSVPBloc favoriteAndRSVPBloc,
       @required OrganizationBloc organizationBloc,
+      @required EditEventBloc editBloc,
       @required EventBloc eventBloc,
       @required Organization organization})
       : _organization = organization,
         _organizationBloc = organizationBloc,
+        _editBloc = editBloc,
+        _favoriteAndRSVPBloc = favoriteAndRSVPBloc,
         _eventBloc = eventBloc,
         _ucid = ucid;
 
   String _organizationRole() {
     for (OrganizationMember eboardMember in _organization.eBoardMembers) {
       if (eboardMember.ucid == _ucid) return eboardMember.role;
+    }
+    for (OrganizationMember regularMember in _organization.regularMembers) {
+      if (regularMember.ucid == _ucid) return regularMember.role;
     }
     return null;
   }
@@ -66,10 +77,12 @@ class OrganizationCard extends StatelessWidget {
                   context,
                   MaterialPageRoute(
                     builder: (BuildContext context) => OrganizationDetailPage(
+                          editBloc: _editBloc,
                           organizationBloc: _organizationBloc,
                           eventBloc: _eventBloc,
+                          favoriteAndRSVPBloc: _favoriteAndRSVPBloc,
                           organization: _organization,
-                          isEboardMember: isEboardMember,
+                          ucid: _ucid,
                         ),
                   ),
                 );

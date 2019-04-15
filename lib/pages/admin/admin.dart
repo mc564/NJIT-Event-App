@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../blocs/organization_bloc.dart';
 import '../../blocs/user_bloc.dart';
+import '../../blocs/edit_bloc.dart';
 
 import '../../providers/event_list_provider.dart';
 
@@ -10,15 +11,18 @@ import './org_actions_pending.dart';
 import '../add/add.dart';
 
 class AdminPage extends StatefulWidget {
+  final EditEventBloc _editBloc;
   final OrganizationBloc _organizationBloc;
   final UserBloc _userBloc;
   final EventListProvider _eventListProvider;
 
   AdminPage(
-      {@required OrganizationBloc organizationBloc,
+      {@required EditEventBloc editBloc,
+      @required OrganizationBloc organizationBloc,
       @required UserBloc userBloc,
       @required EventListProvider eventListProvider})
-      : _organizationBloc = organizationBloc,
+      : _editBloc = editBloc,
+        _organizationBloc = organizationBloc,
         _userBloc = userBloc,
         _eventListProvider = eventListProvider;
 
@@ -104,6 +108,7 @@ class _AdminPageState extends State<AdminPage> {
       context,
       MaterialPageRoute(
         builder: (BuildContext context) => AddPage(
+            editBloc: widget._editBloc,
             isAdmin: true,
             ucid: widget._userBloc.ucid,
             orgProvider: widget._organizationBloc.organizationProvider,
@@ -135,8 +140,10 @@ class _AdminPageState extends State<AdminPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Admin Task Panel'),
+        backgroundColor: Colors.lightBlue[50],
+        title: Text('Admin Task Panel', style: TextStyle(color: Colors.black)),
         centerTitle: true,
+        iconTheme: IconThemeData(color: Colors.black),
       ),
       body: Container(
         margin: EdgeInsets.all(10),
@@ -145,6 +152,7 @@ class _AdminPageState extends State<AdminPage> {
           children: <Widget>[
             Expanded(
               child: Card(
+                color: Colors.lightBlue[50],
                 child: Column(
                   children: <Widget>[
                     _buildSection(
@@ -152,21 +160,21 @@ class _AdminPageState extends State<AdminPage> {
                         {
                           'Review User Permissions': _goToUserPermissionsPage,
                         },
-                        Color(0xffffff00)),
+                        Color(0xffffdde2)),
                     _buildSection(
                         'Events',
                         {
                           'Add Events': _goToAdminAddPage,
                           'Edit Events': _showEditInstructionsDialog,
                         },
-                        Color(0xffffa500)),
+                        Color(0xffFFFFCC)),
                     _buildSection(
                         'Organizations',
                         {
                           'Actions Pending Approval/Rejection':
                               _goToOrganizationActionsPendingPage,
                         },
-                        Color(0xff02d100)),
+                        Color(0xffdcf9ec)),
                   ],
                 ),
               ),

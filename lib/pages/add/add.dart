@@ -3,29 +3,34 @@ import 'dart:async';
 
 import '../../models/event.dart';
 
-import '../../common/suggestion_dialog.dart';
 import '../../common/success_dialog.dart';
 import '../../common/error_dialog.dart';
 import '../../common/date_range_picker.dart';
 import '../../common/drop_down_button_form_field.dart';
 
-import '../../blocs/add_bloc.dart';
+import '../../blocs/add_bloc.dart' as AddBloc;
+import '../../blocs/edit_bloc.dart';
 
 import '../../providers/event_list_provider.dart';
-import '../../providers/organization_provider.dart';
+import '../../providers/organization/organization_provider.dart';
+
+import './add_widgets.dart';
 
 class AddPage extends StatefulWidget {
+  final EditEventBloc _editBloc;
   final EventListProvider _eventListProvider;
   final OrganizationProvider _orgProvider;
   final String _ucid;
   final bool _isAdmin;
 
   AddPage(
-      {@required EventListProvider eventListProvider,
+      {@required EditEventBloc editBloc,
+      @required EventListProvider eventListProvider,
       @required OrganizationProvider orgProvider,
       @required bool isAdmin,
       @required ucid})
-      : _eventListProvider = eventListProvider,
+      : _editBloc = editBloc,
+        _eventListProvider = eventListProvider,
         _orgProvider = orgProvider,
         _isAdmin = isAdmin,
         _ucid = ucid;
@@ -39,7 +44,7 @@ class AddPage extends StatefulWidget {
 class _AddPageState extends State<AddPage> {
   GlobalKey<DateRangePickerState> _dateRangePickerKey;
   StreamSubscription _navigationListener;
-  AddEventBloc _addEventBloc;
+  AddBloc.AddEventBloc _addEventBloc;
   GlobalKey<FormState> _formKey;
   List<DropdownMenuItem<String>> _categoryDropdownItems;
   List<DropdownMenuItem<String>> _organizationDropdownItems;
@@ -52,14 +57,14 @@ class _AddPageState extends State<AddPage> {
         labelText: 'Event Title',
         labelStyle: TextStyle(color: Colors.black, fontWeight: FontWeight.w600),
         filled: true,
-        fillColor: Color(0xffffff00),
+        fillColor: Color(0xffffdde2),
         border: InputBorder.none,
       ),
       validator: _addEventBloc.titleValidator,
       initialValue: initVal,
       onSaved: (String value) {
         print('title saved');
-        _addEventBloc.setTitle(value);
+        _addEventBloc.sink.add(AddBloc.SetTitle(value));
       },
     );
   }
@@ -67,16 +72,16 @@ class _AddPageState extends State<AddPage> {
   Theme _buildOrganizationField() {
     return Theme(
       data: ThemeData(
-        canvasColor: Color(0xff0200ff),
+        canvasColor: Color(0xffffffcc),
       ),
       child: DropDownButtonFormField(
         hint: 'Event Organization',
         items: _organizationDropdownItems,
-        color: Color(0xff0200ff),
-        textColor: Colors.white,
+        color: Color(0xffffffcc),
+        textColor: Colors.black,
         onChanged: (String value) {},
         onSaved: (String value) {
-          _addEventBloc.setOrganization(value);
+          _addEventBloc.sink.add(AddBloc.SetOrganization(value));
         },
         validator: _addEventBloc.organizationValidator,
       ),
@@ -91,13 +96,13 @@ class _AddPageState extends State<AddPage> {
         labelText: 'Event Location',
         labelStyle: TextStyle(color: Colors.black, fontWeight: FontWeight.w600),
         filled: true,
-        fillColor: Color(0xff02d100),
+        fillColor: Color(0xffffffff),
         border: InputBorder.none,
       ),
       initialValue: initVal,
       validator: _addEventBloc.locationValidator,
       onSaved: (String value) {
-        _addEventBloc.setLocation(value);
+        _addEventBloc.sink.add(AddBloc.SetLocation(value));
       },
     );
   }
@@ -113,11 +118,11 @@ class _AddPageState extends State<AddPage> {
       initialEndTime: endTime,
       onStartChanged: (DateTime start) {
         print('start time changed to: ' + start.toString());
-        _addEventBloc.setStartTime(start);
+        _addEventBloc.sink.add(AddBloc.SetStartTime(start));
       },
       onEndChanged: (DateTime end) {
         print('end time changed to :' + end.toString());
-        _addEventBloc.setEndTime(end);
+        _addEventBloc.sink.add(AddBloc.SetEndTime(end));
       },
     );
   }
@@ -130,18 +135,18 @@ class _AddPageState extends State<AddPage> {
         labelText: 'Event Description',
         labelStyle: TextStyle(color: Colors.black, fontWeight: FontWeight.w600),
         filled: true,
-        fillColor: Color(0xffffa500),
+        fillColor: Color(0xfff0f0f0),
         border: InputBorder.none,
       ),
       initialValue: initVal,
       validator: _addEventBloc.descriptionValidator,
       onSaved: (String value) {
-        _addEventBloc.setDescription(value);
+        _addEventBloc.sink.add(AddBloc.SetDescription(value));
       },
     );
   }
 
-  void _showErrorDialog(FormSubmitError errorObject) {
+  void _showErrorDialog(AddBloc.FormSubmitError errorObject) {
     String error = errorObject.error;
     showDialog(
       context: context,
@@ -167,10 +172,11 @@ class _AddPageState extends State<AddPage> {
       context: context,
       builder: (BuildContext context) {
         return SuggestionDialog(
+            editBloc: widget._editBloc,
             similarEvents: similarEvents,
             continuePrompt: "No, continue to add event",
             onSuggestionIgnored: () {
-              _addEventBloc.submitDespiteSuggestions(eventToAdd);
+              _addEventBloc.sink.add(AddBloc.SubmitDespiteSuggestions(eventToAdd));
               Navigator.pop(context);
             });
       },
@@ -180,16 +186,16 @@ class _AddPageState extends State<AddPage> {
   Theme _buildCategoryField() {
     return Theme(
       data: ThemeData(
-        canvasColor: Color(0xff800000),
+        canvasColor: Color(0xffdcf9ec),
       ),
       child: DropDownButtonFormField(
         hint: 'Event Category',
         items: _categoryDropdownItems,
-        color: Color(0xffff0700),
-        textColor: Colors.white,
+        color: Color(0xffdcf9ec),
+        textColor: Colors.black,
         onChanged: (String value) {},
         onSaved: (String value) {
-          _addEventBloc.setCategory(value);
+          _addEventBloc.sink.add(AddBloc.SetCategory(value));
         },
         validator: _addEventBloc.categoryValidator,
       ),
@@ -201,22 +207,24 @@ class _AddPageState extends State<AddPage> {
       return;
     }
     _formKey.currentState.save();
-    _addEventBloc.submitForm();
+    _addEventBloc.sink.add(AddBloc.SubmitForm());
     _formKey.currentState.reset();
     DateTime now = DateTime.now();
     _dateRangePickerKey.currentState.setStartAndEndTime(now, now);
   }
 
   Widget _buildSubmitButton() {
-    return StreamBuilder<AddFormState>(
+    return StreamBuilder<AddBloc.AddFormState>(
       stream: _addEventBloc.formSubmissions,
       initialData: _addEventBloc.initialState,
-      builder: (BuildContext context, AsyncSnapshot<AddFormState> snapshot) {
-        AddFormState state = snapshot.data;
-        if (state is FormSubmitting) {
+      builder: (BuildContext context, AsyncSnapshot<AddBloc.AddFormState> snapshot) {
+        AddBloc.AddFormState state = snapshot.data;
+        if (state is AddBloc.FormSubmitting) {
           return Center(child: CircularProgressIndicator());
         } else
           return RaisedButton(
+              color: Color(0xffffdde2),
+              splashColor: Color(0xffffdde2),
               child: Text('Add Event'),
               onPressed: () {
                 _addEvent();
@@ -269,31 +277,33 @@ class _AddPageState extends State<AddPage> {
   void initState() {
     super.initState();
     _dateRangePickerKey = GlobalKey<DateRangePickerState>();
-    _addEventBloc = AddEventBloc(
+    _addEventBloc = AddBloc.AddEventBloc(
         eventListProvider: widget._eventListProvider,
         orgProvider: widget._orgProvider,
         ucid: widget._ucid,
         isAdmin: widget._isAdmin,
         onInitialized: () {
-          setState(() {
-            _organizationDropdownItems = List<DropdownMenuItem<String>>();
-            _addEventBloc.allSelectableOrganizations
-                .forEach((String organization) {
-              _organizationDropdownItems.add(
-                DropdownMenuItem(
-                  value: organization,
-                  child: Padding(
-                    padding: EdgeInsets.only(left: 10),
-                    child: Text(
-                      _cutShort(organization, 80),
-                      style: TextStyle(
-                          color: Colors.white, fontWeight: FontWeight.w600),
+          if (mounted) {
+            setState(() {
+              _organizationDropdownItems = List<DropdownMenuItem<String>>();
+              _addEventBloc.allSelectableOrganizations
+                  .forEach((String organization) {
+                _organizationDropdownItems.add(
+                  DropdownMenuItem(
+                    value: organization,
+                    child: Padding(
+                      padding: EdgeInsets.only(left: 10),
+                      child: Text(
+                        _cutShort(organization, 80),
+                        style: TextStyle(
+                            color: Colors.black, fontWeight: FontWeight.w600),
+                      ),
                     ),
                   ),
-                ),
-              );
+                );
+              });
             });
-          });
+          }
         });
     _formKey = GlobalKey<FormState>();
     _categoryDropdownItems = List<DropdownMenuItem<String>>();
@@ -307,7 +317,7 @@ class _AddPageState extends State<AddPage> {
             child: Text(
               category,
               style:
-                  TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                  TextStyle(color: Colors.black, fontWeight: FontWeight.w600),
             ),
           ),
         ),
@@ -317,12 +327,12 @@ class _AddPageState extends State<AddPage> {
     _organizationDropdownItems = List<DropdownMenuItem<String>>();
 
     _navigationListener = _addEventBloc.formSubmissions.listen((dynamic state) {
-      if (state is FormSubmitAlternative) {
+      if (state is AddBloc.FormSubmitAlternative) {
         _suggestEditingSimilarEvents(
             state.eventToAdd, state.editableSimilarEvents);
-      } else if (state is FormSubmitError) {
+      } else if (state is AddBloc.FormSubmitError) {
         _showErrorDialog(state);
-      } else if (state is FormSubmitted) {
+      } else if (state is AddBloc.FormSubmitted) {
         _showSuccessDialog(state.submittedEvent);
       }
     });
@@ -336,7 +346,7 @@ class _AddPageState extends State<AddPage> {
         iconTheme: IconThemeData(
           color: Colors.black,
         ),
-        backgroundColor: Colors.white,
+        backgroundColor: Colors.lightBlue[50],
         title: Text(
           'Add An Event',
           style: TextStyle(color: Colors.black),
