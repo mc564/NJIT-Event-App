@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import './event_list_tile.dart';
 import '../models/event.dart';
 import '../blocs/event_bloc.dart';
-import '../blocs/favorite_bloc.dart';
 import '../blocs/edit_bloc.dart';
+import '../blocs/favorite_rsvp_bloc.dart';
 import 'dart:async';
 
 class DailyEventList extends StatefulWidget {
   final EditEventBloc _editBloc;
-  final FavoriteBloc _favoriteBloc;
   final EventBloc _eventBloc;
+  final FavoriteAndRSVPBloc _favoriteAndRSVPBloc;
   final Function _canEdit;
   final DateTime _day;
 
@@ -19,14 +19,14 @@ class DailyEventList extends StatefulWidget {
       {@required DateTime day,
       @required EventBloc eventBloc,
       @required EditEventBloc editBloc,
-      @required FavoriteBloc favoriteBloc,
+      @required FavoriteAndRSVPBloc favoriteAndRSVPBloc,
       @required Function canEdit,
       Key key})
       : assert(day != null && eventBloc != null),
         _day = day,
         _eventBloc = eventBloc,
         _editBloc = editBloc,
-        _favoriteBloc = favoriteBloc,
+        _favoriteAndRSVPBloc = favoriteAndRSVPBloc,
         _canEdit = canEdit,
         super(key: key);
 
@@ -55,12 +55,12 @@ class _DailyEventListState extends State<DailyEventList> {
     return ListView.builder(
       itemCount: events.length,
       itemBuilder: (BuildContext context, int index) {
-        return EventListTile(
+        return EventListTileBasicStyle(
             event: events[index],
             color: colors[index % colors.length],
-            favoriteBloc: widget._favoriteBloc,
             editBloc: widget._editBloc,
             eventBloc: widget._eventBloc,
+            favoriteAndRSVPBloc: widget._favoriteAndRSVPBloc,
             canEdit: widget._canEdit);
       },
     );
@@ -70,8 +70,9 @@ class _DailyEventListState extends State<DailyEventList> {
   void initState() {
     super.initState();
     widget._eventBloc.sink.add(FetchDailyEvents(day: widget._day));
-    _favoriteErrorSubscription =
-        widget._favoriteBloc.favoriteSettingErrors.listen((dynamic state) {
+    _favoriteErrorSubscription = widget
+        ._favoriteAndRSVPBloc.favoriteBloc.favoriteSettingErrors
+        .listen((dynamic state) {
       //recieve any favorite setting errors? rollback favorite status by setting state
       setState(() {});
     });

@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import '../../blocs/organization_bloc.dart';
 import '../../blocs/event_bloc.dart';
-import '../../blocs/favorite_bloc.dart';
 import '../../blocs/edit_bloc.dart';
+import '../../blocs/favorite_rsvp_bloc.dart';
 import '../../models/organization.dart';
 import './organization_detail.dart';
 
 class OrganizationCard extends StatelessWidget {
   final EditEventBloc _editBloc;
-  final FavoriteBloc _favoriteBloc;
+  final FavoriteAndRSVPBloc _favoriteAndRSVPBloc;
   final OrganizationBloc _organizationBloc;
   final EventBloc _eventBloc;
   final Organization _organization;
@@ -16,7 +16,7 @@ class OrganizationCard extends StatelessWidget {
 
   OrganizationCard(
       {@required ucid,
-      @required FavoriteBloc favoriteBloc,
+      @required FavoriteAndRSVPBloc favoriteAndRSVPBloc,
       @required OrganizationBloc organizationBloc,
       @required EditEventBloc editBloc,
       @required EventBloc eventBloc,
@@ -24,7 +24,7 @@ class OrganizationCard extends StatelessWidget {
       : _organization = organization,
         _organizationBloc = organizationBloc,
         _editBloc = editBloc,
-        _favoriteBloc = favoriteBloc,
+        _favoriteAndRSVPBloc = favoriteAndRSVPBloc,
         _eventBloc = eventBloc,
         _ucid = ucid;
 
@@ -78,11 +78,11 @@ class OrganizationCard extends StatelessWidget {
                   MaterialPageRoute(
                     builder: (BuildContext context) => OrganizationDetailPage(
                           editBloc: _editBloc,
-                          favoriteBloc: _favoriteBloc,
                           organizationBloc: _organizationBloc,
                           eventBloc: _eventBloc,
+                          favoriteAndRSVPBloc: _favoriteAndRSVPBloc,
                           organization: _organization,
-                          isEboardMember: isEboardMember,
+                          ucid: _ucid,
                         ),
                   ),
                 );

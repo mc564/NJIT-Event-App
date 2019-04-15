@@ -1,25 +1,25 @@
 import 'package:flutter/material.dart';
 import '../../common/event_list_tile.dart';
 import '../../blocs/search_bloc.dart';
-import '../../blocs/favorite_bloc.dart';
 import '../../blocs/event_bloc.dart';
 import '../../blocs/edit_bloc.dart';
+import '../../blocs/favorite_rsvp_bloc.dart';
 
 class SearchPage extends StatefulWidget {
   final EditEventBloc _editBloc;
   final SearchBloc _searchBloc;
-  final FavoriteBloc _favoriteBloc;
+  final FavoriteAndRSVPBloc _favoriteAndRSVPBloc;
   final EventBloc _eventBloc;
   final Function _canEdit;
 
   SearchPage(
       {@required SearchBloc searchBloc,
-      @required FavoriteBloc favoriteBloc,
+      @required FavoriteAndRSVPBloc favoriteAndRSVPBloc,
       @required EventBloc eventBloc,
       @required EditEventBloc editBloc,
       @required Function canEdit})
       : _searchBloc = searchBloc,
-        _favoriteBloc = favoriteBloc,
+        _favoriteAndRSVPBloc = favoriteAndRSVPBloc,
         _eventBloc = eventBloc,
         _editBloc = editBloc,
         _canEdit = canEdit;
@@ -32,12 +32,12 @@ class SearchPage extends StatefulWidget {
 
 class _SearchPageState extends State<SearchPage> {
   List<int> colors = [
-      0xffffdde2,
-      0xffFFFFCC,
-      0xffdcf9ec,
-      0xffFFFFFF,
-      0xffF0F0F0,
-    ];
+    0xffffdde2,
+    0xffFFFFCC,
+    0xffdcf9ec,
+    0xffFFFFFF,
+    0xffF0F0F0,
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -99,10 +99,11 @@ class _SearchPageState extends State<SearchPage> {
                           shrinkWrap: true,
                           itemCount: searchResult.results.length,
                           itemBuilder: (context, index) {
-                            return EventListTile(
+                            return EventListTileBasicStyle(
                                 event: searchResult.results[index],
                                 color: colors[index % colors.length],
-                                favoriteBloc: widget._favoriteBloc,
+                                favoriteAndRSVPBloc:
+                                    widget._favoriteAndRSVPBloc,
                                 eventBloc: widget._eventBloc,
                                 editBloc: widget._editBloc,
                                 canEdit: widget._canEdit);

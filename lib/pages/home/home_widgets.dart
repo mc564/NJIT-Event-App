@@ -2,11 +2,11 @@ import 'dart:async';
 import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
 import '../../blocs/event_bloc.dart';
-import '../../blocs/favorite_bloc.dart';
+import '../../blocs/favorite_rsvp_bloc.dart';
 import '../../blocs/edit_bloc.dart';
 import '../../models/event.dart';
-import '../detail/event_detail.dart';
 import '../../common/daily_event_list_page.dart';
+import '../../common/event_list_tile.dart';
 
 class ViewDropDown extends StatelessWidget {
   final DateFormat dayFormatter = DateFormat('EEE, MMM d, y');
@@ -121,120 +121,17 @@ class _DropDownButtonState extends State<DropDownButton> {
   }
 }
 
-class WeeklyEventListTile extends StatefulWidget {
-  final Event _event;
-  final EventBloc _eventBloc;
-  final FavoriteBloc _favoriteBloc;
-  final EditEventBloc _editBloc;
-  final Function _canEdit;
-  final Color _color;
-
-  WeeklyEventListTile(
-      {@required Event event,
-      @required EventBloc eventBloc,
-      @required FavoriteBloc favoriteBloc,
-      @required EditEventBloc editBloc,
-      @required Function canEdit,
-      @required Color color})
-      : _color = color,
-        _event = event,
-        _eventBloc = eventBloc,
-        _favoriteBloc = favoriteBloc,
-        _editBloc = editBloc,
-        _canEdit = canEdit;
-
-  @override
-  State<StatefulWidget> createState() {
-    return _WeeklyEventListTileState();
-  }
-}
-
-class _WeeklyEventListTileState extends State<WeeklyEventListTile> {
-  String _cutShort(String s, int length) {
-    if (s.length <= length)
-      return s;
-    else
-      return s.substring(0, length + 1) + "...";
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    // TODO: implement build
-    String title = widget._event == null
-        ? 'No more events!'
-        : _cutShort(widget._event.title, 35);
-    List<Widget> rowWidgets = List<Widget>();
-    if (widget._event != null) {
-      rowWidgets.addAll([
-        Stack(
-          children: <Widget>[
-            IconButton(
-              icon: Icon(Icons.favorite,
-                  color: widget._event.favorited ? Colors.red : Colors.white),
-              onPressed: () {},
-            ),
-            IconButton(
-              icon: Icon(Icons.favorite_border),
-              onPressed: () {
-                if (widget._event.favorited) {
-                  widget._favoriteBloc.sink.add(
-                    RemoveFavorite(eventToUnfavorite: widget._event),
-                  );
-                } else {
-                  widget._favoriteBloc.sink
-                      .add(AddFavorite(eventToFavorite: widget._event));
-                }
-                setState(() {});
-              },
-            ),
-          ],
-        ),
-        Text(title),
-        IconButton(
-          icon: Icon(Icons.info),
-          onPressed: () {
-            widget._eventBloc.sink.add(AddViewToEvent(event: widget._event));
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (BuildContext context) => EventDetailPage(
-                      event: widget._event,
-                      canEdit: widget._canEdit,
-                      editBloc: widget._editBloc,
-                    ),
-              ),
-            );
-          },
-        ),
-      ]);
-    } else {
-      rowWidgets.add(Text(title));
-    }
-    return Card(
-      child: Container(
-        color: widget._color,
-        height: 55,
-        padding: EdgeInsets.all(10),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: rowWidgets,
-        ),
-      ),
-    );
-  }
-}
-
 class WeeklyEventList extends StatefulWidget {
   final DateTime _dayStart;
   final DateTime _dayEnd;
   final EventBloc _eventBloc;
-  final FavoriteBloc _favoriteBloc;
+  final FavoriteAndRSVPBloc _favoriteAndRSVPBloc;
   final EditEventBloc _editBloc;
   final Function _canEdit;
 
   WeeklyEventList(
       {@required EventBloc eventBloc,
-      @required FavoriteBloc favoriteBloc,
+      @required FavoriteAndRSVPBloc favoriteAndRSVPBloc,
       @required EditEventBloc editBloc,
       @required Function canEdit,
       @required DateTime dayStart,
@@ -243,7 +140,7 @@ class WeeklyEventList extends StatefulWidget {
       : _dayStart = dayStart,
         _dayEnd = dayEnd,
         _eventBloc = eventBloc,
-        _favoriteBloc = favoriteBloc,
+        _favoriteAndRSVPBloc = favoriteAndRSVPBloc,
         _editBloc = editBloc,
         _canEdit = canEdit,
         super(key: key);
@@ -266,7 +163,7 @@ class _WeeklyEventListState extends State<WeeklyEventList> {
   void initState() {
     super.initState();
     _favoriteErrorSubscription =
-        widget._favoriteBloc.favoriteSettingErrors.listen((dynamic state) {
+        widget._favoriteAndRSVPBloc.favoriteBloc.favoriteSettingErrors.listen((dynamic state) {
       //recieve any favorite setting errors? rollback favorite status by setting state
 
       setState(() {});
@@ -293,8 +190,8 @@ class _WeeklyEventListState extends State<WeeklyEventList> {
   Widget _buildEventListTile(Event event) {
     tileColorIdx++;
     Color color = tileColors[tileColorIdx % tileColors.length];
-    return WeeklyEventListTile(
-        favoriteBloc: widget._favoriteBloc,
+    return EventListTileCardStyle(
+        favoriteAndRSVPBloc: widget._favoriteAndRSVPBloc,
         eventBloc: widget._eventBloc,
         editBloc: widget._editBloc,
         canEdit: widget._canEdit,
@@ -383,7 +280,7 @@ class _WeeklyEventListState extends State<WeeklyEventList> {
                       MaterialPageRoute(
                         builder: (BuildContext context) => DailyEventListPage(
                               editBloc: widget._editBloc,
-                              favoriteBloc: widget._favoriteBloc,
+                              favoriteAndRSVPBloc: widget._favoriteAndRSVPBloc,
                               eventBloc: widget._eventBloc,
                               day: dateForWeekDay,
                               canEdit: widget._canEdit,

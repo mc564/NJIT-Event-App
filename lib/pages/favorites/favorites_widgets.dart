@@ -2,13 +2,14 @@ import 'package:flutter/material.dart';
 import '../../blocs/favorite_bloc.dart';
 import '../../blocs/event_bloc.dart';
 import '../../blocs/edit_bloc.dart';
+import '../../blocs/favorite_rsvp_bloc.dart';
 import '../../models/event.dart';
 import '../detail/event_detail.dart';
 import 'package:intl/intl.dart';
 
 class FavoriteGridTile extends StatelessWidget {
   final EditEventBloc _editBloc;
-  final FavoriteBloc _favoriteBloc;
+  final FavoriteAndRSVPBloc _favoriteAndRSVPBloc;
   final EventBloc _eventBloc;
   final Function _canEditEvent;
   final Event _event;
@@ -16,13 +17,13 @@ class FavoriteGridTile extends StatelessWidget {
 
   FavoriteGridTile(
       {@required EditEventBloc editBloc,
-      @required FavoriteBloc favoriteBloc,
+      @required FavoriteAndRSVPBloc favoriteAndRSVPBloc,
       @required EventBloc eventBloc,
       @required Function canEditEvent,
       @required Event event,
       @required int color})
       : _editBloc = editBloc,
-        _favoriteBloc = favoriteBloc,
+        _favoriteAndRSVPBloc = favoriteAndRSVPBloc,
         _eventBloc = eventBloc,
         _canEditEvent = canEditEvent,
         _event = event,
@@ -43,7 +44,7 @@ class FavoriteGridTile extends StatelessWidget {
                 FlatButton(
                     child: Text('Yes, continue'),
                     onPressed: () {
-                      _favoriteBloc.sink
+                      _favoriteAndRSVPBloc.favoriteBloc.sink
                           .add(RemoveFavorite(eventToUnfavorite: toRemove));
                       Navigator.of(context).pop();
                     }),
@@ -95,11 +96,30 @@ class FavoriteGridTile extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: <Widget>[
-          Container(
-            child: Image.network(
-              'https://vignette.wikia.nocookie.net/line/images/b/bb/2015-brown.png/revision/latest?cb=20150808131630',
-              width: 50,
-            ),
+          Stack(
+            alignment: Alignment.center,
+            children: <Widget>[
+              Container(
+                padding: EdgeInsets.only(top: 18),
+                child: Image.network(
+                  'https://vignette.wikia.nocookie.net/line/images/b/bb/2015-brown.png/revision/latest?cb=20150808131630',
+                  width: 50,
+                ),
+              ),
+              Positioned(
+                top: -1,
+                child: Container(
+                  padding: EdgeInsets.all(3),
+                  color: _event.rsvpd ? Colors.red : Colors.blue,
+                  child: Text(
+                    _event.rsvpd ? 'RSVP\'d' : 'FAVE\'d',
+                    style: TextStyle(
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
           Container(
             child: Column(
@@ -146,6 +166,7 @@ class FavoriteGridTile extends StatelessWidget {
                               event: _event,
                               canEdit: _canEditEvent,
                               editBloc: _editBloc,
+                              rsvpBloc: _favoriteAndRSVPBloc.rsvpBloc,
                             ),
                       ),
                     );

@@ -7,6 +7,7 @@ import '../../blocs/organization_bloc.dart';
 import '../../blocs/event_bloc.dart';
 import '../../blocs/favorite_bloc.dart';
 import '../../blocs/edit_bloc.dart';
+import '../../blocs/favorite_rsvp_bloc.dart';
 
 import '../../models/organization.dart';
 import '../../models/event.dart';
@@ -20,25 +21,25 @@ import '../detail/event_detail.dart';
 
 class OrganizationDetailPage extends StatefulWidget {
   final OrganizationBloc _organizationBloc;
-  final FavoriteBloc _favoriteBloc;
+  final FavoriteAndRSVPBloc _favoriteAndRSVPBloc;
   final EventBloc _eventBloc;
   final EditEventBloc _editBloc;
   final Organization _organization;
-  final bool _isEboardMember;
+  final String _ucid;
 
   OrganizationDetailPage(
       {@required OrganizationBloc organizationBloc,
-      @required FavoriteBloc favoriteBloc,
+      @required FavoriteAndRSVPBloc favoriteAndRSVPBloc,
       @required EventBloc eventBloc,
       @required EditEventBloc editBloc,
       @required Organization organization,
-      @required bool isEboardMember})
+      @required String ucid})
       : _organizationBloc = organizationBloc,
-        _favoriteBloc = favoriteBloc,
+        _favoriteAndRSVPBloc = favoriteAndRSVPBloc,
         _editBloc = editBloc,
         _eventBloc = eventBloc,
         _organization = organization,
-        _isEboardMember = isEboardMember;
+        _ucid = ucid;
 
   @override
   State<StatefulWidget> createState() {
@@ -48,6 +49,26 @@ class OrganizationDetailPage extends StatefulWidget {
 
 class _OrganizationDetailPageState extends State<OrganizationDetailPage> {
   StreamSubscription<FavoriteState> _favoriteErrorSubscription;
+  StreamSubscription<OrganizationState> _organizationUpdateSubscription;
+  List<int> colors;
+  int colorIdx;
+
+  bool _isEboardMember() {
+    for (OrganizationMember eboardMember
+        in widget._organization.eBoardMembers) {
+      if (eboardMember.ucid == widget._ucid) return true;
+    }
+    return false;
+  }
+
+  bool _isRegularMember() {
+    for (OrganizationMember regularMember
+        in widget._organization.regularMembers) {
+      if (regularMember.ucid == widget._ucid) return true;
+    }
+    return false;
+  }
+
   void _showRequestsInProgressDialog() {
     showDialog(
         context: context,
@@ -261,52 +282,83 @@ class _OrganizationDetailPageState extends State<OrganizationDetailPage> {
     return dateFormatter.format(time);
   }
 
-  ListTile _buildEventTile(Event event) {
-    return ListTile(
-      title: Text(
-        _cutShort(event.title, 35),
-      ),
-      subtitle: Text(_eventTimeText(event)),
-      trailing: Container(
-        width: 100,
-        child: Row(
-          children: <Widget>[
-            IconButton(
-              icon: Icon(
-                event.favorited ? Icons.favorite : Icons.favorite_border,
-                color: Colors.red,
-              ),
-              onPressed: () {
-                if (event.favorited) {
-                  widget._favoriteBloc.sink
-                      .add(RemoveFavorite(eventToUnfavorite: event));
-                } else {
-                  widget._favoriteBloc.sink
-                      .add(AddFavorite(eventToFavorite: event));
-                }
-                setState(() {});
-              },
+  Stack _buildEventTile(Event event) {
+    return Stack(
+      children: <Widget>[
+        Container(
+          color: Color(colors[colorIdx++ % colors.length]),
+          child: ListTile(
+            title: Text(
+              _cutShort(event.title, 35),
             ),
-            IconButton(
-              icon: Icon(
-                Icons.info,
-                color: Colors.blue,
-              ),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (BuildContext context) => EventDetailPage(
-                        event: event,
-                        canEdit: widget._organizationBloc.canEdit,
-                        editBloc: widget._editBloc),
+            subtitle: Text(_eventTimeText(event)),
+            trailing: Container(
+              width: 100,
+              child: Row(
+                children: <Widget>[
+                  IconButton(
+                    icon: Icon(
+                      event.favorited ? Icons.favorite : Icons.favorite_border,
+                      color: Colors.red,
+                    ),
+                    onPressed: () {
+                      if (event.favorited) {
+                        widget._favoriteAndRSVPBloc.favoriteBloc.sink
+                            .add(RemoveFavorite(eventToUnfavorite: event));
+                      } else {
+                        widget._favoriteAndRSVPBloc.favoriteBloc.sink
+                            .add(AddFavorite(eventToFavorite: event));
+                      }
+                      setState(() {});
+                    },
                   ),
-                );
-              },
+                  IconButton(
+                    icon: Icon(
+                      Icons.info,
+                      color: Colors.blue,
+                    ),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (BuildContext context) => EventDetailPage(
+                                event: event,
+                                canEdit: widget._organizationBloc.canEdit,
+                                editBloc: widget._editBloc,
+                                rsvpBloc: widget._favoriteAndRSVPBloc.rsvpBloc,
+                              ),
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
             ),
-          ],
+          ),
         ),
-      ),
+        !event.rsvpd
+            ? Container()
+            : Positioned(
+                top: 27,
+                right: 120,
+                child: Container(
+                  padding: EdgeInsets.symmetric(vertical: 3, horizontal: 5),
+                  decoration: BoxDecoration(
+                    color: Colors.red,
+                    borderRadius: BorderRadius.all(
+                      Radius.circular(13),
+                    ),
+                  ),
+                  child: Text(
+                    'RSVP\'d',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              ),
+      ],
     );
   }
 
@@ -406,6 +458,49 @@ class _OrganizationDetailPageState extends State<OrganizationDetailPage> {
     return RichText(text: TextSpan(children: children));
   }
 
+  StreamBuilder _buildJoinOrLeaveButton() {
+    bool leave = _isRegularMember();
+    String text = '';
+    if (leave) {
+      text = 'Leave  ❌';
+    } else {
+      text = 'Join  ➕';
+    }
+    return StreamBuilder<OrganizationState>(
+      initialData: widget._organizationBloc.updatingOrgInitialState,
+      stream: widget._organizationBloc.organizationUpdateRequests,
+      builder:
+          (BuildContext context, AsyncSnapshot<OrganizationState> snapshot) {
+        OrganizationState state = snapshot.data;
+        if (state is OrganizationUpdating) {
+          return Center(child: CircularProgressIndicator());
+        }
+        return FlatButton(
+          child: Text(
+            text,
+            style: TextStyle(color: Colors.white),
+          ),
+          color: Colors.blue,
+          onPressed: () {
+            if (leave) {
+              widget._organizationBloc.sink.add(
+                  SetOrganizationToEdit(organization: widget._organization));
+              widget._organizationBloc.sink
+                  .add(RemoveRegularMember(ucid: widget._ucid));
+              widget._organizationBloc.sink.add(SubmitOrganizationUpdates());
+            } else {
+              widget._organizationBloc.sink.add(
+                  SetOrganizationToEdit(organization: widget._organization));
+              widget._organizationBloc.sink
+                  .add(AddRegularMember(ucid: widget._ucid));
+              widget._organizationBloc.sink.add(SubmitOrganizationUpdates());
+            }
+          },
+        );
+      },
+    );
+  }
+
   List<Widget> _buildChildren(EventListState state) {
     List<Widget> children = List<Widget>();
     children.addAll([
@@ -423,6 +518,12 @@ class _OrganizationDetailPageState extends State<OrganizationDetailPage> {
           ),
         ],
       ),
+      _isEboardMember()
+          ? Container()
+          : Container(
+              margin: EdgeInsets.only(bottom: 10),
+              child: _buildJoinOrLeaveButton(),
+            ),
       _buildMembersSection(),
       SizedBox(height: 10),
       Text(widget._organization.description),
@@ -460,12 +561,34 @@ class _OrganizationDetailPageState extends State<OrganizationDetailPage> {
   @override
   void initState() {
     super.initState();
+    colors = [
+      0xffffdde2,
+      0xffFFFFCC,
+      0xffdcf9ec,
+      0xffFFFFFF,
+      0xffF0F0F0,
+    ];
+    colorIdx = 0;
     widget._eventBloc.sink
         .add(FetchRecentEvents(organization: widget._organization));
-    _favoriteErrorSubscription =
-        widget._favoriteBloc.favoriteSettingErrors.listen((dynamic state) {
+    _favoriteErrorSubscription = widget
+        ._favoriteAndRSVPBloc.favoriteBloc.favoriteSettingErrors
+        .listen((dynamic state) {
       //recieve any favorite setting errors? rollback favorite status by setting state
       setState(() {});
+    });
+    //this subscription is to watch for any changes in members from the 'leave' and 'join' buttons
+    _organizationUpdateSubscription = widget
+        ._organizationBloc.organizationUpdateRequests
+        .listen((dynamic state) {
+      if (state is OrganizationUpdated) {
+        Organization updatedOrg = state.updatedOrganization;
+        if (updatedOrg.name == widget._organization.name) {
+          setState(() {
+            widget._organization.setMembers(updatedOrg.regularMembers);
+          });
+        }
+      }
     });
   }
 
@@ -476,7 +599,7 @@ class _OrganizationDetailPageState extends State<OrganizationDetailPage> {
         centerTitle: true,
         title: Text(_cutShort(widget._organization.name, 20)),
         actions: <Widget>[
-          widget._isEboardMember ? _buildEboardButton(context) : Container(),
+          _isEboardMember() ? _buildEboardButton(context) : Container(),
         ],
       ),
       body: _buildBody(),
@@ -486,6 +609,7 @@ class _OrganizationDetailPageState extends State<OrganizationDetailPage> {
   @override
   void dispose() {
     _favoriteErrorSubscription.cancel();
+    _organizationUpdateSubscription.cancel();
     super.dispose();
   }
 }

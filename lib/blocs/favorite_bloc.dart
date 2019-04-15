@@ -3,6 +3,8 @@ import 'package:equatable/equatable.dart';
 import 'dart:async';
 import '../models/event.dart';
 import '../providers/favorite_provider.dart';
+import '../providers/favorite_rsvp_provider.dart';
+import './search_bloc.dart';
 
 class FavoriteBloc {
   StreamController<FavoriteEvent> _requestsController;
@@ -14,9 +16,19 @@ class FavoriteBloc {
   FavoriteState _prevState;
   String _ucid;
 
-  FavoriteBloc({@required String ucid}) {
+  FavoriteAndRSVPProvider _favoriteAndRSVPProvider;
+  StreamSink<SearchEvent> _searchSink;
+
+  FavoriteBloc({
+    @required String ucid,
+    @required FavoriteAndRSVPProvider favoriteAndRSVPProvider,
+    @required StreamSink<SearchEvent> searchSink,
+  }) {
     _ucid = ucid;
+    _searchSink = searchSink;
+    _favoriteAndRSVPProvider = favoriteAndRSVPProvider;
     _favoriteProvider = FavoriteProvider(ucid: _ucid);
+    favoriteAndRSVPProvider.setFavoriteProvider(_favoriteProvider);
     _favoriteErrorsController = StreamController<FavoriteState>.broadcast();
     _favoriteController = StreamController<FavoriteState>.broadcast();
     _requestsController = StreamController<FavoriteEvent>.broadcast();
@@ -28,6 +40,7 @@ class FavoriteBloc {
     _requestsController.stream.forEach((FavoriteEvent event) {
       event.execute(this);
     });
+    print('in favoritebloc constructor!');
   }
 
   Stream get favoriteSettingErrors => _favoriteErrorsController.stream;
@@ -41,6 +54,7 @@ class FavoriteBloc {
 
   void _alertFavoriteSettingError(Event errorEvent,
       List<Event> rollbackFavorites, bool favorited, String errorMsg) {
+    _favoriteAndRSVPProvider.markFavoritedAndRSVPdEvents(rollbackFavorites);
     FavoriteSettingError errorState = FavoriteSettingError(
         eventId: errorEvent.eventId,
         ucid: _ucid,
@@ -68,12 +82,17 @@ class FavoriteBloc {
     _favoriteErrorsController.sink.add(errorState);
   }
 
+  void _alertSuccess(List<Event> favorites) {
+    _favoriteAndRSVPProvider.markFavoritedAndRSVPdEvents(favorites);
+    _favoriteController.sink.add(FavoritesUpdated(favorites: favorites));
+  }
+
   void fetchFavorites() async {
     try {
+      print('fetching favorites');
       bool fetched = await _favoriteProvider.fetchFavorites();
       if (fetched) {
-        _favoriteController.sink
-            .add(FavoritesUpdated(favorites: _favoriteProvider.allFavorites));
+        _alertSuccess(_favoriteProvider.allFavorites);
       } else {
         _alertFavoriteError('Error in fetchFavorites method of favorite BLOC.');
       }
@@ -87,9 +106,10 @@ class FavoriteBloc {
     try {
       bool successfullyAdded = await _favoriteProvider.addFavorite(event);
       List<Event> favorites = _favoriteProvider.allFavorites;
-      print('favorites length is: ' + favorites.length.toString());
       if (successfullyAdded) {
-        _favoriteController.sink.add(FavoritesUpdated(favorites: favorites));
+        _alertSuccess(favorites);
+       
+          _searchSink.add(ChangeEventFavoriteStatus(changedEvent: event));
       } else {
         _alertFavoriteSettingError(
             event, favorites, true, 'Failed to addFavorite in favoriteBloc');
@@ -105,7 +125,9 @@ class FavoriteBloc {
       bool successfullyRemoved = await _favoriteProvider.removeFavorite(event);
       List<Event> favorites = _favoriteProvider.allFavorites;
       if (successfullyRemoved) {
-        _favoriteController.sink.add(FavoritesUpdated(favorites: favorites));
+        _alertSuccess(favorites);
+        
+          _searchSink.add(ChangeEventFavoriteStatus(changedEvent: event));
       } else {
         _alertFavoriteSettingError(event, favorites, false,
             'Failed to removeFavorite in favoriteBloc');
@@ -133,7 +155,8 @@ class FavoriteBloc {
         return;
       }
       if (successfullyRemovedAllFavorites) {
-        _favoriteController.sink.add(FavoritesUpdated(favorites: favorites));
+        _alertSuccess(favorites);
+        _searchSink.add(NullifyAllFavorites());
       } else {
         _alertFavoriteError('Failed to removeAllFavorites in favoriteBloc');
         return;
@@ -147,7 +170,9 @@ class FavoriteBloc {
 
   void removePastFavorites() async {
     try {
-      bool successfullyRemoved = await _favoriteProvider.removePastFavorites();
+      List<Event> pastEventsFavorited = _favoriteProvider.pastFavorites();
+      bool successfullyRemoved =
+          await _favoriteProvider.removePastFavorites(pastEventsFavorited);
       bool fetchedFavorites = await _favoriteProvider.fetchFavorites();
       List<Event> favorites = List<Event>();
       if (fetchedFavorites) {
@@ -158,7 +183,9 @@ class FavoriteBloc {
         return;
       }
       if (successfullyRemoved) {
-        _favoriteController.sink.add(FavoritesUpdated(favorites: favorites));
+        _alertSuccess(favorites);
+        _searchSink.add(
+            NullifySelectedFavorites(selectedFavorites: pastEventsFavorited));
       } else {
         _alertFavoriteError('Failed to removePastFavorites in favoriteBloc');
       }

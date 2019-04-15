@@ -1,5 +1,6 @@
-import '../models/event.dart';
 import 'package:uuid/uuid.dart';
+import '../api/database_event_api.dart';
+import '../models/event.dart';
 import '../models/location.dart';
 import '../models/category.dart';
 
@@ -71,8 +72,7 @@ class AddEventProvider {
   }
 
   void setEndTime(DateTime endTime) {
-
-    print('in add event provider, set end date to : '+endTime.toString());
+    print('in add event provider, set end date to : ' + endTime.toString());
 
     _endDateTime = endTime;
   }
@@ -155,6 +155,17 @@ class AddEventProvider {
         favorited: false);
     return event;
   }
-}
 
-//TODO edit add and edit page validators so that they factor in max length as well
+  Future<bool> addEvent(Event event) {
+    print("[MODEL] adding event");
+    return DatabaseEventAPI.addEvent(event).then((bool success) {
+      if (success) {
+        return true;
+      } else {
+        throw Exception("Adding event failed.");
+      }
+    }).catchError((error) {
+      throw Exception("Adding event failed: " + error.toString());
+    });
+  }
+}

@@ -174,7 +174,7 @@ class AddEventBloc {
     try {
       _addEventProvider.clear();
       _alertFormSubmitting();
-      bool successfullyAdded = await _eventListProvider.addEvent(eventToAdd);
+      bool successfullyAdded = await _addEventProvider.addEvent(eventToAdd);
       if (!successfullyAdded) {
         _alertFormSubmitError();
       } else {
@@ -206,7 +206,7 @@ class AddEventBloc {
       if (similarEvents.length > 0) {
         _alertUserCanEditSimilarEvents(similarEvents, eventToAdd);
       } else {
-        bool successfullyAdded = await _eventListProvider.addEvent(eventToAdd);
+        bool successfullyAdded = await _addEventProvider.addEvent(eventToAdd);
         if (!successfullyAdded) {
           _alertFormSubmitError();
         } else {

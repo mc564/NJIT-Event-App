@@ -6,6 +6,7 @@ import 'package:equatable/equatable.dart';
 import '../providers/event_list_provider.dart';
 import '../providers/favorite_provider.dart';
 import '../providers/metrics_provider.dart';
+import '../providers/favorite_rsvp_provider.dart';
 
 import '../models/event.dart';
 import '../models/organization.dart';
@@ -20,11 +21,14 @@ class EventBloc {
   final StreamController<EventListState> _cachedEventsController;
 
   final EventListProvider _eventListProvider;
-  final FavoriteProvider _favoriteProvider;
   final MetricsProvider _metricsProvider;
 
-  EventBloc({@required FavoriteProvider favoriteProvider})
-      : _favoriteProvider = favoriteProvider,
+  final FavoriteAndRSVPProvider _favoriteAndRSVPProvider;
+
+  EventBloc(
+      {@required FavoriteAndRSVPProvider favoriteAndRSVPProvider,
+      @required FavoriteProvider favoriteProvider})
+      : _favoriteAndRSVPProvider = favoriteAndRSVPProvider,
         _eventListProvider =
             EventListProvider(favoriteProvider: favoriteProvider),
         _metricsProvider = MetricsProvider(),
@@ -48,8 +52,6 @@ class EventBloc {
   Stream get recentEvents => _recentEventsController.stream;
   Stream get cachedEvents => _cachedEventsController.stream;
 
-  //so in UI always use this and go eventBloc.sink.add(FetchDailyEvents(DateTime.now()))
-  //or something like that
   StreamSink<EventListEvent> get sink => _requestsController.sink;
 
   EventListProvider get eventListProvider => _eventListProvider;
@@ -59,21 +61,11 @@ class EventBloc {
       _eventListProvider.selectedLocations.length +
       _eventListProvider.selectedOrganizations.length;
 
-  void _markFavoritedEvents(List<Event> events) {
-    events = events.map((Event event) {
-      if (_favoriteProvider.favorited(event)) {
-        event.favorited = true;
-      } else {
-        event.favorited = false;
-      }
-    }).toList();
-  }
-
   void fetchDailyEvents(DateTime day) async {
     try {
       _dailyController.sink.add(EventListLoading());
       List<Event> dailyEvents = await _eventListProvider.getEventsOnDay(day);
-      _markFavoritedEvents(dailyEvents);
+      _favoriteAndRSVPProvider.markFavoritedAndRSVPdEvents(dailyEvents);
       _dailyController.sink.add(DailyEventListLoaded(events: dailyEvents));
     } catch (error) {
       _dailyController.sink.add(EventListError(
@@ -88,7 +80,7 @@ class EventBloc {
       _dailyController.sink.add(EventListLoading());
       List<Event> dailyEvents =
           await _eventListProvider.refetchEventsOnDay(day);
-      _markFavoritedEvents(dailyEvents);
+      _favoriteAndRSVPProvider.markFavoritedAndRSVPdEvents(dailyEvents);
       _dailyController.sink.add(DailyEventListLoaded(events: dailyEvents));
     } catch (error) {
       _dailyController.sink.add(EventListError(
@@ -102,7 +94,7 @@ class EventBloc {
       _weeklyController.sink.add(EventListLoading());
       List<Event> weeklyEvents =
           await _eventListProvider.getEventsBetween(weekStart, weekEnd);
-      _markFavoritedEvents(weeklyEvents);
+      _favoriteAndRSVPProvider.markFavoritedAndRSVPdEvents(weeklyEvents);
       Map<DateTime, List<Event>> mappedWeeklyEvents =
           _eventListProvider.splitEventsByDay(weeklyEvents);
       _weeklyController.sink
@@ -119,7 +111,7 @@ class EventBloc {
       _weeklyController.sink.add(EventListLoading());
       List<Event> weeklyEvents =
           await _eventListProvider.refetchEventsBetween(weekStart, weekEnd);
-      _markFavoritedEvents(weeklyEvents);
+      _favoriteAndRSVPProvider.markFavoritedAndRSVPdEvents(weeklyEvents);
       Map<DateTime, List<Event>> mappedWeeklyEvents =
           _eventListProvider.splitEventsByDay(weeklyEvents);
       _weeklyController.sink
@@ -135,8 +127,8 @@ class EventBloc {
     try {
       _recentEventsController.sink.add(EventListLoading());
       RecentEvents recentEvents = await _eventListProvider.getRecentEvents(org);
-      _markFavoritedEvents(recentEvents.pastEvents);
-      _markFavoritedEvents(recentEvents.upcomingEvents);
+      _favoriteAndRSVPProvider.markFavoritedAndRSVPdEvents(recentEvents.pastEvents);
+      _favoriteAndRSVPProvider.markFavoritedAndRSVPdEvents(recentEvents.upcomingEvents);
       _recentEventsController.sink
           .add(RecentEventsLoaded(recentEvents: recentEvents));
     } catch (error) {
@@ -151,8 +143,8 @@ class EventBloc {
       _recentEventsController.sink.add(EventListLoading());
       RecentEvents recentEvents =
           await _eventListProvider.refetchRecentEvents(org);
-      _markFavoritedEvents(recentEvents.pastEvents);
-      _markFavoritedEvents(recentEvents.upcomingEvents);
+      _favoriteAndRSVPProvider.markFavoritedAndRSVPdEvents(recentEvents.pastEvents);
+      _favoriteAndRSVPProvider.markFavoritedAndRSVPdEvents(recentEvents.upcomingEvents);
       _recentEventsController.sink
           .add(RecentEventsLoaded(recentEvents: recentEvents));
     } catch (error) {

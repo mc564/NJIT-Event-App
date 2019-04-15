@@ -9,31 +9,31 @@ import './calendar_widgets.dart';
 import '../../common/daily_event_list_page.dart';
 
 import '../../blocs/event_bloc.dart';
-import '../../blocs/favorite_bloc.dart';
 import '../../blocs/date_bloc.dart';
 import '../../blocs/edit_bloc.dart';
+import '../../blocs/favorite_rsvp_bloc.dart';
 
 import '../../models/event.dart';
 
 class CalendarPage extends StatefulWidget {
   final DateBloc _dateBloc;
   final EventBloc _eventBloc;
-  final FavoriteBloc _favoriteBloc;
-  final EditEventBloc _editBloc;
+  final EditEventBloc _editBloc; 
+  final FavoriteAndRSVPBloc _favoriteAndRSVPBloc;
   final Function _canEdit;
   final DateTime _selectedDay;
 
   CalendarPage(
       {@required EventBloc eventBloc,
-      @required FavoriteBloc favoriteBloc,
+      @required FavoriteAndRSVPBloc favoriteAndRSVPBloc,
       @required EditEventBloc editBloc,
       @required DateBloc dateBloc,
       @required DateTime selectedDay,
       @required Function canEdit})
       : _eventBloc = eventBloc,
         _editBloc = editBloc,
-        _favoriteBloc = favoriteBloc,
         _dateBloc = dateBloc,
+        _favoriteAndRSVPBloc = favoriteAndRSVPBloc,
         _selectedDay = selectedDay,
         _canEdit = canEdit;
 
@@ -110,8 +110,8 @@ class _CalendarPageState extends State<CalendarPage> {
                   return DailyEventListPage(
                       day: dayPressed,
                       eventBloc: widget._eventBloc,
-                      favoriteBloc: widget._favoriteBloc,
                       editBloc: widget._editBloc,
+                      favoriteAndRSVPBloc: widget._favoriteAndRSVPBloc,
                       canEdit: widget._canEdit,
                       key: PageStorageKey<String>(DateTime.now().toString()));
                 },

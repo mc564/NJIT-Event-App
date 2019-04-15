@@ -17,7 +17,7 @@ import './cosine_similarity_provider.dart';
 import './metrics_provider.dart';
 import './favorite_provider.dart';
 
-//utility methods to deal with event lists, including sorting, filtering and adding events
+//utility methods to deal with event lists, including sorting and filtering
 class EventListProvider {
   _EventCache _cache;
   MetricsProvider _metricsProvider;
@@ -362,19 +362,6 @@ class EventListProvider {
       throw Exception(
           "Failed to get similar events in EventsModel: " + error.toString());
     }
-  }
-
-  Future<bool> addEvent(Event event) {
-    print("[MODEL] adding event");
-    return DatabaseEventAPI.addEvent(event).then((bool success) {
-      if (success) {
-        return true;
-      } else {
-        throw Exception("Adding event failed.");
-      }
-    }).catchError((error) {
-      throw Exception("Adding event failed: " + error.toString());
-    });
   }
 
   void setSort(Sort sortType) {

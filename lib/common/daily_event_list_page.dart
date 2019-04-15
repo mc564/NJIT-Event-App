@@ -1,28 +1,28 @@
 import 'package:flutter/material.dart';
-import '../blocs/favorite_bloc.dart';
 import '../blocs/edit_bloc.dart';
 import '../blocs/event_bloc.dart';
+import '../blocs/favorite_rsvp_bloc.dart';
 import 'package:intl/intl.dart';
 import './daily_event_list.dart';
 
 class DailyEventListPage extends StatelessWidget {
   final DateTime _day;
-  final FavoriteBloc _favoriteBloc;
   final EditEventBloc _editBloc;
   final EventBloc _eventBloc;
+  final FavoriteAndRSVPBloc _favoriteAndRSVPBloc;
   final Function _canEdit;
   final DateFormat _dayFormatter;
   final Key _key;
 
   DailyEventListPage(
       {@required EventBloc eventBloc,
-      @required FavoriteBloc favoriteBloc,
       @required EditEventBloc editBloc,
+      @required FavoriteAndRSVPBloc favoriteAndRSVPBloc,
       @required Function canEdit,
       @required DateTime day,
       Key key})
       : _eventBloc = eventBloc,
-        _favoriteBloc = favoriteBloc,
+        _favoriteAndRSVPBloc = favoriteAndRSVPBloc,
         _editBloc = editBloc,
         _canEdit = canEdit,
         _day = day,
@@ -50,7 +50,7 @@ class DailyEventListPage extends StatelessWidget {
         eventBloc: _eventBloc,
         editBloc: _editBloc,
         key: _key,
-        favoriteBloc: _favoriteBloc,
+        favoriteAndRSVPBloc: _favoriteAndRSVPBloc,
         canEdit: _canEdit,
       ),
     );

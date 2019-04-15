@@ -69,4 +69,49 @@ class SearchProvider {
     return Tuple2<List<String>, String>(
         tokenStringMatches(token), noResultsFoundMessage(token));
   }
+
+  //mark an event favorited if it's in searchableEvents
+  void changeEventFavoriteStatus(Event changedEvent) {
+    if (_allSearchableEvents == null) return;
+    for (Event event in _allSearchableEvents) {
+      if (event.eventId == changedEvent.eventId) {
+        event.favorited = changedEvent.favorited;
+        break;
+      }
+    }
+  }
+
+  //mark an event rsvpd if it's in searchable Events
+  void changeEventRSVPStatus(Event changedEvent) {
+    if (_allSearchableEvents == null) return;
+    for (Event event in _allSearchableEvents) {
+      if (event.eventId == changedEvent.eventId) {
+        event.rsvpd = changedEvent.rsvpd;
+        break;
+      }
+    }
+  }
+
+  void nullifyAllFavorites() {
+    if (_allSearchableEvents == null) return;
+    for (Event event in _allSearchableEvents) {
+      if (event.favorited = true) {
+        event.favorited = false;
+      }
+    }
+  }
+
+  void nullifySelectedFavorites(List<Event> favoritesToNullify) {
+    if (_allSearchableEvents == null ||
+        favoritesToNullify == null ||
+        favoritesToNullify.length == 0) return;
+    for (Event event in _allSearchableEvents) {
+      if (favoritesToNullify.singleWhere(
+              (Event eventToNullify) => eventToNullify.eventId == event.eventId,
+              orElse: () => null) !=
+          null) {
+        event.favorited = false;
+      }
+    }
+  }
 }

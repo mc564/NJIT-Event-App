@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../blocs/favorite_bloc.dart';
 import '../../blocs/event_bloc.dart';
 import '../../blocs/edit_bloc.dart';
+import '../../blocs/favorite_rsvp_bloc.dart';
 import '../../models/event.dart';
 import '../../common/error_dialog.dart';
 import './favorites_widgets.dart';
@@ -9,17 +10,17 @@ import 'dart:async';
 
 class FavoritesPage extends StatefulWidget {
   final EditEventBloc _editBloc;
-  final FavoriteBloc _favoriteBloc;
+  final FavoriteAndRSVPBloc _favoriteAndRSVPBloc;
   final EventBloc _eventBloc;
   final Function _canEditEvent;
 
   FavoritesPage(
       {@required EditEventBloc editBloc,
-      @required FavoriteBloc favoriteBloc,
+      @required FavoriteAndRSVPBloc favoriteAndRSVPBloc,
       @required EventBloc eventBloc,
       @required Function canEditEvent})
       : _editBloc = editBloc,
-        _favoriteBloc = favoriteBloc,
+        _favoriteAndRSVPBloc = favoriteAndRSVPBloc,
         _eventBloc = eventBloc,
         _canEditEvent = canEditEvent;
 
@@ -68,7 +69,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
   FavoriteGridTile _buildTile(Event event, int color) {
     return FavoriteGridTile(
       editBloc: widget._editBloc,
-      favoriteBloc: widget._favoriteBloc,
+      favoriteAndRSVPBloc: widget._favoriteAndRSVPBloc,
       eventBloc: widget._eventBloc,
       event: event,
       color: color,
@@ -92,7 +93,6 @@ class _FavoritesPageState extends State<FavoritesPage> {
   }
 
   List<Widget> _buildActionTiles() {
-    //TODO 1 tile to delete all favorites or past favorites for now
     List<Widget> list = List<Widget>();
     list.add(
       ListTile(
@@ -104,7 +104,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
               color: Color(0xffffdde2),
               onPressed: () => _showAreYouSureDialog(
                     'Are you sure you want to delete ALL your favorites?',
-                    () => widget._favoriteBloc.sink.add(
+                    () => widget._favoriteAndRSVPBloc.favoriteBloc.sink.add(
                           RemoveAllFavorites(),
                         ),
                   ),
@@ -114,7 +114,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
               color: Color(0xffFFFFCC),
               onPressed: () => _showAreYouSureDialog(
                     'Are you sure you want to delete ALL favorites for PAST events?',
-                    () => widget._favoriteBloc.sink.add(
+                    () => widget._favoriteAndRSVPBloc.favoriteBloc.sink.add(
                           RemovePastFavorites(),
                         ),
                   ),
@@ -159,11 +159,13 @@ class _FavoritesPageState extends State<FavoritesPage> {
   @override
   void initState() {
     super.initState();
-    _errorListener = widget._favoriteBloc.favoriteSettingErrors.listen((error) {
-      if(error is FavoriteError){
-        print("generic error: "+error.errorMsg);
-      }else if(error is FavoriteSettingError){
-        print("setting error: "+error.errorMsg);
+    _errorListener = widget
+        ._favoriteAndRSVPBloc.favoriteBloc.favoriteSettingErrors
+        .listen((error) {
+      if (error is FavoriteError) {
+        print("generic error: " + error.errorMsg);
+      } else if (error is FavoriteSettingError) {
+        print("setting error: " + error.errorMsg);
       }
       _showErrorDialog();
     });
@@ -176,16 +178,28 @@ class _FavoritesPageState extends State<FavoritesPage> {
         iconTheme: IconThemeData(color: Colors.black),
         backgroundColor: Colors.lightBlue[50],
         centerTitle: true,
-        title: Text(
-          'Favorites',
-          style: TextStyle(
-            color: Colors.black,
-          ),
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            Text(
+              'Favorites',
+              style: TextStyle(
+                color: Colors.black,
+              ),
+            ),
+            IconButton(
+              icon: Icon(Icons.refresh),
+              onPressed: () =>
+                  widget._favoriteAndRSVPBloc.favoriteBloc.sink.add(
+                    FetchFavorites(),
+                  ),
+            ),
+          ],
         ),
       ),
       body: StreamBuilder<FavoriteState>(
-        stream: widget._favoriteBloc.favoriteRequests,
-        initialData: widget._favoriteBloc.initialState,
+        stream: widget._favoriteAndRSVPBloc.favoriteBloc.favoriteRequests,
+        initialData: widget._favoriteAndRSVPBloc.favoriteBloc.initialState,
         builder: (BuildContext context, AsyncSnapshot<FavoriteState> snapshot) {
           FavoriteState state = snapshot.data;
           List<Event> faves = List<Event>();

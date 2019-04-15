@@ -3,11 +3,11 @@ import 'package:flutter/material.dart';
 import '../../blocs/date_bloc.dart';
 import '../../blocs/event_bloc.dart';
 import '../../blocs/search_bloc.dart';
-import '../../blocs/favorite_bloc.dart';
 import '../../blocs/user_bloc.dart';
 import '../../blocs/message_bloc.dart';
 import '../../blocs/organization_bloc.dart';
 import '../../blocs/edit_bloc.dart';
+import '../../blocs/favorite_rsvp_bloc.dart';
 
 import './home_widgets.dart';
 
@@ -18,6 +18,7 @@ import '../calendar/calendar.dart';
 import '../filter/filter.dart';
 import '../search/search.dart';
 import '../favorites/favorites.dart';
+import '../rsvp/rsvp.dart';
 import '../organization/organization.dart';
 import '../admin/admin.dart';
 import '../message/message.dart';
@@ -42,7 +43,7 @@ class _HomePageState extends State<HomePage> {
   EditEventBloc _editBloc;
   DateBloc _dateBloc;
   SearchBloc _searchBloc;
-  FavoriteBloc _favoriteBloc;
+  FavoriteAndRSVPBloc _favoriteAndRSVPBloc;
   MessageBloc _messageBloc;
   OrganizationBloc _organizationBloc;
   PageController _pageController;
@@ -68,6 +69,7 @@ class _HomePageState extends State<HomePage> {
         entries.add(PopupMenuItem(value: 'search', child: Text('Search')));
         entries
             .add(PopupMenuItem(value: 'favorites', child: Text('Favorites')));
+        entries.add(PopupMenuItem(value: 'rsvp', child: Text('RSVP')));
         entries.add(PopupMenuItem(value: 'messages', child: Text('Messages')));
         entries.add(PopupMenuItem(value: 'log out', child: Text('Log Out')));
         return entries;
@@ -92,9 +94,9 @@ class _HomePageState extends State<HomePage> {
             context,
             MaterialPageRoute(
               builder: (BuildContext context) => SearchPage(
+                    favoriteAndRSVPBloc: _favoriteAndRSVPBloc,
                     editBloc: _editBloc,
                     searchBloc: _searchBloc,
-                    favoriteBloc: _favoriteBloc,
                     eventBloc: _eventBloc,
                     canEdit: _organizationBloc.canEdit,
                   ),
@@ -109,9 +111,21 @@ class _HomePageState extends State<HomePage> {
             MaterialPageRoute(
               builder: (BuildContext context) => FavoritesPage(
                     editBloc: _editBloc,
-                    favoriteBloc: _favoriteBloc,
+                    favoriteAndRSVPBloc: _favoriteAndRSVPBloc,
                     eventBloc: _eventBloc,
                     canEditEvent: _organizationBloc.canEdit,
+                  ),
+            ),
+          );
+        } else if (value == 'rsvp') {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (BuildContext context) => RSVPPage(
+                    favoriteAndRSVPBloc: _favoriteAndRSVPBloc,
+                    editBloc: _editBloc,
+                    canEdit: _organizationBloc.canEdit,
+                    eventBloc: _eventBloc,
                   ),
             ),
           );
@@ -120,9 +134,9 @@ class _HomePageState extends State<HomePage> {
             context,
             MaterialPageRoute(
               builder: (BuildContext context) => OrganizationPage(
-                    editBloc: _editBloc,
-                    favoriteBloc: _favoriteBloc,
+                    favoriteAndRSVPBloc: _favoriteAndRSVPBloc,
                     eventBloc: _eventBloc,
+                    editBloc: _editBloc,
                     organizationBloc: _organizationBloc,
                     ucid: widget._userBloc.ucid,
                   ),
@@ -247,7 +261,7 @@ class _HomePageState extends State<HomePage> {
     return DailyEventList(
         editBloc: _editBloc,
         eventBloc: _eventBloc,
-        favoriteBloc: _favoriteBloc,
+        favoriteAndRSVPBloc: _favoriteAndRSVPBloc,
         day: dateState.day,
         canEdit: _organizationBloc.canEdit,
         key: PageStorageKey<String>(DateTime.now().toString()));
@@ -259,8 +273,8 @@ class _HomePageState extends State<HomePage> {
     return WeeklyEventList(
       canEdit: _organizationBloc.canEdit,
       editBloc: _editBloc,
-      favoriteBloc: _favoriteBloc,
       eventBloc: _eventBloc,
+      favoriteAndRSVPBloc: _favoriteAndRSVPBloc,
       dayStart: state.weekStart,
       dayEnd: state.weekEnd,
       key: PageStorageKey<String>(DateTime.now().toString()),
@@ -271,7 +285,7 @@ class _HomePageState extends State<HomePage> {
     return CalendarPage(
       editBloc: _editBloc,
       eventBloc: _eventBloc,
-      favoriteBloc: _favoriteBloc,
+      favoriteAndRSVPBloc: _favoriteAndRSVPBloc,
       dateBloc: _dateBloc,
       selectedDay: state.day,
       canEdit: _organizationBloc.canEdit,
@@ -324,18 +338,23 @@ class _HomePageState extends State<HomePage> {
 
     DateTime now = DateTime.now();
     print('in init state of home!');
-    _favoriteBloc = FavoriteBloc(ucid: widget._userBloc.ucid);
-    _eventBloc = EventBloc(favoriteProvider: _favoriteBloc.favoriteProvider);
+    _searchBloc = SearchBloc();
+    _favoriteAndRSVPBloc = FavoriteAndRSVPBloc(
+        ucid: widget._userBloc.ucid, searchSink: _searchBloc.sink);
+    _eventBloc = EventBloc(
+        favoriteProvider: _favoriteAndRSVPBloc.favoriteBloc.favoriteProvider,
+        favoriteAndRSVPProvider: _favoriteAndRSVPBloc.favoriteAndRSVPProvider);
+    _searchBloc.initialize(eventListProvider: _eventBloc.eventListProvider);
     _dateBloc = DateBloc(
       initialDay: DateTime(now.year, now.month, now.day),
     );
-    _searchBloc = SearchBloc(eventListProvider: _eventBloc.eventListProvider);
     _messageBloc = MessageBloc(ucid: widget._userBloc.ucid);
     _organizationBloc = OrganizationBloc(
         messageProvider: _messageBloc.messageProvider,
         userProvider: widget._userBloc.userProvider);
     _editBloc = EditEventBloc(
-        searchSink: _searchBloc.sink, favoriteSink: _favoriteBloc.sink);
+        searchSink: _searchBloc.sink,
+        favoriteSink: _favoriteAndRSVPBloc.favoriteBloc.sink);
     _view = null;
     //make it some ridiculously large number to allow scrolling both directions
     int initialPage = 20000;
@@ -386,9 +405,9 @@ class _HomePageState extends State<HomePage> {
     _dateBloc.dispose();
     _eventBloc.dispose();
     _searchBloc.dispose();
-    _favoriteBloc.dispose();
     _messageBloc.dispose();
     _organizationBloc.dispose();
+    _favoriteAndRSVPBloc.dispose();
     _editBloc.dispose();
     super.dispose();
   }

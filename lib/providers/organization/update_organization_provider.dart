@@ -231,6 +231,11 @@ class UpdateOrganizationProvider {
             orElse: () => null) !=
         null) {
       return 'Duplicate E-board member exists.';
+    } else if (_orgWithUpdates.regularMembers.firstWhere(
+            (OrganizationMember member) => member.ucid == ucid,
+            orElse: () => null) !=
+        null) {
+      return 'Duplicate regular member exists.';
     } else if (ucid.length > _maxUCIDLength) {
       return 'UCID must be less than length ' + _maxUCIDLength.toString() + '.';
     } else if (role.length > _maxRoleLength) {
@@ -247,6 +252,11 @@ class UpdateOrganizationProvider {
             orElse: () => null) !=
         null) {
       return 'Duplicate regular member exists.';
+    } else if (_orgWithUpdates.eBoardMembers.firstWhere(
+            (OrganizationMember member) => member.ucid == ucid,
+            orElse: () => null) !=
+        null) {
+          return 'Duplicate E-Board member exists.';
     } else if (ucid.length > _maxUCIDLength) {
       return 'UCID must be less than length ' + _maxUCIDLength.toString() + '.';
     } else {
@@ -274,7 +284,7 @@ class UpdateOrganizationProvider {
     }
   }
 
-    Future<bool> requestReactivation() async {
+  Future<bool> requestReactivation() async {
     try {
       bool requestSubmitted =
           await DatabaseEventAPI.requestReactivation(_orgWithUpdates);

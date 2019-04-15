@@ -16,16 +16,21 @@ class SearchBloc {
   SearchState _initialEventSearchState;
   SearchState _initialStringSearchState;
 
-  SearchBloc({@required EventListProvider eventListProvider}) {
+  SearchBloc() {
     _requestsController = StreamController<SearchEvent>.broadcast();
     _searchController = StreamController<SearchState>.broadcast();
-    _eventListProvider = eventListProvider;
     _searchProvider = SearchProvider();
-    initializeForSearchingEvents();
-    initializeForSearchingStrings();
     _requestsController.stream.forEach((SearchEvent event) {
       event.execute(this);
     });
+  }
+
+  //need a separate initialize method because there are dependencies that are tied in a circle
+  //so break it by calling a separate initialize method
+  void initialize({@required EventListProvider eventListProvider}) {
+    _eventListProvider = eventListProvider;
+    initializeForSearchingEvents();
+    initializeForSearchingStrings();
   }
 
   SearchState get initialEventSearchState => _initialEventSearchState;
@@ -93,6 +98,46 @@ class SearchBloc {
     }
   }
 
+  void changeEventFavoriteStatus(Event changedEvent) {
+    try {
+      _searchProvider.changeEventFavoriteStatus(changedEvent);
+    } catch (error) {
+      print('error in SearchBloc changeEventFavoriteStatus method: ' +
+          error.toString());
+      _searchController.sink.add(SearchError());
+    }
+  }
+
+  void changeEventRSVPStatus(Event changedEvent) {
+    try {
+      _searchProvider.changeEventRSVPStatus(changedEvent);
+    } catch (error) {
+      print('error in SearchBloc changeEventRSVPStatus method: ' +
+          error.toString());
+      _searchController.sink.add(SearchError());
+    }
+  }
+
+  void nullifyAllFavorites() {
+    try {
+      _searchProvider.nullifyAllFavorites();
+    } catch (error) {
+      print('error in SearchBloc nullifyAllFavorites method: ' +
+          error.toString());
+      _searchController.sink.add(SearchError());
+    }
+  }
+
+  void nullifySelectedFavorites(List<Event> selectedFaves) {
+    try {
+      _searchProvider.nullifySelectedFavorites(selectedFaves);
+    } catch (error) {
+      print('error in SearchBloc nullifySelectedFavorites method: ' +
+          error.toString());
+      _searchController.sink.add(SearchError());
+    }
+  }
+
   void dispose() {
     _searchController.close();
     _requestsController.close();
@@ -139,6 +184,42 @@ class SearchEvents extends SearchEvent {
 class ReinitializeForSearchingEvents extends SearchEvent {
   void execute(SearchBloc searchBloc) {
     searchBloc.initializeForSearchingEvents();
+  }
+}
+
+class ChangeEventFavoriteStatus extends SearchEvent {
+  final Event changedEvent;
+  ChangeEventFavoriteStatus({@required Event changedEvent})
+      : changedEvent = changedEvent,
+        super([changedEvent]);
+  void execute(SearchBloc searchBloc) {
+    searchBloc.changeEventFavoriteStatus(changedEvent);
+  }
+}
+
+class ChangeEventRSVPStatus extends SearchEvent {
+  final Event changedEvent;
+  ChangeEventRSVPStatus({@required Event changedEvent})
+      : changedEvent = changedEvent,
+        super([changedEvent]);
+  void execute(SearchBloc searchBloc) {
+    searchBloc.changeEventRSVPStatus(changedEvent);
+  }
+}
+
+class NullifyAllFavorites extends SearchEvent {
+  void execute(SearchBloc searchBloc) {
+    searchBloc.nullifyAllFavorites();
+  }
+}
+
+class NullifySelectedFavorites extends SearchEvent {
+  final List<Event> selectedFavorites;
+  NullifySelectedFavorites({@required List<Event> selectedFavorites})
+      : selectedFavorites = selectedFavorites,
+        super([selectedFavorites]);
+  void execute(SearchBloc searchBloc) {
+    searchBloc.nullifySelectedFavorites(selectedFavorites);
   }
 }
 

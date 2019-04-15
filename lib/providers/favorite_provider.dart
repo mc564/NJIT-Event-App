@@ -118,11 +118,15 @@ class FavoriteProvider {
     }
   }
 
-  Future<bool> removePastFavorites() async {
+  List<Event> pastFavorites() {
+    List<Event> pastEventsFavorited = _allFavoritedEvents
+        .where((Event e) => e.endTime.isBefore(DateTime.now()))
+        .toList();
+    return pastEventsFavorited;
+  }
+
+  Future<bool> removePastFavorites(List<Event> pastEventsFavorited) async {
     try {
-      List<Event> pastEventsFavorited = _allFavoritedEvents
-          .where((Event e) => e.endTime.isBefore(DateTime.now()))
-          .toList();
       List<String> pastEventIds =
           pastEventsFavorited.map((Event e) => e.eventId).toList();
       bool removedPastFavorites = await removeSelectedFavorites(pastEventIds);

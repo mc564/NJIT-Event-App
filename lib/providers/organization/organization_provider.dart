@@ -82,14 +82,12 @@ class OrganizationProvider {
             null) {
           return true;
         } else {
-          //not sure if I should throw an error here? probably can continue on using program without
-          //this working
           return false;
         }
       }
     } catch (error) {
       throw Exception(
-          'Error in Organization Provider function organizationInfo: ' +
+          'Error in Organization Provider function canEdit: ' +
               error.toString());
     }
   }
