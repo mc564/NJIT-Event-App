@@ -11,23 +11,23 @@ void main() {
 
   Event event1 =Event(eventId: 'abc', location: 'Campus Center', locationCode: Location.CC, title: 'Hello',
     startTime: DateTime.now(), endTime: DateTime.now(), organization: 'NJIT', category: Category.Miscellaneous,
-    description: 'Spay me for the dooret.');
+    description: 'Spay me for the dooret.', favorited: false);
   Event event2 =Event(eventId: 'def', location: 'Culimore', locationCode: Location.CULM, title: 'Hey',
     startTime: DateTime.now(), endTime: DateTime.now(), organization: 'NJIT', category: Category.AlumniAndUniversity,
-    description: 'Spaloonebabagoscooties.');
+    description: 'Spaloonebabagoscooties.', favorited: false);
   Event event3 =Event(eventId: 'ghi', location: 'Athletic Field', locationCode: Location.AF, title: 'Hi',
     startTime: DateTime.now(), endTime: DateTime.now(), organization: 'NJIT', category: Category.Sports,
-    description: 'Blood Bagel');
+    description: 'Blood Bagel', favorited: false);
 
   Event event4 =Event(eventId: 'abc', location: 'Campus Center', locationCode: Location.CC, title: '',
     startTime: DateTime.now(), endTime: DateTime.now(), organization: 'NJIT', category: Category.Miscellaneous,
-    description: 'Spay me for the dooret.');
+    description: 'Spay me for the dooret.', favorited: false);
   Event event5 =Event(eventId: 'def', location: 'Culimore', locationCode: Location.CULM, title: null,
     startTime: DateTime.now(), endTime: DateTime.now(), organization: 'NJIT', category: Category.AlumniAndUniversity,
-    description: 'Spaloonebabagoscooties.');
+    description: 'Spaloonebabagoscooties.', favorited: false);
   Event event6 =Event(eventId: 'ghi', location: 'Athletic Field', locationCode: Location.AF, title: 'Hi',
     startTime: DateTime.now(), endTime: DateTime.now(), organization: 'NJIT', category: Category.Sports,
-    description: 'Blood Bagel');
+    description: 'Blood Bagel', favorited: false);
 
   List<Event> events = [event1, event2, event3];
   List<Event> events2 = [event4, event5, event6];

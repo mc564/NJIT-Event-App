@@ -1,10 +1,6 @@
-import 'package:flutter/material.dart';
-import 'dart:async';
 import '../../lib/models/event.dart';
 import '../../lib/models/location.dart';
 import '../../lib/models/category.dart';
-import '../../lib/api/database_event_api.dart';
-import '../../lib/api/njit_event_api.dart';
 import '../../lib/providers/favorite_provider.dart';
 import 'package:test_api/test_api.dart';
 
