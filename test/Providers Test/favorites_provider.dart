@@ -12,13 +12,6 @@ void main() {
   
   FavoriteProvider fave = FavoriteProvider(ucid: 'lh252');
 
-  test('Test: Initialized', () {
-
-    var result = fave.initialize();
-
-    expect(result, true);
-  });
-
   test('Test: No Faves', () {
 
     var result = fave.allFavorites;
@@ -67,4 +60,14 @@ void main() {
 
     expect(result, false);
   });
+
+  //Decommissioned due to the method being removed.
+  /*
+  test('Test: Initialized', () {
+
+    var result = fave.initialize();
+
+    expect(result, true);
+  });
+  */
 }
