@@ -38,7 +38,7 @@ class _EditPageState extends State<EditPage> {
           labelStyle:
               TextStyle(color: Colors.black, fontWeight: FontWeight.w600),
           filled: true,
-          fillColor: Colors.pink[50],
+          fillColor: Color(0xffffdde2),
           border: InputBorder.none,
         ),
         initialValue: _currentlyEditing.title,
@@ -57,7 +57,7 @@ class _EditPageState extends State<EditPage> {
           labelStyle:
               TextStyle(color: Colors.black, fontWeight: FontWeight.w600),
           filled: true,
-          fillColor: Colors.pink[100],
+          fillColor: Color(0xffffffcc),
           border: InputBorder.none,
         ),
         initialValue: _currentlyEditing.organization,
@@ -67,18 +67,22 @@ class _EditPageState extends State<EditPage> {
         });
   }
 
-  DropDownButtonFormField _buildCategoryField() {
-    return DropDownButtonFormField(
-      hint: 'Event Category',
-      items: _categoryDropdownItems,
-      color: Colors.pink[200],
-      textColor: Colors.black,
-      initialValue: CategoryHelper.getString(_currentlyEditing.category),
-      validator: widget._editBloc.categoryValidator,
-      onSaved: (String value) {
-        widget._editBloc.sink.add(SetCategory(value));
-      },
-    );
+  Theme _buildCategoryField() {
+    return Theme(
+        data: ThemeData(
+          canvasColor: Color(0xffdcf9ec),
+        ),
+        child: DropDownButtonFormField(
+          hint: 'Event Category',
+          items: _categoryDropdownItems,
+          color: Color(0xffdcf9ec),
+          textColor: Colors.black,
+          initialValue: CategoryHelper.getString(_currentlyEditing.category),
+          validator: widget._editBloc.categoryValidator,
+          onSaved: (String value) {
+            widget._editBloc.sink.add(SetCategory(value));
+          },
+        ));
   }
 
   TextFormField _buildLocationField() {
@@ -88,7 +92,7 @@ class _EditPageState extends State<EditPage> {
           labelStyle:
               TextStyle(color: Colors.black, fontWeight: FontWeight.w600),
           filled: true,
-          fillColor: Colors.pink[50],
+          fillColor: Color(0xffffffff),
           border: InputBorder.none,
         ),
         initialValue: _currentlyEditing.location,
@@ -106,7 +110,7 @@ class _EditPageState extends State<EditPage> {
           labelStyle:
               TextStyle(color: Colors.black, fontWeight: FontWeight.w600),
           filled: true,
-          fillColor: Colors.pink[100],
+          fillColor: Color(0xfff0f0f0),
           border: InputBorder.none,
         ),
         validator: widget._editBloc.descriptionValidator,
@@ -153,8 +157,8 @@ class _EditPageState extends State<EditPage> {
         } else {
           return RaisedButton(
             child: Text('Edit Event'),
-            color: Colors.pink[200],
-            splashColor: Colors.pink[200],
+            color: Color(0xffffdde2),
+            splashColor: Color(0xffffdde2),
             onPressed: () {
               _editEvent();
             },
@@ -257,8 +261,15 @@ class _EditPageState extends State<EditPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Edit Page'),
-        backgroundColor: Colors.pink[200],
+        centerTitle: true,
+        iconTheme: IconThemeData(
+          color: Colors.black,
+        ),
+        title: Text(
+          'Edit Page',
+          style: TextStyle(color: Colors.black),
+        ),
+        backgroundColor: Colors.lightBlue[50],
       ),
       body: _buildEditForm(context),
     );
