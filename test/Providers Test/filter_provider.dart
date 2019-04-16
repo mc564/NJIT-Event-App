@@ -2,6 +2,7 @@ import '../../lib/providers/filter_provider.dart';
 import '../../lib/models/category.dart';
 import '../../lib/models/sort.dart';
 import '../../lib/models/location.dart';
+import '../../lib/models/filter.dart';
 import 'package:test_api/test_api.dart';
 
 void main() {
