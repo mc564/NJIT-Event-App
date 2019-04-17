@@ -17,6 +17,8 @@ import './cosine_similarity_provider.dart';
 import './metrics_provider.dart';
 import './favorite_provider.dart';
 
+//This file is very confusing to read.  But what do I know? -Logan
+
 //utility methods to deal with event lists, including sorting and filtering
 class EventListProvider {
   _EventCache _cache;
