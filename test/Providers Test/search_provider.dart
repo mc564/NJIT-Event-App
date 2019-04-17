@@ -31,6 +31,7 @@ void main() {
 
   List<Event> events = [event1, event2, event3];
   List<Event> events2 = [event4, event5, event6];
+  List<Event> events3 = [event1];
 
   List<String> strings = ['pineapple', 'cherry', 'orange'];
   List<String> strings2 = ['', null, 'orange'];
@@ -128,5 +129,43 @@ void main() {
     var result = sp2.tokenStringSearch(null);
 
     expect(result.toString(), '[[], No results found for "".]');
+  });
+
+  test('Test: Mark Event as Favorited', () {
+
+    sp.changeEventFavoriteStatus(event1);
+
+    var result = event1.favorited;
+
+    expect(result, true);
+  });
+
+  test('Test: Mark Event as RSVP', () {
+
+    sp.changeEventRSVPStatus(event1);
+
+    var result = event1.rsvpd;
+
+    expect(result, true);
+  });
+
+  test('Test: Remove Favorite Status, Single', () {
+
+    sp.nullifySelectedFavorites(events3);
+
+    var result = event1.favorited;
+
+    expect(result, false);
+  });
+
+  test('Test: Remove Favorite Status, All', () {
+
+    sp.nullifyAllFavorites();
+
+    var result = event2.favorited;
+    var result2 = event3.favorited;
+
+    expect(result, false);
+    expect(result2, false);
   });
 }

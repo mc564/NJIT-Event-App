@@ -12,9 +12,15 @@ void main(){
   Event event2 = Event(eventId: 'abc', location: 'Campus Center', locationCode: Location.CC, title: 'Hello',
     startTime: DateTime.now(), endTime: DateTime.now(), organization: 'NJIT', category: Category.Miscellaneous,
     description: 'Spay me for the dooret.', favorited: false);
+  Event event3 =Event(eventId: 'ghi', location: 'Athletic Field', locationCode: Location.AF, title: 'Hi',
+    startTime: DateTime.now(), endTime: DateTime.now(), organization: 'NJIT', category: Category.Sports,
+    description: 'Blood Bagel', favorited: false);
 
   EditEventProvider edit = EditEventProvider();
   edit.setEventToEdit(event1);
+
+  EditEventProvider edit2 = EditEventProvider();
+  edit2.setEventToEdit(event1);
 
   test('Test: Getters', () {
 
@@ -130,6 +136,20 @@ void main(){
   test('Test: Is Different', () {
 
     var result = edit.noChangesMade();
+
+    expect(result, true);
+  });
+  test('Test: Edit, no changes', () {
+
+    var result = edit2.editEvent(event2);
+
+    expect(result, 'No changes made from original. Cannot submit edit changes. YOU HAVE TO EDIT SOMETHING TO EDIT SOMETHING!!');
+  });
+  test('Test: Edit, new event', () {
+
+    edit2.editEvent(event3);
+
+    var result = edit2.editEvent(event2);
 
     expect(result, true);
   });
