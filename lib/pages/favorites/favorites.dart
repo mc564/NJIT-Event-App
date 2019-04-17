@@ -34,6 +34,30 @@ class FavoritesPage extends StatefulWidget {
 class _FavoritesPageState extends State<FavoritesPage> {
   StreamSubscription _errorListener;
   List<Event> _faves;
+  bool _isLoading;
+
+  void _setupTempListenerForResetFavorites() {
+    setState(() {
+      _isLoading = true;
+    });
+
+    StreamSubscription<FavoriteState> tempListener;
+    tempListener = widget._favoriteAndRSVPBloc.favoriteBloc.favoriteRequests
+        .listen((dynamic state) {
+      if (state is FavoritesUpdated) {
+        setState(() {
+          _isLoading = false;
+          _faves = state.favorites;
+        });
+        tempListener.cancel();
+      } else if (state is FavoriteError) {
+        tempListener.cancel();
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    });
+  }
 
   void _showErrorDialog() {
     showDialog(
@@ -130,20 +154,24 @@ class _FavoritesPageState extends State<FavoritesPage> {
               color: Color(0xffffdde2),
               onPressed: () => _showAreYouSureDialog(
                     'Are you sure you want to delete ALL your favorites?',
-                    () => widget._favoriteAndRSVPBloc.favoriteBloc.sink.add(
-                          RemoveAllFavorites(),
-                        ),
+                    () {
+                      widget._favoriteAndRSVPBloc.favoriteBloc.sink.add(
+                        RemoveAllFavorites(),
+                      );
+                      _setupTempListenerForResetFavorites();
+                    },
                   ),
             ),
             FlatButton(
               child: Text('Delete Past Favorites'),
               color: Color(0xffFFFFCC),
               onPressed: () => _showAreYouSureDialog(
-                    'Are you sure you want to delete ALL favorites for PAST events?',
-                    () => widget._favoriteAndRSVPBloc.favoriteBloc.sink.add(
-                          RemovePastFavorites(),
-                        ),
-                  ),
+                      'Are you sure you want to delete ALL favorites for PAST events?',
+                      () {
+                    widget._favoriteAndRSVPBloc.favoriteBloc.sink
+                        .add(RemovePastFavorites());
+                    _setupTempListenerForResetFavorites();
+                  }),
             ),
           ],
         ),
@@ -185,6 +213,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
   Widget _buildBody() {
     //don't use a streamBuilder here because if a user keeps on swiping to delete, I want to use optimistic updating
     //instead of loading stale data
+    if (_isLoading) return Center(child: CircularProgressIndicator());
     return ListView(children: _buildChildren(_faves));
   }
 
@@ -213,6 +242,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
         _faves = state.favorites;
       }
     }
+    _isLoading = false;
   }
 
   @override
@@ -232,12 +262,13 @@ class _FavoritesPageState extends State<FavoritesPage> {
               ),
             ),
             IconButton(
-              icon: Icon(Icons.refresh),
-              onPressed: () =>
+                icon: Icon(Icons.refresh),
+                onPressed: () {
                   widget._favoriteAndRSVPBloc.favoriteBloc.sink.add(
                     FetchFavorites(),
-                  ),
-            ),
+                  );
+                  _setupTempListenerForResetFavorites();
+                }),
           ],
         ),
       ),

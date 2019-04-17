@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../blocs/message_bloc.dart';
 import '.././../models/message.dart';
@@ -29,6 +30,17 @@ class _MessagePageState extends State<MessagePage> {
 
   Future<void> _refresh() async {
     widget._messageBloc.sink.add(ReloadMessages());
+    StreamSubscription<MessageState> tempListener;
+    tempListener = widget._messageBloc.messages.listen((dynamic state) {
+      if (state is MessagesLoaded) {
+        setState(() {
+          _messageList = state.messages;
+        });
+        tempListener.cancel();
+      } else if (state is MessageError) {
+        tempListener.cancel();
+      }
+    });
   }
 
   ListTile _buildNoMessagesListTile() {
