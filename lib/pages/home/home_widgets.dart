@@ -61,7 +61,7 @@ class ViewDropDown extends StatelessWidget {
                   weekDayFormatter.format(_weekStart) +
                       " - " +
                       weekDayFormatter.format(_weekEnd),
-                  style: TextStyle(fontSize: 14),
+                  style: TextStyle(fontSize: 12),
                 ),
               ],
             ),
@@ -162,8 +162,9 @@ class _WeeklyEventListState extends State<WeeklyEventList> {
   @override
   void initState() {
     super.initState();
-    _favoriteErrorSubscription =
-        widget._favoriteAndRSVPBloc.favoriteBloc.favoriteSettingErrors.listen((dynamic state) {
+    _favoriteErrorSubscription = widget
+        ._favoriteAndRSVPBloc.favoriteBloc.favoriteSettingErrors
+        .listen((dynamic state) {
       //recieve any favorite setting errors? rollback favorite status by setting state
 
       setState(() {});
@@ -191,12 +192,14 @@ class _WeeklyEventListState extends State<WeeklyEventList> {
     tileColorIdx++;
     Color color = tileColors[tileColorIdx % tileColors.length];
     return EventListTileCardStyle(
-        favoriteAndRSVPBloc: widget._favoriteAndRSVPBloc,
-        eventBloc: widget._eventBloc,
-        editBloc: widget._editBloc,
-        canEdit: widget._canEdit,
-        event: event,
-        color: color);
+      favoriteAndRSVPBloc: widget._favoriteAndRSVPBloc,
+      eventBloc: widget._eventBloc,
+      editBloc: widget._editBloc,
+      canEdit: widget._canEdit,
+      event: event,
+      color: color,
+      titleMaxLength: 25,
+    );
   }
 
   @override

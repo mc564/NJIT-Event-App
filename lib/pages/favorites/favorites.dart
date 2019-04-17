@@ -3,9 +3,10 @@ import '../../blocs/favorite_bloc.dart';
 import '../../blocs/event_bloc.dart';
 import '../../blocs/edit_bloc.dart';
 import '../../blocs/favorite_rsvp_bloc.dart';
+import '../../blocs/rsvp_bloc.dart';
 import '../../models/event.dart';
 import '../../common/error_dialog.dart';
-import './favorites_widgets.dart';
+import '../../common/event_list_tile.dart';
 import 'dart:async';
 
 class FavoritesPage extends StatefulWidget {
@@ -32,6 +33,7 @@ class FavoritesPage extends StatefulWidget {
 
 class _FavoritesPageState extends State<FavoritesPage> {
   StreamSubscription _errorListener;
+  List<Event> _faves;
 
   void _showErrorDialog() {
     showDialog(
@@ -66,14 +68,38 @@ class _FavoritesPageState extends State<FavoritesPage> {
         });
   }
 
-  FavoriteGridTile _buildTile(Event event, int color) {
-    return FavoriteGridTile(
-      editBloc: widget._editBloc,
-      favoriteAndRSVPBloc: widget._favoriteAndRSVPBloc,
-      eventBloc: widget._eventBloc,
-      event: event,
-      color: color,
-      canEditEvent: widget._canEditEvent,
+  Dismissible _buildTile(Event event, int color) {
+    return Dismissible(
+      key: Key(DateTime.now().toString()),
+      onDismissed: (DismissDirection direction) {
+        widget._favoriteAndRSVPBloc.favoriteBloc.sink
+            .add(RemoveFavorite(eventToUnfavorite: event));
+        setState(() {
+          _faves.removeWhere((Event e) => event.eventId == e.eventId);
+        });
+      },
+      background: Container(
+          color: Colors.red,
+          padding: EdgeInsets.only(right: 10),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: <Widget>[
+              Text(
+                'Remove Favorite ',
+                style:
+                    TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              ),
+              Icon(Icons.delete, color: Colors.white),
+            ],
+          )),
+      child: EventListTileBasicAbbrevStyle(
+        editBloc: widget._editBloc,
+        favoriteAndRSVPBloc: widget._favoriteAndRSVPBloc,
+        eventBloc: widget._eventBloc,
+        event: event,
+        color: color,
+        canEditEvent: widget._canEditEvent,
+      ),
     );
   }
 
@@ -156,6 +182,12 @@ class _FavoritesPageState extends State<FavoritesPage> {
     return list;
   }
 
+  Widget _buildBody() {
+    //don't use a streamBuilder here because if a user keeps on swiping to delete, I want to use optimistic updating
+    //instead of loading stale data
+    return ListView(children: _buildChildren(_faves));
+  }
+
   @override
   void initState() {
     super.initState();
@@ -169,6 +201,18 @@ class _FavoritesPageState extends State<FavoritesPage> {
       }
       _showErrorDialog();
     });
+    _faves = List<Event>();
+    FavoriteState state = widget._favoriteAndRSVPBloc.favoriteBloc.initialState;
+    if (state is FavoriteSettingError) {
+      if (state.rollbackFavorites != null &&
+          state.rollbackFavorites.length > 0) {
+        _faves = state.rollbackFavorites;
+      }
+    } else if (state is FavoritesUpdated) {
+      if (state.favorites != null && state.favorites.length > 0) {
+        _faves = state.favorites;
+      }
+    }
   }
 
   @override
@@ -197,25 +241,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
           ],
         ),
       ),
-      body: StreamBuilder<FavoriteState>(
-        stream: widget._favoriteAndRSVPBloc.favoriteBloc.favoriteRequests,
-        initialData: widget._favoriteAndRSVPBloc.favoriteBloc.initialState,
-        builder: (BuildContext context, AsyncSnapshot<FavoriteState> snapshot) {
-          FavoriteState state = snapshot.data;
-          List<Event> faves = List<Event>();
-          if (state is FavoriteSettingError) {
-            if (state.rollbackFavorites != null &&
-                state.rollbackFavorites.length > 0) {
-              faves = state.rollbackFavorites;
-            }
-          } else if (state is FavoritesUpdated) {
-            if (state.favorites != null && state.favorites.length > 0) {
-              faves = state.favorites;
-            }
-          }
-          return ListView(children: _buildChildren(faves));
-        },
-      ),
+      body: _buildBody(),
     );
   }
 

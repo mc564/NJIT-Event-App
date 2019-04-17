@@ -18,7 +18,7 @@ import '../../models/event.dart';
 class CalendarPage extends StatefulWidget {
   final DateBloc _dateBloc;
   final EventBloc _eventBloc;
-  final EditEventBloc _editBloc; 
+  final EditEventBloc _editBloc;
   final FavoriteAndRSVPBloc _favoriteAndRSVPBloc;
   final Function _canEdit;
   final DateTime _selectedDay;
@@ -72,7 +72,9 @@ class _CalendarPageState extends State<CalendarPage> {
                 Calendar.Event(
                   date: day,
                   title: event.title,
-                  icon: eventMarkIcon,
+                  icon: EventMarkIcon(
+                    iconNumber: day.day,
+                  ),
                 ),
               );
             }

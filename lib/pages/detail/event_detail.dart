@@ -108,6 +108,59 @@ class _EventDetailPageState extends State<EventDetailPage> {
     );
   }
 
+  void _showWhosGoingDialog(List<String> ucids) {
+    List<Widget> whosGoingWidgets = List<Widget>();
+    int i = 0;
+    for (String ucid in ucids) {
+      whosGoingWidgets.add(Text(
+        (++i).toString() + ") " + ucid,
+        textAlign: TextAlign.left,
+      ));
+    }
+    if (ucids == null || ucids.length == 0) {
+      whosGoingWidgets.add(Text('No one 😞'));
+    }
+
+    if (!_canEdit) {
+      showDialog(
+        context: context,
+        builder: (BuildContext context) => AlertDialog(
+              title: Text('Permission denied, sorry! (◕‿◕✿)'),
+              content: Text(
+                  'You have to be an E-Board member of the organization [' +
+                      widget._event.organization +
+                      '] to see who is going to this event! '),
+              actions: <Widget>[
+                FlatButton(
+                  child: Text('OK'),
+                  onPressed: () => Navigator.of(context).pop(),
+                )
+              ],
+            ),
+      );
+    } else {
+      showDialog(
+        context: context,
+        builder: (BuildContext context) => AlertDialog(
+              title: Text('Who\'s going?'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: whosGoingWidgets,
+                ),
+              ),
+              actions: <Widget>[
+                FlatButton(
+                  child: Text('RETURN'),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ],
+            ),
+      );
+    }
+  }
+
   Widget _buildRSVPSection() {
     return StreamBuilder<RSVPState>(
         initialData: widget._rsvpBloc.eventRSVPInitialState,
@@ -116,7 +169,6 @@ class _EventDetailPageState extends State<EventDetailPage> {
           RSVPState state = snapshot.data;
           List<String> ucids = List<String>();
           List<TextSpan> numPeopleRSVPdText = List<TextSpan>();
-          List<Widget> whosGoingWidgets = List<Widget>();
           numPeopleRSVPdText.add(TextSpan(
               text: 'So far, ', style: TextStyle(color: Colors.black)));
           numPeopleRSVPdText
@@ -143,36 +195,11 @@ class _EventDetailPageState extends State<EventDetailPage> {
                 text: 'people RSVP\'d! ☺️',
                 style: TextStyle(color: Colors.black)));
           }
-          int i = 0;
-          for (String ucid in ucids) {
-            whosGoingWidgets
-                .add(Text((++i).toString() + ") " + ucid, textAlign: TextAlign.left,));
-          }
-          if(ucids == null || ucids.length == 0){
-            whosGoingWidgets.add(Text('No one 😞'));
-          }
+
           return FlatButton(
             child: RichText(text: TextSpan(children: numPeopleRSVPdText)),
             onPressed: () {
-              showDialog(
-                context: context,
-                builder: (BuildContext context) => AlertDialog(
-                      title: Text('Who\'s going?'),
-                      content: SingleChildScrollView(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.start,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: whosGoingWidgets,
-                        ),
-                      ),
-                      actions: <Widget>[
-                        FlatButton(
-                          child: Text('RETURN'),
-                          onPressed: () => Navigator.of(context).pop(),
-                        ),
-                      ],
-                    ),
-              );
+              _showWhosGoingDialog(ucids);
             },
           );
         });

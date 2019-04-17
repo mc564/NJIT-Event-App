@@ -31,31 +31,42 @@ class RSVPPage extends StatefulWidget {
 }
 
 class _RSVPPageState extends State<RSVPPage> {
+  List<Event> _rsvps;
   List<int> colors;
   int colorIdx;
 
   Widget _buildListTile(Event event) {
-    return Row(
-      children: <Widget>[
-        IconButton(
-          icon: Icon(Icons.remove_circle),
-          onPressed: () {
-            widget._favoriteAndRSVPBloc.rsvpBloc.sink
-                .add(RemoveRSVP(eventToUnRSVP: event));
-          },
-        ),
-        Expanded(
-          child: EventListTileCardStyle(
-            event: event,
-            color: Color(colors[colorIdx++ % colors.length]),
-            favoriteAndRSVPBloc: widget._favoriteAndRSVPBloc,
-            eventBloc: widget._eventBloc,
-            editBloc: widget._editBloc,
-            canEdit: widget._canEdit,
-            titleMaxLength: 30,
-          ),
-        ),
-      ],
+    return Dismissible(
+      key: Key(DateTime.now().toString()),
+      onDismissed: (DismissDirection direction) {
+        widget._favoriteAndRSVPBloc.rsvpBloc.sink
+            .add(RemoveRSVP(eventToUnRSVP: event));
+        setState(() {
+          _rsvps.removeWhere((Event e) => e.eventId == event.eventId);
+        });
+      },
+      background: Container(
+          color: Colors.red,
+          padding: EdgeInsets.only(right: 10),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: <Widget>[
+              Text(
+                'Remove RSVP ',
+                style:
+                    TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              ),
+              Icon(Icons.delete, color: Colors.white),
+            ],
+          )),
+      child: EventListTileBasicAbbrevStyle(
+        event: event,
+        color: colors[colorIdx++ % colors.length],
+        favoriteAndRSVPBloc: widget._favoriteAndRSVPBloc,
+        eventBloc: widget._eventBloc,
+        editBloc: widget._editBloc,
+        canEditEvent: widget._canEdit,
+      ),
     );
   }
 
@@ -75,34 +86,24 @@ class _RSVPPageState extends State<RSVPPage> {
   }
 
   Widget _buildBody() {
-    return StreamBuilder<RSVPState>(
-      initialData: widget._favoriteAndRSVPBloc.rsvpBloc.userRSVPInitialState,
-      stream: widget._favoriteAndRSVPBloc.rsvpBloc.userRSVPRequests,
-      builder: (BuildContext context, AsyncSnapshot<RSVPState> snapshot) {
-        List<Widget> children = List<Widget>();
-        RSVPState state = snapshot.data;
-        if (state is UserRSVPsUpdated) {
-          List<Event> rsvps = state.rsvps;
+    List<Widget> children = List<Widget>();
 
-          if (rsvps != null) {
-            if (rsvps.length > 0) {
-              children
-                  .add(_accentTile('These are all your RSVP\'d events! 🙂'));
-            }
+    if (_rsvps != null) {
+      if (_rsvps.length > 0) {
+        children.add(_accentTile('These are all your RSVP\'d events! 🙂'));
+      }
 
-            for (Event event in rsvps) {
-              children.add(_buildListTile(event));
-            }
-          }
-        }
-        if (children.length == 0) {
-          children.add(_accentTile('No RSVPs For Now! 🙂'));
-        }
+      for (Event event in _rsvps) {
+        children.add(_buildListTile(event));
+      }
+    }
 
-        return ListView(
-          children: children,
-        );
-      },
+    if (children.length == 0) {
+      children.add(_accentTile('No RSVPs For Now! 🙂'));
+    }
+
+    return ListView(
+      children: children,
     );
   }
 
@@ -117,6 +118,11 @@ class _RSVPPageState extends State<RSVPPage> {
       0xffF0F0F0,
     ];
     colorIdx = 0;
+    RSVPState initialState =
+        widget._favoriteAndRSVPBloc.rsvpBloc.userRSVPInitialState;
+    if (initialState is UserRSVPsUpdated) {
+      _rsvps = initialState.rsvps;
+    }
   }
 
   @override

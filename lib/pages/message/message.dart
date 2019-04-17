@@ -14,11 +14,12 @@ class MessagePage extends StatefulWidget {
 }
 
 class _MessagePageState extends State<MessagePage> {
-  String _numMessagesString(List<Message> messageList) {
-    if (messageList == null || messageList.length == 0) {
+  List<Message> _messageList;
+  String _numMessagesString() {
+    if (_messageList == null || _messageList.length == 0) {
       return '0 Messages';
     }
-    int numMessages = messageList.length;
+    int numMessages = _messageList.length;
     if (numMessages == 1) {
       return "1 Message";
     } else {
@@ -28,31 +29,6 @@ class _MessagePageState extends State<MessagePage> {
 
   Future<void> _refresh() async {
     widget._messageBloc.sink.add(ReloadMessages());
-  }
-
-  void _showAreYouSureDeleteDialog(Message message) {
-    showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            title: Text('Are you sure you want to delete this message?'),
-            actions: <Widget>[
-              FlatButton(
-                child: Text('Return'),
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-              ),
-              FlatButton(
-                child: Text('Yes'),
-                onPressed: () {
-                  widget._messageBloc.sink.add(RemoveMessage(message: message));
-                  Navigator.of(context).pop();
-                },
-              ),
-            ],
-          );
-        });
   }
 
   ListTile _buildNoMessagesListTile() {
@@ -75,13 +51,7 @@ class _MessagePageState extends State<MessagePage> {
         backgroundColor: Colors.blue,
       );
     }
-    return IconButton(
-      icon: Icon(Icons.remove_circle),
-      color: Colors.red,
-      onPressed: () {
-        _showAreYouSureDeleteDialog(message);
-      },
-    );
+    return Container(height: 0, width: 0);
   }
 
   String _timeCreatedText(Message message) {
@@ -98,112 +68,125 @@ class _MessagePageState extends State<MessagePage> {
     return dateFormatter.format(timeCreated);
   }
 
-  ListTile _buildMessageListTile(Message message) {
+  Dismissible _buildMessageListTile(Message message) {
     bool read = message.messageRead;
-    return ListTile(
-      title: Text(
-        message.title,
-        style:
-            TextStyle(fontWeight: read ? FontWeight.normal : FontWeight.bold),
-      ),
-      subtitle: Padding(
-        padding: EdgeInsets.only(top: 6),
-        child: Text(
-          _timeCreatedText(message),
-        ),
-      ),
-      trailing: _buildTrailingListTileWidget(message),
-      onTap: () {
-        if (message.messageRead == false) {
-          setState(() {
-            message.messageRead = true;
-            widget._messageBloc.sink.add(SetMessageToRead(message: message));
-          });
-        }
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (BuildContext context) =>
-                MessageDetailPage(message: message),
-          ),
-        );
+    return Dismissible(
+      key: Key(DateTime.now().toString()),
+      onDismissed: (DismissDirection direction) {
+        widget._messageBloc.sink.add(RemoveMessage(message: message));
+        setState(() {
+          _messageList.removeWhere(
+              (Message msg) => message.timeCreated == msg.timeCreated);
+        });
       },
+      background: Container(
+          color: Colors.red,
+          padding: EdgeInsets.only(right: 10),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: <Widget>[
+              Text(
+                'Remove Message ',
+                style:
+                    TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              ),
+              Icon(Icons.delete, color: Colors.white),
+            ],
+          )),
+      child: ListTile(
+        title: Text(
+          message.title,
+          style:
+              TextStyle(fontWeight: read ? FontWeight.normal : FontWeight.bold),
+        ),
+        subtitle: Padding(
+          padding: EdgeInsets.only(top: 6),
+          child: Text(
+            _timeCreatedText(message),
+          ),
+        ),
+        trailing: _buildTrailingListTileWidget(message),
+        onTap: () {
+          if (message.messageRead == false) {
+            setState(() {
+              message.messageRead = true;
+              widget._messageBloc.sink.add(SetMessageToRead(message: message));
+            });
+          }
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (BuildContext context) =>
+                  MessageDetailPage(message: message),
+            ),
+          );
+        },
+      ),
     );
   }
 
   Widget _buildBody() {
-    return StreamBuilder<MessageState>(
-      initialData: widget._messageBloc.initialState,
-      stream: widget._messageBloc.messages,
-      builder: (BuildContext context, AsyncSnapshot<MessageState> snapshot) {
-        MessageState state = snapshot.data;
-        Widget child;
-        if (state is MessagesLoading) {
-          child = CircularProgressIndicator();
-        } else if (state is MessagesLoaded) {
-          List<Message> messages = state.messages;
+    Widget child;
 
-          child = Column(
-            mainAxisAlignment: MainAxisAlignment.start,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Padding(
-                padding: EdgeInsets.only(left: 10),
-                child: Text(
-                  _numMessagesString(messages),
-                  textAlign: TextAlign.left,
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
-                  ),
-                ),
-              ),
-              Container(
-                height: 500,
-                child: (messages == null || messages.length == 0)
-                    ? ListView.builder(
-                        itemCount: 1,
-                        itemBuilder: (BuildContext context, int index) {
-                          return _buildNoMessagesListTile();
-                        },
-                      )
-                    : ListView.separated(
-                        separatorBuilder: (BuildContext context, int index) {
-                          return Divider(
-                            color: Colors.black,
-                          );
-                        },
-                        itemCount: messages.length,
-                        itemBuilder: (BuildContext context, int index) {
-                          Message message = messages[index];
-
-                          return _buildMessageListTile(message);
-                        },
-                      ),
-              ),
-            ],
-          );
-        } else {
-          child = ListView.builder(
-            itemCount: 1,
-            itemBuilder: (BuildContext context, int index) {
-              return ListTile(
-                  title: Text(
-                      'Whoops, there was an error! 😿 Try dragging down to refresh, meow 🐱'));
-            },
-          );
-        }
-        return Center(
-          child: Container(
-            margin: EdgeInsets.all(10),
-            child: RefreshIndicator(
-              child: child,
-              onRefresh: () => _refresh(),
+    child = Column(
+      mainAxisAlignment: MainAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Padding(
+          padding: EdgeInsets.only(left: 10),
+          child: Text(
+            _numMessagesString(),
+            textAlign: TextAlign.left,
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 18,
             ),
           ),
-        );
-      },
+        ),
+        Container(
+          height: 500,
+          child: (_messageList == null || _messageList.length == 0)
+              ? ListView.builder(
+                  itemCount: 1,
+                  itemBuilder: (BuildContext context, int index) {
+                    return _buildNoMessagesListTile();
+                  },
+                )
+              : ListView.separated(
+                  separatorBuilder: (BuildContext context, int index) {
+                    return Divider(
+                      color: Colors.black,
+                    );
+                  },
+                  itemCount: _messageList.length,
+                  itemBuilder: (BuildContext context, int index) {
+                    Message message = _messageList[index];
+
+                    return _buildMessageListTile(message);
+                  },
+                ),
+        ),
+      ],
     );
+
+    return Center(
+      child: Container(
+        margin: EdgeInsets.all(10),
+        child: RefreshIndicator(
+          child: child,
+          onRefresh: () => _refresh(),
+        ),
+      ),
+    );
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    MessageState initialState = widget._messageBloc.initialState;
+    if (initialState is MessagesLoaded) {
+      _messageList = initialState.messages;
+    }
   }
 
   @override

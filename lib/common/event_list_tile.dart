@@ -171,6 +171,235 @@ class _EventListTileBasicStyleState extends State<EventListTileBasicStyle> {
   }
 }
 
+class EventListTileBasicAbbrevStyle extends StatefulWidget {
+  final EditEventBloc _editBloc;
+  final FavoriteAndRSVPBloc _favoriteAndRSVPBloc;
+  final EventBloc _eventBloc;
+  final Function _canEditEvent;
+  final Event _event;
+  final int _color;
+  final int _titleMaxLength;
+
+  EventListTileBasicAbbrevStyle(
+      {@required EditEventBloc editBloc,
+      @required FavoriteAndRSVPBloc favoriteAndRSVPBloc,
+      @required EventBloc eventBloc,
+      @required Function canEditEvent,
+      @required Event event,
+      @required int color,
+      titleMaxLength = 35})
+      : _editBloc = editBloc,
+        _favoriteAndRSVPBloc = favoriteAndRSVPBloc,
+        _eventBloc = eventBloc,
+        _canEditEvent = canEditEvent,
+        _event = event,
+        _color = color,
+        _titleMaxLength = titleMaxLength;
+
+  @override
+  State<StatefulWidget> createState() {
+    return _EventListTileBasicAbbrevStyleState();
+  }
+}
+
+class _EventListTileBasicAbbrevStyleState
+    extends State<EventListTileBasicAbbrevStyle> {
+  void _showAreYouSureDialog(BuildContext context, Event toRemove) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) => AlertDialog(
+              title: Text('Are you sure?'),
+              content: Text('Would you like to remove the event [' +
+                  toRemove.title +
+                  '] from your favorites?\n This action cannot be undone.'),
+              actions: <Widget>[
+                FlatButton(
+                    child: Text('Return'),
+                    onPressed: () => Navigator.of(context).pop()),
+                FlatButton(
+                    child: Text('Yes, continue'),
+                    onPressed: () {
+                      widget._favoriteAndRSVPBloc.favoriteBloc.sink
+                          .add(RemoveFavorite(eventToUnfavorite: toRemove));
+                      setState(() {});
+                      Navigator.of(context).pop();
+                    }),
+              ]),
+    );
+  }
+
+  String _cutShort(String s, int length) {
+    if (s.length <= length)
+      return s;
+    else
+      return s.substring(0, length + 1) + "...";
+  }
+
+  String _formatEventDuration(DateTime start, DateTime end) {
+    DateFormat monthFormatter = DateFormat("MMMM");
+    DateFormat timeFormatter = DateFormat.jm();
+    if (start.day == end.day) {
+      return monthFormatter.format(start) +
+          " " +
+          start.day.toString() +
+          "  " +
+          timeFormatter.format(start);
+    }
+    return monthFormatter.format(start) +
+        " " +
+        start.day.toString() +
+        " - " +
+        end.day.toString() +
+        "  " +
+        timeFormatter.format(start);
+  }
+
+  bool _happeningToday() {
+    DateTime now = DateTime.now();
+    DateTime start = widget._event.startTime;
+    if (start.year == start.year &&
+        start.month == now.month &&
+        start.day == now.day)
+      return true;
+    else
+      return false;
+  }
+
+  Widget _buildLeadingImage() {
+    return Container(
+      margin: EdgeInsets.only(left: 15),
+      child: Image.network(
+        'https://vignette.wikia.nocookie.net/line/images/b/bb/2015-brown.png/revision/latest?cb=20150808131630',
+        width: 50,
+      ),
+    );
+  }
+
+  Widget _buildTileMainContent() {
+    return Column(
+      children: <Widget>[
+        Text(_cutShort(widget._event.title, widget._titleMaxLength),
+            textAlign: TextAlign.left,
+            style: TextStyle(fontSize: 15.0, fontWeight: FontWeight.bold)),
+        Text(
+          _formatEventDuration(widget._event.startTime, widget._event.endTime),
+          style: TextStyle(fontSize: 15.0),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFaveAndInfoButton(BuildContext context) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: <Widget>[
+        IconButton(
+            icon: Icon(
+              widget._event.favorited ? Icons.favorite : Icons.favorite_border,
+              color: Colors.pink,
+            ),
+            onPressed: () {
+              if (widget._event.favorited)
+                _showAreYouSureDialog(context, widget._event);
+              else {
+                widget._favoriteAndRSVPBloc.favoriteBloc.sink
+                    .add(AddFavorite(eventToFavorite: widget._event));
+                setState(() {});
+              }
+            }),
+        IconButton(
+          icon: Icon(
+            Icons.info,
+            color: Colors.lightBlue[200],
+          ),
+          onPressed: () {
+            widget._eventBloc.sink.add(AddViewToEvent(event: widget._event));
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (BuildContext context) => EventDetailPage(
+                      event: widget._event,
+                      canEdit: widget._canEditEvent,
+                      editBloc: widget._editBloc,
+                      rsvpBloc: widget._favoriteAndRSVPBloc.rsvpBloc,
+                    ),
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRSVPTag() {
+    return Container(
+      padding: EdgeInsets.symmetric(vertical: 3, horizontal: 5),
+      decoration: BoxDecoration(
+        color: Colors.red,
+        borderRadius: BorderRadius.all(
+          Radius.circular(13),
+        ),
+      ),
+      child: Text(
+        'RSVP\'d',
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: 12,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHappeningTodayTag() {
+    return Container(
+      margin: EdgeInsets.only(right: 10),
+      padding: EdgeInsets.symmetric(vertical: 3, horizontal: 5),
+      decoration: BoxDecoration(
+        color: Colors.yellow,
+        borderRadius: BorderRadius.all(
+          Radius.circular(13),
+        ),
+      ),
+      child: Text(
+        'TODAY!!  🎉',
+        style: TextStyle(
+          color: Colors.black,
+          fontSize: 12,
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: Color(widget._color),
+      child: Stack(
+        alignment: Alignment.topCenter,
+        children: <Widget>[
+          Positioned(
+            top: 7,
+            child: Row(
+              children: <Widget>[
+                _happeningToday() ? _buildHappeningTodayTag() : Container(),
+                widget._event.rsvpd ? _buildRSVPTag() : Container(),
+              ],
+            ),
+          ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: <Widget>[
+              _buildLeadingImage(),
+              _buildTileMainContent(),
+              _buildFaveAndInfoButton(context),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class EventListTileCardStyle extends StatefulWidget {
   final Event _event;
   final EventBloc _eventBloc;

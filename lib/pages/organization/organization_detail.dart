@@ -340,7 +340,7 @@ class _OrganizationDetailPageState extends State<OrganizationDetailPage> {
             ? Container()
             : Positioned(
                 top: 27,
-                right: 120,
+                right: 115,
                 child: Container(
                   padding: EdgeInsets.symmetric(vertical: 3, horizontal: 5),
                   decoration: BoxDecoration(
