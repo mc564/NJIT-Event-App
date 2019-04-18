@@ -66,6 +66,8 @@ class _RSVPPageState extends State<RSVPPage> {
         eventBloc: widget._eventBloc,
         editBloc: widget._editBloc,
         canEditEvent: widget._canEdit,
+        onFavorited: (_) {},
+        onUnfavorited: (_) {},
       ),
     );
   }
@@ -125,8 +127,13 @@ class _RSVPPageState extends State<RSVPPage> {
     }
   }
 
+  void _deleteAllUnRSVPdEvents() {
+    _rsvps.removeWhere((Event e) => e.rsvpd == false);
+  }
+
   @override
   Widget build(BuildContext context) {
+    _deleteAllUnRSVPdEvents();
     return Scaffold(
       appBar: AppBar(
         title: Text('RSVP'),

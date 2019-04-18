@@ -28,6 +28,8 @@ class ChangeOfEboardMembersPage extends StatefulWidget {
 class _ChangeOfEboardMembersPageState extends State<ChangeOfEboardMembersPage> {
   GlobalKey<FormState> _formKey;
   StreamSubscription<OrganizationState> _navigationListener;
+  List<int> _colors;
+  int _colorIdx;
 
   @override
   void initState() {
@@ -71,6 +73,14 @@ class _ChangeOfEboardMembersPageState extends State<ChangeOfEboardMembersPage> {
             });
       }
     });
+    _colors = [
+      0xffffdde2,
+      0xffFFFFCC,
+      0xffdcf9ec,
+      0xffFFFFFF,
+      0xffF0F0F0,
+    ];
+    _colorIdx = 0;
   }
 
   void _alertErrorsWithEboardMemberChanges() {
@@ -97,6 +107,7 @@ class _ChangeOfEboardMembersPageState extends State<ChangeOfEboardMembersPage> {
     for (OrganizationMember eBoardMember in eBoardMembers) {
       eBoardMemberChips.add(
         Chip(
+          backgroundColor: Color(_colors[_colorIdx++ % _colors.length]),
           label: Text(
             eBoardMember.ucid + ' - ' + eBoardMember.role,
           ),
@@ -132,6 +143,9 @@ class _ChangeOfEboardMembersPageState extends State<ChangeOfEboardMembersPage> {
         ),
         Text('(Must have at least 3 for consideration!)'),
         UCIDAndRoleFormField(
+          colorRole: Color(_colors[_colorIdx++ % _colors.length]),
+          colorUCID: Color(_colors[_colorIdx++ % _colors.length]),
+          backgroundColor: Color(_colors[_colorIdx++ % _colors.length]),
           onSubmitted: (String ucid, String role) {
             widget._organizationBloc.sink
                 .add(AddEboardMember(ucid: ucid, role: role));
@@ -201,6 +215,8 @@ class _ChangeOfEboardMembersPageState extends State<ChangeOfEboardMembersPage> {
                     TextFormField(
                       maxLines: 5,
                       decoration: InputDecoration(
+                        filled: true,
+                        fillColor: Color(_colors[_colorIdx++ % _colors.length]),
                         hintText: 'Reason For Change In E-Board Members',
                       ),
                       validator: widget._organizationBloc.reasonValidator,
@@ -209,6 +225,7 @@ class _ChangeOfEboardMembersPageState extends State<ChangeOfEboardMembersPage> {
                             .add(SetReasonForUpdate(reason: value));
                       },
                     ),
+                    SizedBox(height: 10),
                     _buildEBoardSection(state),
                     _buildSubmitButton(state),
                   ],
@@ -227,7 +244,12 @@ class _ChangeOfEboardMembersPageState extends State<ChangeOfEboardMembersPage> {
         widget._organization.status.toString());
     return Scaffold(
       appBar: AppBar(
-        title: Text('Change of E-Board Members'),
+        iconTheme: IconThemeData(color: Colors.black),
+        backgroundColor: Color(_colors[_colorIdx++ % _colors.length]),
+        title: Text(
+          'Change of E-Board Members',
+          style: TextStyle(color: Colors.black),
+        ),
         centerTitle: true,
       ),
       body: !widget._organizationBloc

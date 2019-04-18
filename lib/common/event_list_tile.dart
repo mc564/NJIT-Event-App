@@ -11,6 +11,8 @@ import '../blocs/edit_bloc.dart';
 import '../blocs/favorite_bloc.dart';
 import '../blocs/favorite_rsvp_bloc.dart';
 
+import '../presentation/my_flutter_app_icons.dart';
+
 class EventListTileBasicStyle extends StatefulWidget {
   final Event _event;
   final int _color;
@@ -40,6 +42,60 @@ class EventListTileBasicStyle extends StatefulWidget {
 }
 
 class _EventListTileBasicStyleState extends State<EventListTileBasicStyle> {
+  IconData getIcon(String category) {
+    switch (category) {
+      case "Arts & Entertainment":
+        return MyFlutterApp.pencil_case;
+      case "Health & Wellness":
+        return MyFlutterApp.heart;
+      case "Sports":
+        return MyFlutterApp.runer_silhouette_running_fast;
+      case "Meet & Learn":
+        return MyFlutterApp.meeting;
+      case "Alumni & University":
+        return MyFlutterApp.students_cap;
+      case "Celebrations":
+        return MyFlutterApp.confetti;
+      case "Miscellaneous":
+        return MyFlutterApp.push_pin;
+      case "Community":
+        return MyFlutterApp.exchange;
+      case "Conferences":
+        return MyFlutterApp.computer;
+      case "Market Place & Tabling":
+        return MyFlutterApp.exchange;
+      default:
+        return MyFlutterApp.push_pin;
+    }
+  }
+
+  Color getColor(String category) {
+    switch (category) {
+      case "Arts & Entertainment":
+        return Color(0xffffa500);
+      case "Health & Wellness":
+        return Color(0xff0200ff);
+      case "Sports":
+        return Color(0xffff0700);
+      case "Meet & Learn":
+        return Color(0xff02d100);
+      case "Alumni & University":
+        return Color(0xffffa500);
+      case "Celebrations":
+        return Color(0xffffa500);
+      case "Miscellaneous":
+        return Color(0xff0200ff);
+      case "Community":
+        return Color(0xffff0700);
+      case "Conferences":
+        return Color(0xff02d100);
+      case "Market Place & Tabling":
+        return Color(0xffffa500);
+      default:
+        return Color(0xffffa500);
+    }
+  }
+
   //formats start and end times in a nice format for reading
   String formatEventDuration(DateTime start, DateTime end) {
     DateFormat monthFormatter = DateFormat("MMMM");
@@ -80,17 +136,27 @@ class _EventListTileBasicStyleState extends State<EventListTileBasicStyle> {
           children: <Widget>[
             Positioned(
               child: Padding(
-                padding: EdgeInsets.only(top: 17),
-                child: Image.network(
-                  'https://vignette.wikia.nocookie.net/line/images/b/bb/2015-brown.png/revision/latest?cb=20150808131630',
-                  width: 50,
+                padding: EdgeInsets.only(top: 19),
+                child: Container(
+                  margin: EdgeInsets.all(3),
+                  padding: EdgeInsets.all(7),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.all(Radius.circular(10)),
+                  ),
+                  child: Icon(
+                    getIcon(CategoryHelper.getString(widget._event.category)),
+                    color: getColor(
+                        CategoryHelper.getString(widget._event.category)),
+                    size: 40,
+                  ),
                 ),
               ),
             ),
             !widget._event.rsvpd
                 ? Container(width: 0, height: 0)
                 : Positioned(
-                    top: -2,
+                    top: -4,
                     child: Container(
                       padding: EdgeInsets.all(2),
                       color: Colors.red,
@@ -171,6 +237,7 @@ class _EventListTileBasicStyleState extends State<EventListTileBasicStyle> {
   }
 }
 
+//will show a lower opacity tile if the event has passed
 class EventListTileBasicAbbrevStyle extends StatefulWidget {
   final EditEventBloc _editBloc;
   final FavoriteAndRSVPBloc _favoriteAndRSVPBloc;
@@ -179,22 +246,28 @@ class EventListTileBasicAbbrevStyle extends StatefulWidget {
   final Event _event;
   final int _color;
   final int _titleMaxLength;
+  final Function(Event) _onFavorited;
+  final Function(Event) _onUnfavorited;
 
-  EventListTileBasicAbbrevStyle(
-      {@required EditEventBloc editBloc,
-      @required FavoriteAndRSVPBloc favoriteAndRSVPBloc,
-      @required EventBloc eventBloc,
-      @required Function canEditEvent,
-      @required Event event,
-      @required int color,
-      titleMaxLength = 35})
-      : _editBloc = editBloc,
+  EventListTileBasicAbbrevStyle({
+    @required EditEventBloc editBloc,
+    @required FavoriteAndRSVPBloc favoriteAndRSVPBloc,
+    @required EventBloc eventBloc,
+    @required Function canEditEvent,
+    @required Event event,
+    @required int color,
+    int titleMaxLength = 35,
+    @required Function(Event) onFavorited,
+    @required Function(Event) onUnfavorited,
+  })  : _editBloc = editBloc,
         _favoriteAndRSVPBloc = favoriteAndRSVPBloc,
         _eventBloc = eventBloc,
         _canEditEvent = canEditEvent,
         _event = event,
         _color = color,
-        _titleMaxLength = titleMaxLength;
+        _titleMaxLength = titleMaxLength,
+        _onFavorited = onFavorited,
+        _onUnfavorited = onUnfavorited;
 
   @override
   State<StatefulWidget> createState() {
@@ -221,6 +294,7 @@ class _EventListTileBasicAbbrevStyleState
                     onPressed: () {
                       widget._favoriteAndRSVPBloc.favoriteBloc.sink
                           .add(RemoveFavorite(eventToUnfavorite: toRemove));
+                      widget._onUnfavorited(toRemove);
                       setState(() {});
                       Navigator.of(context).pop();
                     }),
@@ -304,6 +378,7 @@ class _EventListTileBasicAbbrevStyleState
               else {
                 widget._favoriteAndRSVPBloc.favoriteBloc.sink
                     .add(AddFavorite(eventToFavorite: widget._event));
+                widget._onFavorited(widget._event);
                 setState(() {});
               }
             }),
@@ -352,7 +427,7 @@ class _EventListTileBasicAbbrevStyleState
 
   Widget _buildHappeningTodayTag() {
     return Container(
-      margin: EdgeInsets.only(right: 10),
+      margin: EdgeInsets.symmetric(horizontal: 10),
       padding: EdgeInsets.symmetric(vertical: 3, horizontal: 5),
       decoration: BoxDecoration(
         color: Colors.yellow,
@@ -370,8 +445,34 @@ class _EventListTileBasicAbbrevStyleState
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildLowerOpacityPastEventTile() {
+    return Stack(
+      alignment: Alignment.centerLeft,
+      children: <Widget>[
+        Opacity(
+          opacity: 0.5,
+          child: _buildBasicTile(),
+        ),
+        Positioned(
+          left: 30,
+          bottom: 30,
+          child: Transform(
+            transform: new Matrix4.rotationZ(0.174533),
+            child: Container(
+              padding: EdgeInsets.all(10),
+              color: Colors.red,
+              child: Text(
+                'EVENT PASSED',
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBasicTile() {
     return Container(
       color: Color(widget._color),
       child: Stack(
@@ -397,6 +498,13 @@ class _EventListTileBasicAbbrevStyleState
         ],
       ),
     );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return widget._event.endTime.isBefore(DateTime.now())
+        ? _buildLowerOpacityPastEventTile()
+        : _buildBasicTile();
   }
 }
 

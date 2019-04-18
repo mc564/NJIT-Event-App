@@ -36,6 +36,9 @@ class OrganizationPage extends StatefulWidget {
 }
 
 class _OrganizationPageState extends State<OrganizationPage> {
+  List<int> _colors;
+  int _colorIdx;
+
   StreamBuilder _buildOrganizationCards() {
     return StreamBuilder<OrganizationState>(
       stream: widget._organizationBloc.viewableOrganizations,
@@ -60,6 +63,7 @@ class _OrganizationPageState extends State<OrganizationPage> {
                 organizationBloc: widget._organizationBloc,
                 organization: org,
                 ucid: widget._ucid,
+                color: Color(_colors[_colorIdx++%_colors.length]),
               ),
             );
           }
@@ -79,6 +83,19 @@ class _OrganizationPageState extends State<OrganizationPage> {
         }
       },
     );
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _colors = [
+      0xffffdde2,
+      0xffFFFFCC,
+      0xffdcf9ec,
+      0xffFFFFFF,
+      0xffF0F0F0,
+    ];
+    _colorIdx = 0;
   }
 
   @override

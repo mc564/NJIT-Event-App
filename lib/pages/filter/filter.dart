@@ -1,34 +1,33 @@
 import 'package:flutter/material.dart';
 import '../../blocs/filter_bloc.dart';
+import '../../blocs/search_bloc.dart';
 import '../../models/category.dart';
 import '../../models/location.dart';
 import '../../models/sort.dart';
 import './filter_widgets.dart';
-import '../../blocs/search_bloc.dart';
-import '../../blocs/event_bloc.dart';
 
 class FilterPage extends StatefulWidget {
   //fetchCachedEvents used to refresh events on the calendar page
-  final EventBloc _eventBloc;
+  final FilterBloc _filterBloc;
   final SearchBloc _searchBloc;
   final DateTime _viewDay;
 
   FilterPage(
-      {@required EventBloc eventBloc,
-      @required SearchBloc searchBloc,
+      {@required SearchBloc searchBloc,
+      @required FilterBloc filterBloc,
       @required DateTime viewDay})
-      : _eventBloc = eventBloc,
+      : _filterBloc = filterBloc,
         _viewDay = viewDay,
         _searchBloc = searchBloc;
 
   @override
   State<StatefulWidget> createState() {
+    if (_filterBloc == null) print('in filter page and filter bloc is null!1');
     return _FilterPageState();
   }
 }
 
 class _FilterPageState extends State<FilterPage> {
-  FilterBloc _filterBloc;
   bool _locationPanelExpanded;
   bool _categoryPanelExpanded;
 
@@ -42,7 +41,7 @@ class _FilterPageState extends State<FilterPage> {
             backgroundColor: Colors.yellow,
             deleteIconColor: Colors.cyan,
             onDeleted: () {
-              _filterBloc.sink.add(RemoveCategory(category));
+              widget._filterBloc.sink.add(RemoveCategory(category));
             },
           ),
         );
@@ -54,7 +53,7 @@ class _FilterPageState extends State<FilterPage> {
             backgroundColor: Colors.cyan,
             deleteIconColor: Colors.yellow,
             onDeleted: () {
-              _filterBloc.sink.add(RemoveLocation(location));
+              widget._filterBloc.sink.add(RemoveLocation(location));
             },
           ),
         );
@@ -67,7 +66,7 @@ class _FilterPageState extends State<FilterPage> {
             backgroundColor: Color(0xffFFB2FF),
             deleteIconColor: Colors.yellow,
             onDeleted: () {
-              _filterBloc.sink.add(RemoveOrganization(organization));
+              widget._filterBloc.sink.add(RemoveOrganization(organization));
             },
           ),
         );
@@ -80,7 +79,7 @@ class _FilterPageState extends State<FilterPage> {
             textColor: Colors.blue,
             child: Text('clear all'),
             onPressed: () {
-              _filterBloc.sink.add(ClearFilters());
+              widget._filterBloc.sink.add(ClearFilters());
             },
           ),
         );
@@ -100,9 +99,9 @@ class _FilterPageState extends State<FilterPage> {
         title: Text(organization),
         onChanged: (checked) {
           if (checked) {
-            _filterBloc.sink.add(AddOrganization(organization));
+            widget._filterBloc.sink.add(AddOrganization(organization));
           } else {
-            _filterBloc.sink.add(RemoveOrganization(organization));
+            widget._filterBloc.sink.add(RemoveOrganization(organization));
           }
         },
       ),
@@ -129,10 +128,10 @@ class _FilterPageState extends State<FilterPage> {
         selectedCategories: filters.selectedCategories,
         selectedLocations: filters.selectedLocations,
         onCategoryFilterChanged: (List<Category> chosenCategories) {
-          _filterBloc.sink.add(SetCategories(chosenCategories));
+          widget._filterBloc.sink.add(SetCategories(chosenCategories));
         },
         onLocationFilterChanged: (List<Location> chosenLocations) {
-          _filterBloc.sink.add(SetLocations(chosenLocations));
+          widget._filterBloc.sink.add(SetLocations(chosenLocations));
         },
       );
     } else if (state is FilterComplete) {
@@ -217,7 +216,7 @@ class _FilterPageState extends State<FilterPage> {
         initialSort: selected.sort,
         onSortChanged: (Sort sortType) {
           print('sort set is : ' + sortType.toString());
-          _filterBloc.sink.add(SetSort(sortType));
+          widget._filterBloc.sink.add(SetSort(sortType));
         },
       );
     } else {
@@ -228,11 +227,8 @@ class _FilterPageState extends State<FilterPage> {
   @override
   void initState() {
     super.initState();
-    _filterBloc = FilterBloc(
-        eventBlocSink: widget._eventBloc.sink,
-        eventListProvider: widget._eventBloc.eventListProvider,
-        day: widget._viewDay);
-    _filterBloc.searchableOrganizations.then((List<String> orgs) {
+    widget._filterBloc.sink.add(ResetFormFilters(widget._viewDay));
+    widget._filterBloc.searchableOrganizations.then((List<String> orgs) {
       widget._searchBloc.sink.add(SetSearchableStrings(searchStrings: orgs));
     });
     _locationPanelExpanded = false;
@@ -242,8 +238,8 @@ class _FilterPageState extends State<FilterPage> {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<FilterState>(
-      stream: _filterBloc.filterProgress,
-      initialData: _filterBloc.initialState,
+      stream: widget._filterBloc.filterProgress,
+      initialData: widget._filterBloc.initialState,
       builder: (BuildContext context, AsyncSnapshot<FilterState> snapshot) {
         FilterState state = snapshot.data;
 
@@ -276,7 +272,7 @@ class _FilterPageState extends State<FilterPage> {
                     color: Colors.lightBlue[300],
                   ),
                   onPressed: () {
-                    _filterBloc.sink.add(Filter());
+                    widget._filterBloc.sink.add(Filter());
                     Navigator.of(context).pop();
                   }),
             ],
@@ -310,11 +306,5 @@ class _FilterPageState extends State<FilterPage> {
         );
       },
     );
-  }
-
-  @override
-  void dispose() {
-    _filterBloc.dispose();
-    super.dispose();
   }
 }

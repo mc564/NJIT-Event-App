@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 
 class EventMarkIcon extends StatelessWidget {
-  int _iconNumber;
+  final int _iconNumber;
   EventMarkIcon({@required int iconNumber}) : _iconNumber = iconNumber;
 
   @override
   Widget build(BuildContext context) {
-    // TODO: implement build
     return Container(
       alignment: Alignment.center,
       decoration: new BoxDecoration(

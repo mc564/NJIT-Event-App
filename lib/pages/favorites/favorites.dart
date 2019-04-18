@@ -3,7 +3,6 @@ import '../../blocs/favorite_bloc.dart';
 import '../../blocs/event_bloc.dart';
 import '../../blocs/edit_bloc.dart';
 import '../../blocs/favorite_rsvp_bloc.dart';
-import '../../blocs/rsvp_bloc.dart';
 import '../../models/event.dart';
 import '../../common/error_dialog.dart';
 import '../../common/event_list_tile.dart';
@@ -92,39 +91,49 @@ class _FavoritesPageState extends State<FavoritesPage> {
         });
   }
 
-  Dismissible _buildTile(Event event, int color) {
-    return Dismissible(
-      key: Key(DateTime.now().toString()),
-      onDismissed: (DismissDirection direction) {
-        widget._favoriteAndRSVPBloc.favoriteBloc.sink
-            .add(RemoveFavorite(eventToUnfavorite: event));
+  Widget _buildBaseTile(Event event, int color) {
+    return EventListTileBasicAbbrevStyle(
+      editBloc: widget._editBloc,
+      favoriteAndRSVPBloc: widget._favoriteAndRSVPBloc,
+      eventBloc: widget._eventBloc,
+      event: event,
+      color: color,
+      canEditEvent: widget._canEditEvent,
+      onFavorited: (_) {},
+      onUnfavorited: (Event unfavoritedEvent) {
         setState(() {
-          _faves.removeWhere((Event e) => event.eventId == e.eventId);
+          _faves
+              .removeWhere((Event e) => e.eventId == unfavoritedEvent.eventId);
         });
       },
-      background: Container(
-          color: Colors.red,
-          padding: EdgeInsets.only(right: 10),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: <Widget>[
-              Text(
-                'Remove Favorite ',
-                style:
-                    TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-              ),
-              Icon(Icons.delete, color: Colors.white),
-            ],
-          )),
-      child: EventListTileBasicAbbrevStyle(
-        editBloc: widget._editBloc,
-        favoriteAndRSVPBloc: widget._favoriteAndRSVPBloc,
-        eventBloc: widget._eventBloc,
-        event: event,
-        color: color,
-        canEditEvent: widget._canEditEvent,
-      ),
     );
+  }
+
+  Dismissible _buildTile(Event event, int color) {
+    return Dismissible(
+        key: Key(DateTime.now().toString()),
+        onDismissed: (DismissDirection direction) {
+          widget._favoriteAndRSVPBloc.favoriteBloc.sink
+              .add(RemoveFavorite(eventToUnfavorite: event));
+          setState(() {
+            _faves.removeWhere((Event e) => event.eventId == e.eventId);
+          });
+        },
+        background: Container(
+            color: Colors.red,
+            padding: EdgeInsets.only(right: 10),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: <Widget>[
+                Text(
+                  'Remove Favorite ',
+                  style: TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.bold),
+                ),
+                Icon(Icons.delete, color: Colors.white),
+              ],
+            )),
+        child: _buildBaseTile(event, color));
   }
 
   Container _noFavoritesTile() {

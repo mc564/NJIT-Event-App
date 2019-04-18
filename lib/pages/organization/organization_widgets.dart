@@ -13,6 +13,7 @@ class OrganizationCard extends StatelessWidget {
   final EventBloc _eventBloc;
   final Organization _organization;
   final String _ucid;
+  final Color _color;
 
   OrganizationCard(
       {@required ucid,
@@ -20,13 +21,15 @@ class OrganizationCard extends StatelessWidget {
       @required OrganizationBloc organizationBloc,
       @required EditEventBloc editBloc,
       @required EventBloc eventBloc,
-      @required Organization organization})
+      @required Organization organization,
+      @required Color color})
       : _organization = organization,
         _organizationBloc = organizationBloc,
         _editBloc = editBloc,
         _favoriteAndRSVPBloc = favoriteAndRSVPBloc,
         _eventBloc = eventBloc,
-        _ucid = ucid;
+        _ucid = ucid,
+        _color = color;
 
   String _organizationRole() {
     for (OrganizationMember eboardMember in _organization.eBoardMembers) {
@@ -50,6 +53,7 @@ class OrganizationCard extends StatelessWidget {
     String role = _organizationRole();
     bool isEboardMember = role != 'Member' && role != null;
     return Card(
+      color: _color,
       child: Container(
         padding: EdgeInsets.only(left: 10),
         height: 50,
@@ -99,14 +103,25 @@ class UCIDAndRoleFormField extends StatefulWidget {
   final Function _onSubmit;
   final Function _validate;
   final bool _includeRole;
+  final Color _colorUCID;
+  final Color _colorRole;
+  final Color _backgroundColor;
 
-  UCIDAndRoleFormField(
-      {@required Function onSubmitted,
-      @required Function validator,
-      bool includeRole = true})
-      : _onSubmit = onSubmitted,
+  //used to be grey[200] for background color, error about how its not constant
+  UCIDAndRoleFormField({
+    @required Function onSubmitted,
+    @required Function validator,
+    bool includeRole = true,
+    Color colorUCID = Colors.white,
+    Color colorRole = Colors.white,
+    Color backgroundColor = Colors.grey,
+  })  : _onSubmit = onSubmitted,
         _validate = validator,
-        _includeRole = includeRole;
+        _includeRole = includeRole,
+        _colorRole = colorRole,
+        _colorUCID = colorUCID,
+        _backgroundColor = backgroundColor;
+
   @override
   State<StatefulWidget> createState() {
     return _UCIDAndRoleFormFieldState();
@@ -174,9 +189,16 @@ class _UCIDAndRoleFormFieldState extends State<UCIDAndRoleFormField> {
           decoration: InputDecoration(
             hintText: 'Role',
             filled: true,
-            fillColor: Colors.white,
+            fillColor: widget._colorRole,
             contentPadding: EdgeInsets.all(10),
+            enabledBorder: OutlineInputBorder(
+              borderSide: BorderSide(color: widget._colorRole, width: 0),
+              borderRadius: BorderRadius.all(
+                Radius.circular(20),
+              ),
+            ),
             border: OutlineInputBorder(
+              borderSide: BorderSide(color: widget._colorRole, width: 0),
               borderRadius: BorderRadius.all(
                 Radius.circular(20),
               ),
@@ -197,9 +219,16 @@ class _UCIDAndRoleFormFieldState extends State<UCIDAndRoleFormField> {
           decoration: InputDecoration(
             hintText: 'UCID',
             filled: true,
-            fillColor: Colors.white,
+            fillColor: widget._colorUCID,
             contentPadding: EdgeInsets.all(10),
             border: OutlineInputBorder(
+              borderSide: BorderSide(width: 0, color: widget._colorUCID),
+              borderRadius: BorderRadius.all(
+                Radius.circular(20),
+              ),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderSide: BorderSide(width: 0, color: widget._colorUCID),
               borderRadius: BorderRadius.all(
                 Radius.circular(20),
               ),
@@ -216,7 +245,7 @@ class _UCIDAndRoleFormFieldState extends State<UCIDAndRoleFormField> {
       margin: EdgeInsets.only(top: 10, bottom: 10),
       padding: EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: Colors.grey[200],
+        color: widget._backgroundColor,
         borderRadius: BorderRadius.all(
           Radius.circular(40),
         ),

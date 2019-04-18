@@ -103,7 +103,6 @@ class _CalendarPageState extends State<CalendarPage> {
             _prevSeenTime = currTime;
           },
           onDayPressed: (DateTime dayPressed, List<dynamic> list) {
-            //TODO change so that event counts on the calendar have the day instead of the calendar icon
             print('day pressed');
             Navigator.push(
               context,
@@ -128,7 +127,6 @@ class _CalendarPageState extends State<CalendarPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
       body: _buildCalendar(),
     );
   }

@@ -6,144 +6,27 @@ import '../api/database_event_api.dart';
 import '../api/njit_event_api.dart';
 
 import '../models/event.dart';
-import '../models/category.dart';
-import '../models/location.dart';
-import '../models/sort.dart';
-import '../models/filter.dart';
-import '../models/event_details.dart';
 import '../models/organization.dart';
 
 import './cosine_similarity_provider.dart';
-import './metrics_provider.dart';
-import './favorite_provider.dart';
+import './filter_provider.dart';
 
 //utility methods to deal with event lists, including sorting and filtering
 class EventListProvider {
   _EventCache _cache;
-  MetricsProvider _metricsProvider;
-  FavoriteProvider _favoriteProvider;
-  List<Category> _filterCategories;
-  List<Location> _filterLocations;
-  List<String> _filterOrganizations;
-  Sort _sort;
-
-  List<Category> get selectedCategories =>
-      List<Category>.from(_filterCategories);
-
-  List<String> get selectedOrganizations =>
-      List<String>.from(_filterOrganizations);
-
-  List<Location> get selectedLocations => List<Location>.from(_filterLocations);
-
-  Sort get sortType => _sort;
+  FilterAndSortProvider _filterProvider;
 
   Map<DateTime, List<Event>> get filteredCacheEvents {
     List<Event> cachedEvents = _cache.allEvents;
-    cachedEvents = _filterEvents(cachedEvents);
+    cachedEvents = _filterProvider.filter(cachedEvents);
     Map<DateTime, List<Event>> dateMappedEvents =
         splitEventsByDay(cachedEvents);
     return dateMappedEvents;
   }
 
-  EventListProvider({@required FavoriteProvider favoriteProvider}) {
+  EventListProvider({@required FilterAndSortProvider filterProvider}) {
     _cache = _EventCache();
-    _metricsProvider = MetricsProvider();
-    _favoriteProvider = favoriteProvider;
-    _filterCategories = List<Category>();
-    _filterLocations = List<Location>();
-    _filterOrganizations = List<String>();
-    _sort = Sort.Date;
-  }
-
-  double _relevanceScore(Event event, List<Event> faves,
-      Map<String, EventDetails> eventIdToMetrics) {
-    int thisWeekViewCount = 0;
-    int lastWeekViewCount = 0;
-    if (eventIdToMetrics.containsKey(event.eventId)) {
-      EventDetails metrics = eventIdToMetrics[event.eventId];
-      thisWeekViewCount = metrics.thisWeekViewCount;
-      lastWeekViewCount = metrics.lastWeekViewCount;
-    }
-
-    double viewScore =
-        0.75 * (thisWeekViewCount / 100.0) + 0.25 * (lastWeekViewCount / 100);
-    int totalFaves = faves.length == 0 ? 1 : faves.length;
-    //^avoid the divide by 0 error
-    int categoryMatchCount =
-        faves.where((Event fave) => fave.category == event.category).length;
-    int orgMatchCount = faves
-        .where((Event fave) => fave.organization == event.organization)
-        .length;
-    double categoryScore = categoryMatchCount / totalFaves;
-    double orgScore = orgMatchCount / totalFaves;
-    double score = viewScore * 0.5 + categoryScore * 0.25 + orgScore * 0.25;
-    return score;
-  }
-
-  Future<bool> _sortEvents(List<Event> list) async {
-    if (_sort == Sort.Date) {
-      _sortByDate(list);
-      return true;
-    } else if (_sort == Sort.Relevance) {
-      List<Event> faves = _favoriteProvider.allFavorites;
-      //get metrics for all events in list
-      List<EventDetails> detailObjects =
-          await _metricsProvider.bulkReadMetrics(list);
-
-      Map<String, EventDetails> eventIdToMetrics = Map<String, EventDetails>();
-
-      for (int i = 0; i < detailObjects.length; i++) {
-        EventDetails metrics = detailObjects[i];
-        eventIdToMetrics[metrics.eventId] = metrics;
-      }
-      //precalculate all relevancescores for all list events and pass them to the function
-      Map<String, double> relScore = Map<String, double>();
-      for (int i = 0; i < list.length; i++) {
-        Event event = list[i];
-        relScore[event.eventId] =
-            _relevanceScore(event, faves, eventIdToMetrics);
-      }
-
-      list.sort((Event a, Event b) =>
-          relScore[b.eventId].compareTo(relScore[a.eventId]));
-      return true;
-    } else {
-      return false;
-    }
-  }
-
-  void _sortByDate(List<Event> events) {
-    if (events == null || events.length <= 1) return;
-    events.sort((a, b) => a.startTime.compareTo(b.startTime));
-  }
-
-  List<Event> _filterEvents(List<Event> list) {
-    print('filtering!');
-    print('filter categories: ' + _filterCategories.toString());
-    print('filter locations: ' + _filterLocations.toString());
-    List<Event> filteredList = [];
-    for (Event event in list) {
-      if ((_filterCategories.isEmpty ||
-              _filterCategories.contains(event.category)) &&
-          (_filterLocations.contains(event.locationCode) ||
-              _filterLocations.isEmpty) &&
-          (_filterOrganizations.contains(event.organization) ||
-              _filterOrganizations.isEmpty)) {
-        filteredList.add(event);
-      }
-    }
-    return filteredList;
-  }
-
-  Future<List<Event>> _filterAndSort(List<Event> events, bool filtered) async {
-    if (filtered) {
-      List<Event> filteredEvents = _filterEvents(events);
-      await _sortEvents(filteredEvents);
-      return filteredEvents;
-    } else {
-      await _sortEvents(events);
-      return events;
-    }
+    _filterProvider = filterProvider;
   }
 
   void deleteDupEdited(List<Event> dbEvents, List<Event> apiEvents) {
@@ -166,7 +49,8 @@ class EventListProvider {
       events.addAll(apiEvents);
       events.addAll(dbEvents);
       _cache.addList(events);
-      return await _filterAndSort(events, filtered);
+      return await _filterProvider.filterAndSort(
+          events: events, filtered: filtered, sorted: true);
     } catch (error) {
       throw Exception("refreshEventsOnDay failed in EventListProvider: " +
           error.toString());
@@ -185,7 +69,8 @@ class EventListProvider {
       else
         print('cache results are: ' + cacheResults.length.toString());
       if (cacheResults != null) {
-        return await _filterAndSort(cacheResults, filtered);
+        return await _filterProvider.filterAndSort(
+            events: cacheResults, filtered: filtered, sorted: true);
       }
       final List<Event> apiEvents = await NJITEventAPI.eventsOnDay(time);
       final List<Event> dbEvents = await DatabaseEventAPI.eventsOnDay(time);
@@ -193,7 +78,8 @@ class EventListProvider {
       events.addAll(apiEvents);
       events.addAll(dbEvents);
       _cache.addList(events);
-      return await _filterAndSort(events, filtered);
+      return await _filterProvider.filterAndSort(
+          events: events, filtered: filtered, sorted: true);
     } catch (error) {
       throw Exception(
           "Retreiving events for day failed in EventListProvider: " +
@@ -236,7 +122,8 @@ class EventListProvider {
         _cache.addList(eventsOnOneDay);
       }
 
-      return await _filterAndSort(events, filtered);
+      return await _filterProvider.filterAndSort(
+          events: events, filtered: filtered, sorted: true);
     } catch (error) {
       throw Exception(
           "Retrieving events from either NJIT events api or database failed: " +
@@ -268,7 +155,8 @@ class EventListProvider {
         newStart = DateTime(newStart.year, newStart.month, newStart.day);
       }
       if (cacheHasAllDays) {
-        return await _filterAndSort(events, filtered);
+        return await _filterProvider.filterAndSort(
+            events: events, filtered: filtered, sorted: true);
       } else {
         events = [];
       }
@@ -285,7 +173,8 @@ class EventListProvider {
         _cache.addList(eventsOnOneDay);
       }
 
-      return await _filterAndSort(events, filtered);
+      return await _filterProvider.filterAndSort(
+          events: events, filtered: filtered, sorted: true);
     } catch (error) {
       throw Exception(
           "Retrieving events from either NJIT events api or database failed: " +
@@ -315,8 +204,8 @@ class EventListProvider {
     }
     _filterForOrganization(pastEvents, org);
     _filterForOrganization(upcomingEvents, org);
-    _sortByDate(pastEvents);
-    _sortByDate(upcomingEvents);
+    _filterProvider.sortByDate(pastEvents);
+    _filterProvider.sortByDate(upcomingEvents);
     return RecentEvents(pastEvents: pastEvents, upcomingEvents: upcomingEvents);
   }
 
@@ -336,8 +225,8 @@ class EventListProvider {
     }
     _filterForOrganization(pastEvents, org);
     _filterForOrganization(upcomingEvents, org);
-    _sortByDate(pastEvents);
-    _sortByDate(upcomingEvents);
+    _filterProvider.sortByDate(pastEvents);
+    _filterProvider.sortByDate(upcomingEvents);
     return RecentEvents(pastEvents: pastEvents, upcomingEvents: upcomingEvents);
   }
 
@@ -363,28 +252,6 @@ class EventListProvider {
           "Failed to get similar events in EventsModel: " + error.toString());
     }
   }
-
-  void setSort(Sort sortType) {
-    _sort = sortType;
-  }
-
-  //returns whether or not setting filters was successful
-  bool setFilterParameters(Map<FilterType, dynamic> filterParameters) {
-    for (FilterType filter in filterParameters.keys) {
-      try {
-        if (filter == FilterType.Category) {
-          _filterCategories = filterParameters[filter];
-        } else if (filter == FilterType.Location) {
-          _filterLocations = filterParameters[filter];
-        } else if (filter == FilterType.Organization) {
-          _filterOrganizations = filterParameters[filter];
-        }
-      } catch (error) {
-        return false;
-      }
-    }
-    return true;
-  }
 }
 
 //keeps 50 or x number (depending on set size) daily event lists
@@ -400,7 +267,7 @@ class _EventCache {
 
   List<Event> get allEvents {
     List<Event> allEvents = List<Event>();
-    for(List<Event> eventList in _cache.values){
+    for (List<Event> eventList in _cache.values) {
       allEvents.addAll(eventList);
     }
     return allEvents;

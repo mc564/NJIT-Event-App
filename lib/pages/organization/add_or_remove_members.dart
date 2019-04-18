@@ -26,38 +26,26 @@ class AddOrRemoveMembersPage extends StatefulWidget {
 
 class _AddOrRemoveMembersPageState extends State<AddOrRemoveMembersPage> {
   StreamSubscription _navigationListener;
+  List<int> _colors;
+  int _colorIdx;
 
-  FlatButton _buildTileButton(Widget child, Function onPressed) {
-    return FlatButton(child: child, onPressed: onPressed);
+  RaisedButton _buildTileButton(Widget child, Function onPressed) {
+    return RaisedButton(
+      padding: EdgeInsets.all(0),
+      child: child,
+      onPressed: onPressed,
+      elevation: 5,
+    );
   }
 
-  Container _build3DEffectTile(
-      String content, double offset, Color backgroundColor) {
+  Container _buildColumnTitleTile(String content) {
     return Container(
       alignment: Alignment.center,
-      color: backgroundColor,
-      child: Stack(
-        alignment: Alignment.center,
-        children: <Widget>[
-          Positioned(
-            left: offset,
-            child: Text(
-              content,
-              style: TextStyle(
-                  color: Colors.cyan,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold),
-            ),
-          ),
-          Positioned(
-            right: offset,
-            child: Text(
-              content,
-              style: TextStyle(
-                  color: Colors.red, fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-          ),
-        ],
+      color: Color(_colors[_colorIdx++ % _colors.length]),
+      child: Text(
+        content,
+        style: TextStyle(
+            color: Colors.black, fontSize: 20, fontWeight: FontWeight.bold),
       ),
     );
   }
@@ -84,6 +72,7 @@ class _AddOrRemoveMembersPageState extends State<AddOrRemoveMembersPage> {
       );
     }
     return Container(
+      color: Color(_colors[_colorIdx++ % _colors.length]),
       alignment: Alignment.center,
       child: child,
     );
@@ -113,6 +102,8 @@ class _AddOrRemoveMembersPageState extends State<AddOrRemoveMembersPage> {
                 margin: EdgeInsets.all(10),
                 child: UCIDAndRoleFormField(
                   includeRole: false,
+                  colorUCID: Color(_colors[_colorIdx++ % _colors.length]),
+                  backgroundColor: Color(_colors[_colorIdx++ % _colors.length]),
                   onSubmitted: (String ucid) {
                     widget._organizationBloc.sink
                         .add(AddRegularMember(ucid: ucid));
@@ -125,9 +116,9 @@ class _AddOrRemoveMembersPageState extends State<AddOrRemoveMembersPage> {
                   gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: 3, childAspectRatio: 4),
                   children: <Widget>[
-                    _build3DEffectTile('~', 47, Colors.white),
-                    _build3DEffectTile('No members!', 9, Colors.white),
-                    _build3DEffectTile('~', 46, Colors.white),
+                    _buildColumnTitleTile('~'),
+                    _buildColumnTitleTile('No members!'),
+                    _buildColumnTitleTile('~'),
                   ],
                 ),
               ),
@@ -140,6 +131,8 @@ class _AddOrRemoveMembersPageState extends State<AddOrRemoveMembersPage> {
               margin: EdgeInsets.all(10),
               child: UCIDAndRoleFormField(
                 includeRole: false,
+                colorUCID: Color(_colors[_colorIdx++ % _colors.length]),
+                backgroundColor: Color(_colors[_colorIdx++ % _colors.length]),
                 onSubmitted: (String ucid) {
                   widget._organizationBloc.sink
                       .add(AddRegularMember(ucid: ucid));
@@ -154,13 +147,13 @@ class _AddOrRemoveMembersPageState extends State<AddOrRemoveMembersPage> {
                 itemCount: (regularMembers.length + 1) * 3,
                 itemBuilder: (BuildContext context, int index) {
                   if (index == 0)
-                    return _build3DEffectTile('UCID', 47, Colors.white);
+                    return _buildColumnTitleTile('UCID');
                   else if (index == 1)
-                    return _build3DEffectTile('Role', 46, Colors.white);
+                    return _buildColumnTitleTile('Role');
                   else if (index == 2)
                     //change this to become a button
-                    return _buildTileButton(
-                        _build3DEffectTile('SUBMIT', 17, Colors.orange), () {
+                    return _buildTileButton(_buildColumnTitleTile('SUBMIT'),
+                        () {
                       widget._organizationBloc.sink
                           .add(SubmitOrganizationUpdates());
                     });
@@ -197,7 +190,8 @@ class _AddOrRemoveMembersPageState extends State<AddOrRemoveMembersPage> {
       if (state is OrganizationUpdated) {
         widget._organization
             .setMembers(state.updatedOrganization.regularMembers);
-        widget._organizationBloc.sink.add(SetOrganizationToEdit(organization: state.updatedOrganization));
+        widget._organizationBloc.sink.add(
+            SetOrganizationToEdit(organization: state.updatedOrganization));
         String members = '';
         for (OrganizationMember member in widget._organization.regularMembers) {
           members += "UCID: " + member.ucid + " Role: " + member.role + "\n";
@@ -218,14 +212,25 @@ class _AddOrRemoveMembersPageState extends State<AddOrRemoveMembersPage> {
             });
       }
     });
+    _colors = [
+      0xffffdde2,
+      0xffFFFFCC,
+      0xffdcf9ec,
+      0xffFFFFFF,
+      0xffF0F0F0,
+    ];
+    _colorIdx = 0;
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Add Or Remove Members'),
+        iconTheme: IconThemeData(color: Colors.black),
+        title: Text('Add Or Remove Members',
+            style: TextStyle(color: Colors.black)),
         centerTitle: true,
+        backgroundColor: Color(_colors[_colorIdx++ % _colors.length]),
       ),
       body: _buildBody(),
     );

@@ -5,11 +5,12 @@ import 'package:equatable/equatable.dart';
 
 import '../providers/filter_provider.dart';
 import '../providers/event_list_provider.dart';
+import '../providers/favorite_provider.dart';
+import '../providers/metrics_provider.dart';
 
 import '../models/category.dart';
 import '../models/location.dart';
 import '../models/sort.dart';
-import '../models/event.dart';
 
 import '../blocs/event_bloc.dart';
 
@@ -18,64 +19,68 @@ class FilterBloc {
   final StreamController<FilterEvent> _requestsController;
   final StreamController<FilterState> _filterController;
 
-  final FilterProvider _filterProvider;
-  final EventListProvider _eventListProvider;
+  final FilterAndSortProvider _filterProvider;
 
-  final StreamSink<EventListEvent> _eventBlocSink;
+  StreamSink<EventListEvent> _eventBlocSink;
 
-  final DateTime _day;
-  final FiltersSelected _initialState;
-
-  //need view's current day to know how to clear cache later
-  FilterBloc(
-      {@required EventListProvider eventListProvider,
-      @required DateTime day,
-      @required StreamSink<EventListEvent> eventBlocSink})
-      : _eventBlocSink = eventBlocSink,
-        _filterController = StreamController(),
-        _requestsController = StreamController(),
-        _eventListProvider = eventListProvider,
-        _filterProvider = FilterProvider(
-          selectedCategories: eventListProvider.selectedCategories,
-          selectedLocations: eventListProvider.selectedLocations,
-          selectedOrganizations: eventListProvider.selectedOrganizations,
-          sort: eventListProvider.sortType,
-        ),
-        _day = day,
-        _initialState = FiltersSelected(
-          selectedCategories: eventListProvider.selectedCategories,
-          selectedLocations: eventListProvider.selectedLocations,
-          selectedOrganizations: eventListProvider.selectedOrganizations,
-          sort: eventListProvider.sortType,
-        ) {
+  FilterBloc()
+      : _filterController = StreamController.broadcast(),
+        _requestsController = StreamController.broadcast(),
+        _filterProvider = FilterAndSortProvider() {
+          if(_filterController!=null) print('filter controller isnt NULL!');
     _requestsController.stream.forEach((FilterEvent event) {
       event.execute(this);
     });
   }
 
-  FiltersSelected get initialState => _initialState;
+  //circular dependencies, so have separate initialize method
+  void initialize(
+      {@required EventListProvider eventListProvider,
+      @required FavoriteProvider favoriteProvider,
+      @required MetricsProvider metricsProvider,
+      @required StreamSink<EventListEvent> eventBlocSink}) {
+    _eventBlocSink = eventBlocSink;
+    print('in initialize method of filter bloc!');
+    _filterProvider.initialize(
+        metricsProvider: metricsProvider,
+        eventListProvider: eventListProvider,
+        favoriteProvider: favoriteProvider);
+  }
+
+  FiltersSelected get initialState => FiltersSelected(
+        selectedCategories: _filterProvider.formSelectedCategories,
+        selectedLocations: _filterProvider.formSelectedLocations,
+        selectedOrganizations: _filterProvider.formSelectedOrganizations,
+        sort: _filterProvider.formSelectedSort,
+      );
 
   Stream get filterProgress => _filterController.stream;
   StreamSink<FilterEvent> get sink => _requestsController.sink;
+  FilterAndSortProvider get filterProvider => _filterProvider;
 
   //only searches organizations that have hosted events recently
   Future<List<String>> get searchableOrganizations async {
-    List<String> orgs = List<String>();
-    List<Event> recentEvents = await _eventListProvider.getEventsBetween(
-        _day.subtract(Duration(days: 7)), _day.add(Duration(days: 14)), false);
-    for (Event event in recentEvents) {
-      orgs.add(event.organization);
-    }
-    return orgs.toSet().toList();
+    return await _filterProvider.searchableOrganizations;
   }
+
+  int get currentFilterCount =>
+      _filterProvider.filterCategories.length +
+      _filterProvider.filterLocations.length +
+      _filterProvider.filterOrganizations.length;
 
   void alertNewFiltersSelected() {
     _filterController.sink.add(FiltersSelected(
-      selectedCategories: _filterProvider.selectedCategories,
-      selectedLocations: _filterProvider.selectedLocations,
-      selectedOrganizations: _filterProvider.selectedOrganizations,
-      sort: _filterProvider.sortType,
+      selectedCategories: _filterProvider.formSelectedCategories,
+      selectedLocations: _filterProvider.formSelectedLocations,
+      selectedOrganizations: _filterProvider.formSelectedOrganizations,
+      sort: _filterProvider.formSelectedSort,
     ));
+  }
+
+  //called whenever go to filter page to set filters
+  void resetFormFilters(DateTime day) {
+    _filterProvider.resetFormFilters(day);
+    alertNewFiltersSelected();
   }
 
   void addCategory(Category category) {
@@ -139,8 +144,7 @@ class FilterBloc {
 
   void filter() {
     try {
-      _eventListProvider.setFilterParameters(_filterProvider.filterParameters);
-      _eventListProvider.setSort(_filterProvider.sortType);
+      _filterProvider.setFilterAndSort();
       _filterController.sink.add(FilterComplete());
       print('in filter method and calling sink add!');
       _eventBlocSink.add(FetchCachedEvents());
@@ -159,6 +163,14 @@ class FilterBloc {
 abstract class FilterEvent extends Equatable {
   FilterEvent([List args = const []]) : super(args);
   void execute(FilterBloc filterBloc);
+}
+
+class ResetFormFilters extends FilterEvent {
+  final DateTime day;
+  ResetFormFilters(this.day) : super([day]);
+  void execute(FilterBloc filterBloc) {
+    filterBloc.resetFormFilters(day);
+  }
 }
 
 class AddCategory extends FilterEvent {

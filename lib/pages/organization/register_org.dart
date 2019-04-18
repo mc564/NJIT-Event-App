@@ -35,6 +35,8 @@ class _RegisterOrganizationPageState extends State<RegisterOrganizationPage> {
   bool _initializedDescription;
   bool _built;
   bool _reactivate;
+  List<int> _colors;
+  int _colorIdx;
 
   @override
   void initState() {
@@ -86,6 +88,14 @@ class _RegisterOrganizationPageState extends State<RegisterOrganizationPage> {
             });
       }
     });
+    _colors = [
+      0xffffdde2,
+      0xffFFFFCC,
+      0xffdcf9ec,
+      0xffFFFFFF,
+      0xffF0F0F0,
+    ];
+    _colorIdx = 0;
   }
 
   Column _buildRegularMemberChips(List<OrganizationMember> regularMembers) {
@@ -130,6 +140,8 @@ class _RegisterOrganizationPageState extends State<RegisterOrganizationPage> {
             '(This is optional! You can include some members here if you would like!)'),
         UCIDAndRoleFormField(
           includeRole: false,
+          colorUCID: Color(_colors[_colorIdx++ % _colors.length]),
+          backgroundColor: Color(_colors[_colorIdx++ % _colors.length]),
           onSubmitted: (String ucid) {
             widget._organizationBloc.sink.add(AddRegularMember(ucid: ucid));
           },
@@ -180,9 +192,13 @@ class _RegisterOrganizationPageState extends State<RegisterOrganizationPage> {
         ),
         Text('(Must have at least 3 for consideration!)'),
         UCIDAndRoleFormField(
+          colorRole: Color(_colors[_colorIdx++ % _colors.length]),
+          colorUCID: Color(_colors[_colorIdx++ % _colors.length]),
+          backgroundColor: Color(_colors[_colorIdx++ % _colors.length]),
           onSubmitted: (String ucid, String role) {
             print('submitted: ' + ucid + " " + role);
-            widget._organizationBloc.sink.add(AddEboardMember(ucid: ucid, role: role));
+            widget._organizationBloc.sink
+                .add(AddEboardMember(ucid: ucid, role: role));
           },
           validator: widget._organizationBloc.eBoardMemberValidator,
         ),
@@ -203,6 +219,7 @@ class _RegisterOrganizationPageState extends State<RegisterOrganizationPage> {
         _descriptionController.text = '';
       _initializedDescription = true;
     }
+    Color color = Color(_colors[_colorIdx++ % _colors.length]);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisAlignment: MainAxisAlignment.start,
@@ -217,11 +234,19 @@ class _RegisterOrganizationPageState extends State<RegisterOrganizationPage> {
           controller: _descriptionController,
           maxLines: 4,
           decoration: InputDecoration(
-            border: OutlineInputBorder(),
+            filled: true,
+            fillColor: color,
+            border: OutlineInputBorder(
+              borderSide: BorderSide(color: color, width: 0),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderSide: BorderSide(color: color, width: 0),
+            ),
           ),
           validator: widget._organizationBloc.descriptionValidator,
           onSaved: (String value) {
-            widget._organizationBloc.sink.add(SetDescription(description: value));
+            widget._organizationBloc.sink
+                .add(SetDescription(description: value));
           },
         ),
       ],
@@ -237,12 +262,14 @@ class _RegisterOrganizationPageState extends State<RegisterOrganizationPage> {
         _nameController.text = '';
       _initializedName = true;
     }
+
+    Color color = Color(_colors[_colorIdx++ % _colors.length]);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisAlignment: MainAxisAlignment.start,
       children: <Widget>[
         Text(
-          'Organization Name',
+          _reactivate ? 'Organization Name (fixed)' : 'Organization Name',
           textAlign: TextAlign.left,
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
         ),
@@ -251,7 +278,17 @@ class _RegisterOrganizationPageState extends State<RegisterOrganizationPage> {
           controller: _nameController,
           enabled: _reactivate ? false : true,
           decoration: InputDecoration(
-            border: OutlineInputBorder(),
+            border: OutlineInputBorder(
+              borderSide: BorderSide(color: color, width: 0),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderSide: BorderSide(color: color, width: 0),
+            ),
+            disabledBorder: OutlineInputBorder(
+              borderSide: BorderSide(color: color, width: 0),
+            ),
+            filled: true,
+            fillColor: color,
           ),
           validator: widget._organizationBloc.nameValidator,
           onSaved: (String value) {
@@ -350,10 +387,15 @@ class _RegisterOrganizationPageState extends State<RegisterOrganizationPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: Color(_colors[_colorIdx++ % _colors.length]),
+        iconTheme: IconThemeData(color: Colors.black),
         centerTitle: true,
-        title: Text(_reactivate
-            ? 'Reactivate An Organization'
-            : 'Register An Organization'),
+        title: Text(
+          _reactivate
+              ? 'Reactivate An Organization'
+              : 'Register An Organization',
+          style: TextStyle(color: Colors.black),
+        ),
       ),
       body: SingleChildScrollView(
         child: GestureDetector(

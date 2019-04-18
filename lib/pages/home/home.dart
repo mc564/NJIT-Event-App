@@ -8,6 +8,7 @@ import '../../blocs/message_bloc.dart';
 import '../../blocs/organization_bloc.dart';
 import '../../blocs/edit_bloc.dart';
 import '../../blocs/favorite_rsvp_bloc.dart';
+import '../../blocs/filter_bloc.dart';
 
 import './home_widgets.dart';
 
@@ -45,6 +46,7 @@ class _HomePageState extends State<HomePage> {
   SearchBloc _searchBloc;
   FavoriteAndRSVPBloc _favoriteAndRSVPBloc;
   MessageBloc _messageBloc;
+  FilterBloc _filterBloc;
   OrganizationBloc _organizationBloc;
   PageController _pageController;
   int _prevPage;
@@ -191,7 +193,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   String _getFilterCountText() {
-    int count = _eventBloc.currentFilterCount;
+    int count = _filterBloc.currentFilterCount;
     if (count < 9)
       return count.toString();
     else
@@ -228,8 +230,8 @@ class _HomePageState extends State<HomePage> {
                     context,
                     MaterialPageRoute(builder: (BuildContext context) {
                       return FilterPage(
+                          filterBloc: _filterBloc,
                           searchBloc: _searchBloc,
-                          eventBloc: _eventBloc,
                           viewDay: dateState.day);
                     }),
                   );
@@ -341,9 +343,16 @@ class _HomePageState extends State<HomePage> {
     _searchBloc = SearchBloc();
     _favoriteAndRSVPBloc = FavoriteAndRSVPBloc(
         ucid: widget._userBloc.ucid, searchSink: _searchBloc.sink);
+    _filterBloc = FilterBloc();
     _eventBloc = EventBloc(
-        favoriteProvider: _favoriteAndRSVPBloc.favoriteBloc.favoriteProvider,
-        favoriteAndRSVPProvider: _favoriteAndRSVPBloc.favoriteAndRSVPProvider);
+        favoriteAndRSVPProvider: _favoriteAndRSVPBloc.favoriteAndRSVPProvider,
+        filterProvider: _filterBloc.filterProvider);
+    _filterBloc.initialize(
+      metricsProvider: _eventBloc.metricsProvider,
+      favoriteProvider: _favoriteAndRSVPBloc.favoriteBloc.favoriteProvider,
+      eventBlocSink: _eventBloc.sink,
+      eventListProvider: _eventBloc.eventListProvider,
+    );
     _searchBloc.initialize(eventListProvider: _eventBloc.eventListProvider);
     _dateBloc = DateBloc(
       initialDay: DateTime(now.year, now.month, now.day),
@@ -355,6 +364,7 @@ class _HomePageState extends State<HomePage> {
     _editBloc = EditEventBloc(
         searchSink: _searchBloc.sink,
         favoriteSink: _favoriteAndRSVPBloc.favoriteBloc.sink);
+
     _view = null;
     //make it some ridiculously large number to allow scrolling both directions
     int initialPage = 20000;
@@ -409,6 +419,7 @@ class _HomePageState extends State<HomePage> {
     _organizationBloc.dispose();
     _favoriteAndRSVPBloc.dispose();
     _editBloc.dispose();
+    _filterBloc.dispose();
     super.dispose();
   }
 }

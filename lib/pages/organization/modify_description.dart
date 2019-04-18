@@ -25,6 +25,8 @@ class _ModifyDescriptionPageState extends State<ModifyDescriptionPage> {
   StreamSubscription _navigationListener;
   GlobalKey<FormState> _formKey;
   TextEditingController _textEditingController;
+  List<int> _colors;
+  int _colorIdx;
 
   void _alertErrorsWithDescription() {
     showDialog(
@@ -57,11 +59,16 @@ class _ModifyDescriptionPageState extends State<ModifyDescriptionPage> {
             child: Column(
               children: <Widget>[
                 TextFormField(
+                  decoration: InputDecoration(
+                    filled: true,
+                    fillColor: Color(_colors[_colorIdx++ % _colors.length]),
+                  ),
                   controller: _textEditingController,
                   maxLines: null,
                   validator: widget._organizationBloc.descriptionValidator,
                   onSaved: (String value) {
-                    widget._organizationBloc.sink.add(SetDescription(description: value));
+                    widget._organizationBloc.sink
+                        .add(SetDescription(description: value));
                   },
                 ),
                 StreamBuilder<OrganizationState>(
@@ -74,16 +81,17 @@ class _ModifyDescriptionPageState extends State<ModifyDescriptionPage> {
                       return Center(child: CircularProgressIndicator());
                     }
                     return FlatButton(
-                      color: Colors.black,
+                      color: Color(_colors[_colorIdx++ % _colors.length]),
                       child: Text('Modify Description',
-                          style: TextStyle(color: Color(0xffFFD700))),
+                          style: TextStyle(color: Colors.black)),
                       onPressed: () {
                         if (!_formKey.currentState.validate()) {
                           _alertErrorsWithDescription();
                           return;
                         }
                         _formKey.currentState.save();
-                        widget._organizationBloc.sink.add(SubmitOrganizationUpdates());
+                        widget._organizationBloc.sink
+                            .add(SubmitOrganizationUpdates());
                         _formKey.currentState.reset();
                       },
                     );
@@ -104,13 +112,16 @@ class _ModifyDescriptionPageState extends State<ModifyDescriptionPage> {
     _textEditingController =
         TextEditingController(text: widget._organization.description);
     widget._organizationBloc.sink.add(ClearStorage());
-    WidgetsBinding.instance.addPostFrameCallback(
-        (_) => widget._organizationBloc.sink.add(SetOrganizationToEdit(organization: widget._organization)));
+    WidgetsBinding.instance.addPostFrameCallback((_) => widget
+        ._organizationBloc.sink
+        .add(SetOrganizationToEdit(organization: widget._organization)));
     _navigationListener = widget._organizationBloc.organizationUpdateRequests
         .listen((dynamic state) {
       if (state is OrganizationUpdated) {
-        widget._organization.setDescription(state.updatedOrganization.description);
-        widget._organizationBloc.sink.add(SetOrganizationToEdit(organization: state.updatedOrganization));
+        widget._organization
+            .setDescription(state.updatedOrganization.description);
+        widget._organizationBloc.sink.add(
+            SetOrganizationToEdit(organization: state.updatedOrganization));
         _textEditingController.text = state.updatedOrganization.description;
         showDialog(
           context: context,
@@ -129,26 +140,25 @@ class _ModifyDescriptionPageState extends State<ModifyDescriptionPage> {
             });
       }
     });
+    _colors = [
+      0xffffdde2,
+      0xffFFFFCC,
+      0xffdcf9ec,
+      0xffFFFFFF,
+      0xffF0F0F0,
+    ];
+    _colorIdx = 0;
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.black,
-        title: RichText(
-          text: TextSpan(
-            children: <TextSpan>[
-              TextSpan(
-                  text: 'Modify Description',
-                  style: TextStyle(
-                      fontFamily: 'Eutemia',
-                      fontSize: 40,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xffFFD700))),
-              TextSpan(text: '   Page'),
-            ],
-          ),
+        iconTheme: IconThemeData(color: Colors.black),
+        backgroundColor: Color(_colors[_colorIdx++ % _colors.length]),
+        title: Text(
+          'Modify Description',
+          style: TextStyle(color: Colors.black),
         ),
         centerTitle: true,
       ),
