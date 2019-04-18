@@ -127,7 +127,19 @@ class _CalendarPageState extends State<CalendarPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      body: _buildCalendar(),
+      body: Container(
+        child: Column(
+          children: <Widget>[
+            Container(
+              height: 400,
+              child: _buildCalendar(),
+            ),
+            Container(
+              child: Text('Legend!'),
+              )
+          ],
+        ),
+      )
     );
   }
 }
