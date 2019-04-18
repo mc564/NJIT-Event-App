@@ -36,18 +36,6 @@ class _FilterPageState extends State<FilterPage> {
     if (state is FiltersSelected) {
       List<Widget> chipList = [];
 
-      if (chipList.length > 0) {
-        chipList.add(
-          FlatButton(
-            color: Colors.white,
-            textColor: Colors.blue,
-            child: Text('clear all'),
-            onPressed: () {
-              _filterBloc.sink.add(ClearFilters());
-            },
-          ),
-        );
-      }
       for (Category category in state.selectedCategories) {
         chipList.add(
           Chip(
@@ -86,6 +74,18 @@ class _FilterPageState extends State<FilterPage> {
         );
       }
 
+      if (chipList.length > 0) {
+        chipList.insert( 0,
+          FlatButton(
+            color: Colors.white,
+            textColor: Colors.blue,
+            child: Text('clear all'),
+            onPressed: () {
+              _filterBloc.sink.add(ClearFilters());
+            },
+          ),
+        );
+      }
       return chipList;
     } else {
       return List<Widget>();

@@ -135,8 +135,18 @@ class _CalendarPageState extends State<CalendarPage> {
               child: _buildCalendar(),
             ),
             Container(
-              child: Text('Legend!'),
-              )
+              color: Colors.lightBlue.shade100,
+              child: Text(' Legend: \n\n The day highlighted in green is today\'s date. \n\n The day highlighted in red is the current daily view. \n\n The highlighted numbers are the total events per day.'),
+              alignment: AlignmentDirectional(-0.9, -0.9),
+              margin: new EdgeInsets.only(
+                left: 10.00,
+                right: 10.00,
+                bottom: 10.00,
+              ),
+              constraints: new BoxConstraints(
+                maxHeight: 150,
+              ),
+              ),
           ],
         ),
       )
