@@ -34,6 +34,7 @@ class _FilterPageState extends State<FilterPage> {
   List<Widget> _buildChipBox(FilterState state) {
     if (state is FiltersSelected) {
       List<Widget> chipList = [];
+
       for (Category category in state.selectedCategories) {
         chipList.add(
           Chip(
@@ -73,7 +74,7 @@ class _FilterPageState extends State<FilterPage> {
       }
 
       if (chipList.length > 0) {
-        chipList.add(
+        chipList.insert( 0,
           FlatButton(
             color: Colors.white,
             textColor: Colors.blue,

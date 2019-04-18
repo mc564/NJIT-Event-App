@@ -71,6 +71,19 @@ class EditEventProvider {
     return false;
   }
 
+  //Made a copy of above for unit tests.
+  bool noChangesMade() {
+    if (_eventToEdit.title == _title &&
+        _eventToEdit.description == _description &&
+        CategoryHelper.getString(_eventToEdit.category) == _category &&
+        _eventToEdit.location == _location &&
+        _eventToEdit.endTime == _endDateTime &&
+        _eventToEdit.startTime == _startDateTime) {
+      return true;
+    }
+    return false;
+  }
+
   bool setEventToEdit(Event eventToEdit) {
     try {
       _id = eventToEdit.eventId;

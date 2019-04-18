@@ -1,9 +1,16 @@
 import '../../lib/providers/add_event_provider.dart';
+import '../../lib/models/event.dart';
+import '../../lib/models/location.dart';
+import '../../lib/models/category.dart';
 import 'package:test_api/test_api.dart';
 
 void main(){
 
   AddEventProvider event = AddEventProvider();
+
+  Event event1 = Event(eventId: 'abc', location: 'Campus Center', locationCode: Location.CC, title: 'Hello',
+    startTime: DateTime.now(), endTime: DateTime.now(), organization: 'NJIT', category: Category.Miscellaneous,
+    description: 'Spay me for the dooret.', favorited: false);
 
   //Testing individual validators under different situations.
 
@@ -124,6 +131,12 @@ void main(){
     event.clear();
   });
 
+  test('Test: Add Event Function', () {
+
+    var result = event.addEvent(event1);
+
+    expect(result, true);
+  });
 
   //Testing all validators at once. Buckle up, buttercup.
 
