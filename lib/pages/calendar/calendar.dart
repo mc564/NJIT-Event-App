@@ -128,15 +128,28 @@ class _CalendarPageState extends State<CalendarPage> {
     return Scaffold(
       backgroundColor: Colors.white,
       body: Container(
-        child: Column(
+        child: Column( 
           children: <Widget>[
             Container(
               height: 400,
               child: _buildCalendar(),
             ),
             Container(
-              color: Colors.lightBlue.shade100,
-              child: Text(' Legend: \n\n The day highlighted in green is today\'s date. \n\n The day highlighted in red is the current daily view. \n\n The highlighted numbers are the total events per day.'),
+              child: RichText(
+                text: TextSpan(
+                  style: DefaultTextStyle.of(context).style,
+                  children: <TextSpan>[
+                    TextSpan(text: '\n Legend: ', style: new TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                    TextSpan(text: '\n\n The date highlighted in'),
+                    TextSpan(text: ' green', style: TextStyle(color: Colors.green)),
+                    TextSpan(text: ' is today\'s date. \n\n'),
+                    TextSpan(text: ' The date highlighted in'),
+                    TextSpan(text: ' red', style: TextStyle(color: Colors.red)),
+                    TextSpan(text: ' is the current daily view. \n\n'),
+                    TextSpan(text: ' The highlighted numbers are the events per day.'),
+                  ],
+                ),
+              ),
               alignment: AlignmentDirectional(-0.9, -0.9),
               margin: new EdgeInsets.only(
                 left: 10.00,
@@ -146,7 +159,13 @@ class _CalendarPageState extends State<CalendarPage> {
               constraints: new BoxConstraints(
                 maxHeight: 150,
               ),
+              decoration: new BoxDecoration(
+                borderRadius: new BorderRadius.all(
+                  Radius.circular(10),
+                  ),
+                color: Colors.lightBlue.shade100,
               ),
+            ),
           ],
         ),
       )
