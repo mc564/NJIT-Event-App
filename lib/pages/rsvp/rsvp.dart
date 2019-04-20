@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../blocs/rsvp_bloc.dart';
@@ -7,6 +8,7 @@ import '../../blocs/event_bloc.dart';
 
 import '../../models/event.dart';
 import '../../common/event_list_tile.dart';
+import '../../common/loading_squirrel.dart';
 
 class RSVPPage extends StatefulWidget {
   final EditEventBloc _editBloc;
@@ -34,6 +36,36 @@ class _RSVPPageState extends State<RSVPPage> {
   List<Event> _rsvps;
   List<int> colors;
   int colorIdx;
+  bool _isLoading;
+
+  void _setupTempListenerForResetRSVPs() {
+    if (mounted) {
+      setState(() {
+        _isLoading = true;
+      });
+    }
+
+    StreamSubscription<RSVPState> tempListener;
+    tempListener = widget._favoriteAndRSVPBloc.rsvpBloc.userRSVPRequests
+        .listen((dynamic state) {
+      if (state is UserRSVPsUpdated) {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+            _rsvps = state.rsvps;
+          });
+        }
+        tempListener.cancel();
+      } else if (state is RSVPError) {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
+        tempListener.cancel();
+      }
+    });
+  }
 
   Widget _buildListTile(Event event) {
     return Dismissible(
@@ -41,9 +73,12 @@ class _RSVPPageState extends State<RSVPPage> {
       onDismissed: (DismissDirection direction) {
         widget._favoriteAndRSVPBloc.rsvpBloc.sink
             .add(RemoveRSVP(eventToUnRSVP: event));
-        setState(() {
-          _rsvps.removeWhere((Event e) => e.eventId == event.eventId);
-        });
+        if (mounted) {
+          setState(() {
+            if (_rsvps != null)
+              _rsvps.removeWhere((Event e) => e.eventId == event.eventId);
+          });
+        }
       },
       background: Container(
           color: Colors.red,
@@ -87,21 +122,94 @@ class _RSVPPageState extends State<RSVPPage> {
     );
   }
 
+  Container _noRSVPsTile() {
+    return Container(
+      padding: EdgeInsets.all(10),
+      alignment: Alignment.center,
+      child: Text(
+        'No RSVP\'d Events For Now! 🙂',
+        style: TextStyle(
+          color: Colors.grey,
+          fontSize: 20,
+          fontFamily: 'Montserrat',
+        ),
+      ),
+    );
+  }
+
+  void _showAreYouSureDialog(String message, Function onConfirm) {
+    showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Text('Are you sure?'),
+            content: Text(message),
+            actions: <Widget>[
+              FlatButton(
+                child: Text('RETURN'),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+              FlatButton(
+                child: Text('CONTINUE'),
+                onPressed: () {
+                  onConfirm();
+                  Navigator.of(context).pop();
+                },
+              ),
+            ],
+          );
+        });
+  }
+
+  List<Widget> _buildActionTiles() {
+    List<Widget> list = List<Widget>();
+    list.add(
+      ListTile(
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: <Widget>[
+            FlatButton(
+              child: Text('Remove All RSVPs'),
+              color: Color(0xffffdde2),
+              onPressed: () => _showAreYouSureDialog(
+                    'Are you sure you want to remove ALL your RSVP\'d events?',
+                    () {
+                      widget._favoriteAndRSVPBloc.rsvpBloc.sink
+                          .add(RemoveAllRSVPs());
+                      _setupTempListenerForResetRSVPs();
+                    },
+                  ),
+            ),
+            FlatButton(
+              child: Text('Remove Past RSVPs'),
+              color: Color(0xffFFFFCC),
+              onPressed: () => _showAreYouSureDialog(
+                      'Are you sure you want to delete ALL RSVPs for PAST events?',
+                      () {
+                    widget._favoriteAndRSVPBloc.rsvpBloc.sink
+                        .add(RemovePastRSVPs());
+                    _setupTempListenerForResetRSVPs();
+                  }),
+            ),
+          ],
+        ),
+      ),
+    );
+    return list;
+  }
+
   Widget _buildBody() {
+    if (_isLoading) return LoadingSquirrel();
     List<Widget> children = List<Widget>();
-
+    children.addAll(_buildActionTiles());
     if (_rsvps != null) {
-      if (_rsvps.length > 0) {
-        children.add(_accentTile('These are all your RSVP\'d events! 🙂'));
-      }
-
       for (Event event in _rsvps) {
         children.add(_buildListTile(event));
       }
     }
 
-    if (children.length == 0) {
-      children.add(_accentTile('No RSVPs For Now! 🙂'));
+    if (children.length == 1) {
+      children.add(_noRSVPsTile());
     }
 
     return ListView(
@@ -112,6 +220,7 @@ class _RSVPPageState extends State<RSVPPage> {
   @override
   void initState() {
     super.initState();
+    _isLoading = false;
     colors = [
       0xffffdde2,
       0xffFFFFCC,
@@ -128,7 +237,7 @@ class _RSVPPageState extends State<RSVPPage> {
   }
 
   void _deleteAllUnRSVPdEvents() {
-    _rsvps.removeWhere((Event e) => e.rsvpd == false);
+    if (_rsvps != null) _rsvps.removeWhere((Event e) => e.rsvpd == false);
   }
 
   @override
@@ -136,7 +245,26 @@ class _RSVPPageState extends State<RSVPPage> {
     _deleteAllUnRSVPdEvents();
     return Scaffold(
       appBar: AppBar(
-        title: Text('RSVP'),
+        iconTheme: IconThemeData(color: Colors.black),
+        backgroundColor: Colors.lightBlue[50],
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            Text(
+              'RSVP',
+              style: TextStyle(
+                color: Colors.black,
+              ),
+            ),
+            IconButton(
+              icon: Icon(Icons.refresh),
+              onPressed: () {
+                widget._favoriteAndRSVPBloc.rsvpBloc.sink.add(FetchUserRSVPs());
+                _setupTempListenerForResetRSVPs();
+              },
+            ),
+          ],
+        ),
         centerTitle: true,
       ),
       body: _buildBody(),

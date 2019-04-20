@@ -6,6 +6,7 @@ import '../../blocs/favorite_rsvp_bloc.dart';
 import '../../models/event.dart';
 import '../../common/error_dialog.dart';
 import '../../common/event_list_tile.dart';
+import '../../common/loading_squirrel.dart';
 import 'dart:async';
 
 class FavoritesPage extends StatefulWidget {
@@ -36,24 +37,31 @@ class _FavoritesPageState extends State<FavoritesPage> {
   bool _isLoading;
 
   void _setupTempListenerForResetFavorites() {
-    setState(() {
-      _isLoading = true;
-    });
+    if (mounted) {
+      setState(() {
+        _isLoading = true;
+      });
+    }
 
     StreamSubscription<FavoriteState> tempListener;
     tempListener = widget._favoriteAndRSVPBloc.favoriteBloc.favoriteRequests
         .listen((dynamic state) {
       if (state is FavoritesUpdated) {
-        setState(() {
-          _isLoading = false;
-          _faves = state.favorites;
-        });
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+            _faves = state.favorites;
+          });
+        }
+
         tempListener.cancel();
       } else if (state is FavoriteError) {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
         tempListener.cancel();
-        setState(() {
-          _isLoading = false;
-        });
       }
     });
   }
@@ -101,10 +109,12 @@ class _FavoritesPageState extends State<FavoritesPage> {
       canEditEvent: widget._canEditEvent,
       onFavorited: (_) {},
       onUnfavorited: (Event unfavoritedEvent) {
-        setState(() {
-          _faves
-              .removeWhere((Event e) => e.eventId == unfavoritedEvent.eventId);
-        });
+        if (mounted) {
+          setState(() {
+            _faves.removeWhere(
+                (Event e) => e.eventId == unfavoritedEvent.eventId);
+          });
+        }
       },
     );
   }
@@ -115,9 +125,11 @@ class _FavoritesPageState extends State<FavoritesPage> {
         onDismissed: (DismissDirection direction) {
           widget._favoriteAndRSVPBloc.favoriteBloc.sink
               .add(RemoveFavorite(eventToUnfavorite: event));
-          setState(() {
-            _faves.removeWhere((Event e) => event.eventId == e.eventId);
-          });
+          if (mounted) {
+            setState(() {
+              _faves.removeWhere((Event e) => event.eventId == e.eventId);
+            });
+          }
         },
         background: Container(
             color: Colors.red,
@@ -222,7 +234,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
   Widget _buildBody() {
     //don't use a streamBuilder here because if a user keeps on swiping to delete, I want to use optimistic updating
     //instead of loading stale data
-    if (_isLoading) return Center(child: CircularProgressIndicator());
+    if (_isLoading) return LoadingSquirrel();
     return ListView(children: _buildChildren(_faves));
   }
 
@@ -271,13 +283,14 @@ class _FavoritesPageState extends State<FavoritesPage> {
               ),
             ),
             IconButton(
-                icon: Icon(Icons.refresh),
-                onPressed: () {
-                  widget._favoriteAndRSVPBloc.favoriteBloc.sink.add(
-                    FetchFavorites(),
-                  );
-                  _setupTempListenerForResetFavorites();
-                }),
+              icon: Icon(Icons.refresh),
+              onPressed: () {
+                widget._favoriteAndRSVPBloc.favoriteBloc.sink.add(
+                  FetchFavorites(),
+                );
+                _setupTempListenerForResetFavorites();
+              },
+            ),
           ],
         ),
       ),

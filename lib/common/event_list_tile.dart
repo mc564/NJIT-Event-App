@@ -13,6 +13,120 @@ import '../blocs/favorite_rsvp_bloc.dart';
 
 import '../presentation/my_flutter_app_icons.dart';
 
+class LeadingIcon extends StatelessWidget {
+  final Event _event;
+  LeadingIcon({@required Event event}) : _event = event;
+
+  IconData _getIcon(String category) {
+    switch (category) {
+      case "Arts & Entertainment":
+        return MyFlutterApp.pencil_case;
+      case "Health & Wellness":
+        return MyFlutterApp.heart;
+      case "Sports":
+        return MyFlutterApp.runer_silhouette_running_fast;
+      case "Meet & Learn":
+        return MyFlutterApp.meeting;
+      case "Alumni & University":
+        return MyFlutterApp.students_cap;
+      case "Celebrations":
+        return MyFlutterApp.confetti;
+      case "Miscellaneous":
+        return MyFlutterApp.push_pin;
+      case "Community":
+        return MyFlutterApp.exchange;
+      case "Conferences":
+        return MyFlutterApp.computer;
+      case "Market Place & Tabling":
+        return MyFlutterApp.exchange;
+      default:
+        return MyFlutterApp.push_pin;
+    }
+  }
+
+  Color _getColor(String category) {
+    List<Color> colors = [
+      Color(0xffffa500),
+      Color(0xff0200ff),
+      Color(0xffff0700),
+      Color(0xff02d100),
+    ];
+
+    switch (category) {
+      case "Arts & Entertainment":
+        return colors[0];
+      case "Health & Wellness":
+        return colors[1];
+      case "Sports":
+        return colors[2];
+      case "Meet & Learn":
+        return colors[3];
+      case "Alumni & University":
+        return colors[0];
+      case "Celebrations":
+        return colors[1];
+      case "Miscellaneous":
+        return colors[2];
+      case "Community":
+        return colors[3];
+      case "Conferences":
+        return colors[0];
+      case "Market Place & Tabling":
+        return colors[1];
+      default:
+        return colors[2];
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    Color color = _getColor(CategoryHelper.getString(_event.category));
+    return Stack(
+      alignment: Alignment.center,
+      children: <Widget>[
+        Positioned(
+          child: Padding(
+            padding: EdgeInsets.only(top: 13),
+            child: Container(
+              padding: EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.all(Radius.circular(3)),
+              ),
+              child: Icon(
+                _getIcon(CategoryHelper.getString(_event.category)),
+                color: color,
+                size: 40,
+              ),
+            ),
+          ),
+        ),
+        !_event.rsvpd
+            ? Container(width: 0, height: 0)
+            : Positioned(
+                top: 6,
+                child: Container(
+                  padding: EdgeInsets.symmetric(vertical: 3, horizontal: 5),
+                  decoration: BoxDecoration(
+                    color: Colors.red,
+                    borderRadius: BorderRadius.all(
+                      Radius.circular(13),
+                    ),
+                  ),
+                  child: Text(
+                    'RSVP\'d',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              ),
+      ],
+    );
+  }
+}
+
 class EventListTileBasicStyle extends StatefulWidget {
   final Event _event;
   final int _color;
@@ -42,60 +156,6 @@ class EventListTileBasicStyle extends StatefulWidget {
 }
 
 class _EventListTileBasicStyleState extends State<EventListTileBasicStyle> {
-  IconData getIcon(String category) {
-    switch (category) {
-      case "Arts & Entertainment":
-        return MyFlutterApp.pencil_case;
-      case "Health & Wellness":
-        return MyFlutterApp.heart;
-      case "Sports":
-        return MyFlutterApp.runer_silhouette_running_fast;
-      case "Meet & Learn":
-        return MyFlutterApp.meeting;
-      case "Alumni & University":
-        return MyFlutterApp.students_cap;
-      case "Celebrations":
-        return MyFlutterApp.confetti;
-      case "Miscellaneous":
-        return MyFlutterApp.push_pin;
-      case "Community":
-        return MyFlutterApp.exchange;
-      case "Conferences":
-        return MyFlutterApp.computer;
-      case "Market Place & Tabling":
-        return MyFlutterApp.exchange;
-      default:
-        return MyFlutterApp.push_pin;
-    }
-  }
-
-  Color getColor(String category) {
-    switch (category) {
-      case "Arts & Entertainment":
-        return Color(0xffffa500);
-      case "Health & Wellness":
-        return Color(0xff0200ff);
-      case "Sports":
-        return Color(0xffff0700);
-      case "Meet & Learn":
-        return Color(0xff02d100);
-      case "Alumni & University":
-        return Color(0xffffa500);
-      case "Celebrations":
-        return Color(0xffffa500);
-      case "Miscellaneous":
-        return Color(0xff0200ff);
-      case "Community":
-        return Color(0xffff0700);
-      case "Conferences":
-        return Color(0xff02d100);
-      case "Market Place & Tabling":
-        return Color(0xffffa500);
-      default:
-        return Color(0xffffa500);
-    }
-  }
-
   //formats start and end times in a nice format for reading
   String formatEventDuration(DateTime start, DateTime end) {
     DateFormat monthFormatter = DateFormat("MMMM");
@@ -131,45 +191,7 @@ class _EventListTileBasicStyleState extends State<EventListTileBasicStyle> {
       decoration: BoxDecoration(color: Color(widget._color)),
       child: ListTile(
         contentPadding: EdgeInsets.only(left: 14, right: 8, bottom: 5),
-        leading: Stack(
-          alignment: Alignment.center,
-          children: <Widget>[
-            Positioned(
-              child: Padding(
-                padding: EdgeInsets.only(top: 19),
-                child: Container(
-                  margin: EdgeInsets.all(3),
-                  padding: EdgeInsets.all(7),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.all(Radius.circular(10)),
-                  ),
-                  child: Icon(
-                    getIcon(CategoryHelper.getString(widget._event.category)),
-                    color: getColor(
-                        CategoryHelper.getString(widget._event.category)),
-                    size: 40,
-                  ),
-                ),
-              ),
-            ),
-            !widget._event.rsvpd
-                ? Container(width: 0, height: 0)
-                : Positioned(
-                    top: -4,
-                    child: Container(
-                      padding: EdgeInsets.all(2),
-                      color: Colors.red,
-                      child: Text(
-                        'RSVP\'d',
-                        style: TextStyle(
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ),
-          ],
-        ),
+        leading: LeadingIcon(event: widget._event),
         title: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -339,16 +361,6 @@ class _EventListTileBasicAbbrevStyleState
       return false;
   }
 
-  Widget _buildLeadingImage() {
-    return Container(
-      margin: EdgeInsets.only(left: 15),
-      child: Image.network(
-        'https://vignette.wikia.nocookie.net/line/images/b/bb/2015-brown.png/revision/latest?cb=20150808131630',
-        width: 50,
-      ),
-    );
-  }
-
   Widget _buildTileMainContent() {
     return Column(
       children: <Widget>[
@@ -406,25 +418,6 @@ class _EventListTileBasicAbbrevStyleState
     );
   }
 
-  Widget _buildRSVPTag() {
-    return Container(
-      padding: EdgeInsets.symmetric(vertical: 3, horizontal: 5),
-      decoration: BoxDecoration(
-        color: Colors.red,
-        borderRadius: BorderRadius.all(
-          Radius.circular(13),
-        ),
-      ),
-      child: Text(
-        'RSVP\'d',
-        style: TextStyle(
-          color: Colors.white,
-          fontSize: 12,
-        ),
-      ),
-    );
-  }
-
   Widget _buildHappeningTodayTag() {
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 10),
@@ -472,6 +465,13 @@ class _EventListTileBasicAbbrevStyleState
     );
   }
 
+  Widget _buildLeadingIcon() {
+    return Container(
+      margin: EdgeInsets.only(left: 10),
+      child: LeadingIcon(event: widget._event),
+    );
+  }
+
   Widget _buildBasicTile() {
     return Container(
       color: Color(widget._color),
@@ -480,17 +480,12 @@ class _EventListTileBasicAbbrevStyleState
         children: <Widget>[
           Positioned(
             top: 7,
-            child: Row(
-              children: <Widget>[
-                _happeningToday() ? _buildHappeningTodayTag() : Container(),
-                widget._event.rsvpd ? _buildRSVPTag() : Container(),
-              ],
-            ),
+            child: _happeningToday() ? _buildHappeningTodayTag() : Container(),
           ),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: <Widget>[
-              _buildLeadingImage(),
+              _buildLeadingIcon(),
               _buildTileMainContent(),
               _buildFaveAndInfoButton(context),
             ],

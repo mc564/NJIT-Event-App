@@ -108,8 +108,8 @@ class FavoriteBloc {
       List<Event> favorites = _favoriteProvider.allFavorites;
       if (successfullyAdded) {
         _alertSuccess(favorites);
-       
-          _searchSink.add(ChangeEventFavoriteStatus(changedEvent: event));
+
+        _searchSink.add(ChangeEventFavoriteStatus(changedEvent: event));
       } else {
         _alertFavoriteSettingError(
             event, favorites, true, 'Failed to addFavorite in favoriteBloc');
@@ -126,8 +126,8 @@ class FavoriteBloc {
       List<Event> favorites = _favoriteProvider.allFavorites;
       if (successfullyRemoved) {
         _alertSuccess(favorites);
-        
-          _searchSink.add(ChangeEventFavoriteStatus(changedEvent: event));
+
+        _searchSink.add(ChangeEventFavoriteStatus(changedEvent: event));
       } else {
         _alertFavoriteSettingError(event, favorites, false,
             'Failed to removeFavorite in favoriteBloc');

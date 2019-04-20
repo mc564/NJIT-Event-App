@@ -43,8 +43,9 @@ class DailyEventListPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-          backgroundColor: Colors.black,
-          title: Text(_getTitle(), style: TextStyle(color: Color(0xfffff1f3)))),
+          iconTheme: IconThemeData(color: Colors.black),
+          backgroundColor: Colors.lightBlue[50],
+          title: Text(_getTitle(), style: TextStyle(color: Colors.black))),
       body: DailyEventList(
         day: _day,
         eventBloc: _eventBloc,

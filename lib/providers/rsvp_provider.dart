@@ -100,26 +100,8 @@ class RSVPProvider {
   }
 
   Future<bool> removeAllRSVPs() async {
-    //TODO change to use rsvp database methods
     try {
-      bool success = await DatabaseEventAPI.removeAllFavoritesForUser(_ucid);
-      if (success) {
-        return true;
-      } else {
-        return false;
-      }
-    } catch (error) {
-      throw Exception('Error in FavoriteProvider removeAllFavorites method: ' +
-          error.toString());
-    }
-  }
-
-  Future<bool> removeSelectedRSVPs(List<String> favoriteIds) async {
-    //TODO change to use rsvp database methods
-    try {
-      if (favoriteIds == null || favoriteIds.length == 0) return true;
-      bool success =
-          await DatabaseEventAPI.removeSelectedFavorites(_ucid, favoriteIds);
+      bool success = await DatabaseEventAPI.removeAllRSVPs(_ucid);
       if (success) {
         return true;
       } else {
@@ -127,7 +109,23 @@ class RSVPProvider {
       }
     } catch (error) {
       throw Exception(
-          'Error in FavoriteProvider removeSelectedFavorites method: ' +
+          'Error in RSVPProvider removeAllRSVPs method: ' + error.toString());
+    }
+  }
+
+  Future<bool> removeSelectedRSVPs(List<String> rsvpIds) async {
+    //TODO change to use rsvp database methods
+    try {
+      if (rsvpIds == null || rsvpIds.length == 0) return true;
+      bool success = await DatabaseEventAPI.removeSelectedRSVPs(_ucid, rsvpIds);
+      if (success) {
+        return true;
+      } else {
+        return false;
+      }
+    } catch (error) {
+      throw Exception(
+          'Error in RSVPProvider removeSelectedRSVPs method: ' +
               error.toString());
     }
   }

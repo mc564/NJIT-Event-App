@@ -427,6 +427,56 @@ class DatabaseEventAPI {
     });
   }
 
+  static Future<bool> removeAllRSVPs(String ucid) {
+    Map<String, dynamic> rsvpMap = {
+      'ucid': ucid,
+    };
+    return http
+        .post('https://web.njit.edu/~mc564/eventapi/rsvp/removeAll.php',
+            body: json.encode(rsvpMap))
+        .then((http.Response response) {
+      if (response.statusCode != 200 &&
+          response.statusCode != 201 &&
+          response.statusCode != 202) {
+        throw Exception(
+            "Error in Database class removeAllRSVPs method: Database response code is: " +
+                response.statusCode.toString() +
+                "\n response body: " +
+                response.body);
+      }
+      return true;
+    }).catchError((error) {
+      throw Exception(
+          "Error in Database class removeAllRSVPs method: " + error.toString());
+    });
+  }
+
+  static Future<bool> removeSelectedRSVPs(String ucid, List<String> rsvpIds) {
+    print('REMOVING SELECTED RSVPS');
+    Map<String, dynamic> rsvpMap = {
+      'ucid': ucid,
+      'eventIds': rsvpIds,
+    };
+    return http
+        .post('https://web.njit.edu/~mc564/eventapi/rsvp/removeSelected.php',
+            body: json.encode(rsvpMap))
+        .then((http.Response response) {
+      if (response.statusCode != 200 &&
+          response.statusCode != 201 &&
+          response.statusCode != 202) {
+        throw Exception(
+            "Error in Database class removeSelectedRSVPs method: Database response code is: " +
+                response.statusCode.toString() +
+                "\n response body: " +
+                response.body);
+      }
+      return true;
+    }).catchError((error) {
+      throw Exception("Error in Database class removeSelectedRSVPs method: " +
+          error.toString());
+    });
+  }
+
   static Future<Event> getEventWithId(String eventId) {
     return http
         .get(

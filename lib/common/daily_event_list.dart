@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import './event_list_tile.dart';
+import './loading_squirrel.dart';
 import '../models/event.dart';
 import '../blocs/event_bloc.dart';
 import '../blocs/edit_bloc.dart';
@@ -95,7 +96,7 @@ class _DailyEventListState extends State<DailyEventList> {
         if (state is EventListError) {
           child = Text('There was an error! 😱, please try again!');
         } else if (state is EventListLoading) {
-          child = CircularProgressIndicator();
+          child = LoadingSquirrel();
         } else if (state is DailyEventListLoaded) {
           DailyEventListLoaded eventListObject = state;
           child = _buildPage(eventListObject.events);

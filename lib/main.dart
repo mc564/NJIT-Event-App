@@ -4,6 +4,7 @@ import './pages/login/login.dart';
 import './blocs/user_bloc.dart';
 import 'dart:async';
 import './models/authentication_results.dart';
+import './common/loading_squirrel.dart';
 
 void main() => runApp(MyApp());
 
@@ -61,9 +62,7 @@ class _MyAppState extends State<MyApp> {
               Builder(builder: (BuildContext builderContext) {
                 _initializeNavigationListener(builderContext);
                 return Scaffold(
-                  body: Center(
-                    child: CircularProgressIndicator(),
-                  ),
+                  body: LoadingSquirrel(),
                 );
               }),
           '/home': (BuildContext context) => HomePage(userBloc: _userBloc),

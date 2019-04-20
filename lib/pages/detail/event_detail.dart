@@ -227,8 +227,13 @@ class _EventDetailPageState extends State<EventDetailPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        iconTheme: IconThemeData(color: Colors.black),
+        backgroundColor: Colors.lightBlue[50],
         centerTitle: true,
-        title: Text('Event Details'),
+        title: Text(
+          'Event Details',
+          style: TextStyle(color: Colors.black),
+        ),
       ),
       body: Container(
         margin: EdgeInsets.all(10),

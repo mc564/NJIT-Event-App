@@ -128,55 +128,36 @@ class RSVPBloc {
     }
   }
 
-/*
-  void removeAllFavorites() async {
+  void removeAllRSVPs() async {
     try {
-      bool successfullyRemovedAllFavorites =
-          await _rsvpProvider.removeAllFavorites();
-      bool fetchedFavorites = await _rsvpProvider.fetchFavorites();
-      List<Event> favorites = List<Event>();
-      if (fetchedFavorites) {
-        favorites = _rsvpProvider.allFavorites;
+      bool successfullyRemovedAllRSVPs = await _rsvpProvider.removeAllRSVPs();
+      if (successfullyRemovedAllRSVPs) {
+        fetchUserRSVPs();
       } else {
-        _alertRSVPError(
-            'Failed to fetch favorites in removeAllFavorites method of rsvpBloc');
-        return;
-      }
-      if (successfullyRemovedAllFavorites) {
-        _userRSVPController.sink.add(RSVPsUpdated(favorites: favorites));
-      } else {
-        _alertRSVPError('Failed to removeAllFavorites in rsvpBloc');
+        _alertUserRSVPError('Failed to removeAllRSVPs in rsvpBloc');
         return;
       }
     } catch (error) {
-      _alertRSVPError('Failed to removeAllFavorites in rsvpBloc Error: ' +
-          error.toString());
+      _alertUserRSVPError(
+          'Failed to removeAllRSVPs in rsvpBloc Error: ' + error.toString());
     }
   }
 
-  void removePastFavorites() async {
+  //TODO (if needed) modify search sink as well..
+  void removePastRSVPs() async {
     try {
-      bool successfullyRemoved = await _rsvpProvider.removePastFavorites();
-      bool fetchedFavorites = await _rsvpProvider.fetchFavorites();
-      List<Event> favorites = List<Event>();
-      if (fetchedFavorites) {
-        favorites = _rsvpProvider.allFavorites;
-      } else {
-        _alertRSVPError(
-            'Failed to fetch favorites in removePastFavorites method of rsvpBloc');
-        return;
-      }
+      bool successfullyRemoved = await _rsvpProvider.removePastRSVPs();
       if (successfullyRemoved) {
-        _userRSVPController.sink.add(RSVPsUpdated(favorites: favorites));
+        fetchUserRSVPs();
       } else {
-        _alertRSVPError('Failed to removePastFavorites in rsvpBloc');
+        _alertUserRSVPError('Failed to removePastRSVPs in rsvpBloc');
       }
     } catch (error) {
-      _alertRSVPError('Failed to removePastFavorites in rsvpBloc error: ' +
-          error.toString());
+      _alertUserRSVPError(
+          'Failed to removePastRSVPs in rsvpBloc error: ' + error.toString());
     }
   }
-*/
+
   void dispose() {
     _userRSVPController.close();
     _eventRSVPController.close();
@@ -225,19 +206,18 @@ class RemoveRSVP extends RSVPEvent {
     rsvpBloc.removeRSVP(eventToUnRSVP);
   }
 }
-/*
-class RemoveAllFavorites extends RSVPEvent {
+
+class RemoveAllRSVPs extends RSVPEvent {
   void execute(RSVPBloc rsvpBloc) {
-    rsvpBloc.removeAllFavorites();
+    rsvpBloc.removeAllRSVPs();
   }
 }
 
-class RemovePastFavorites extends RSVPEvent {
+class RemovePastRSVPs extends RSVPEvent {
   void execute(RSVPBloc rsvpBloc) {
-    rsvpBloc.removePastFavorites();
+    rsvpBloc.removePastRSVPs();
   }
 }
-*/
 
 abstract class RSVPState extends Equatable {
   RSVPState([List args = const []]) : super(args);
