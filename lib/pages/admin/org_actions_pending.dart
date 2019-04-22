@@ -566,7 +566,10 @@ class _OrganizationActionsPendingPageState
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Organization - Actions Pending'),
+        iconTheme: IconThemeData(color: Colors.black),
+        backgroundColor: Colors.lightBlue[50],
+        title: Text('Organization - Actions Pending',
+            style: TextStyle(color: Colors.black)),
         centerTitle: true,
       ),
       body: _buildBody(),

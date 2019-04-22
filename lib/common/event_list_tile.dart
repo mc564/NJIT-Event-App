@@ -91,7 +91,7 @@ class LeadingIcon extends StatelessWidget {
               padding: EdgeInsets.all(10),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.all(Radius.circular(3)),
+                borderRadius: BorderRadius.all(Radius.circular(4)),
               ),
               child: Icon(
                 _getIcon(CategoryHelper.getString(_event.category)),
@@ -377,8 +377,8 @@ class _EventListTileBasicAbbrevStyleState
 
   Widget _buildFaveAndInfoButton(BuildContext context) {
     return Column(
-      mainAxisAlignment: MainAxisAlignment.end,
       children: <Widget>[
+        SizedBox(height: 10),
         IconButton(
             icon: Icon(
               widget._event.favorited ? Icons.favorite : Icons.favorite_border,
@@ -474,6 +474,7 @@ class _EventListTileBasicAbbrevStyleState
 
   Widget _buildBasicTile() {
     return Container(
+      padding: EdgeInsets.only(bottom: 12),
       color: Color(widget._color),
       child: Stack(
         alignment: Alignment.topCenter,

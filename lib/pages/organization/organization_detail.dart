@@ -478,9 +478,9 @@ class _OrganizationDetailPageState extends State<OrganizationDetailPage> {
         return FlatButton(
           child: Text(
             text,
-            style: TextStyle(color: Colors.white),
+            style: TextStyle(color: Colors.black),
           ),
-          color: Colors.blue,
+          color: leave ? Color(0xffffdde2) : Color(0xffdcf9ec),
           onPressed: () {
             if (leave) {
               widget._organizationBloc.sink.add(
@@ -597,7 +597,10 @@ class _OrganizationDetailPageState extends State<OrganizationDetailPage> {
     return Scaffold(
       appBar: AppBar(
         centerTitle: true,
-        title: Text(_cutShort(widget._organization.name, 20)),
+        iconTheme: IconThemeData(color: Colors.black),
+        backgroundColor: Colors.lightBlue[50],
+        title: Text(_cutShort(widget._organization.name, 20),
+            style: TextStyle(color: Colors.black)),
         actions: <Widget>[
           _isEboardMember() ? _buildEboardButton(context) : Container(),
         ],

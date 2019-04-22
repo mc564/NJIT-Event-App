@@ -56,7 +56,7 @@ class _SearchPageState extends State<SearchPage> {
             iconTheme: IconThemeData(
               color: Colors.black,
             ),
-            backgroundColor: Colors.lightBlue[200],
+            backgroundColor: Colors.lightBlue[50],
             title: Row(
               children: <Widget>[
                 Container(
@@ -66,7 +66,7 @@ class _SearchPageState extends State<SearchPage> {
                   decoration: new BoxDecoration(
                     boxShadow: <BoxShadow>[
                       BoxShadow(
-                        color: Color(0xffDAA520),
+                        color: Colors.blue,
                         offset: Offset(-2, 4),
                         blurRadius: 2.0,
                       ),
