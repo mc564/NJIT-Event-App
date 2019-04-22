@@ -141,10 +141,10 @@ class _CalendarPageState extends State<CalendarPage> {
                   children: <TextSpan>[
                     TextSpan(text: '\n Legend: ', style: new TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                     TextSpan(text: '\n\n The date highlighted in'),
-                    TextSpan(text: ' green', style: TextStyle(color: Colors.green)),
+                    TextSpan(text: ' red', style: TextStyle(color: Colors.red)),
                     TextSpan(text: ' is today\'s date. \n\n'),
                     TextSpan(text: ' The date highlighted in'),
-                    TextSpan(text: ' red', style: TextStyle(color: Colors.red)),
+                    TextSpan(text: ' green', style: TextStyle(color: Colors.green)),
                     TextSpan(text: ' is the current daily view. \n\n'),
                     TextSpan(text: ' The highlighted numbers are the events per day.'),
                   ],
